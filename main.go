@@ -8,11 +8,27 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// GlobalOptions contains global options.
+type GlobalOptions struct {
+	Range string
+	File  string
+}
+
+var globalOptions GlobalOptions
+
+func init() {
+	fs := cmdRoot.Flags()
+	fs.StringVarP(&globalOptions.Range, "range", "r", "", "set range `from-to`")
+	fs.StringVarP(&globalOptions.File, "file", "f", "", "read values from `filename`")
+}
+
 var cmdRoot = &cobra.Command{
 	Use:           "monsoon URL",
 	SilenceErrors: true,
 	SilenceUsage:  true,
-	RunE:          run,
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return run(&globalOptions, args)
+	},
 }
 
 func main() {
@@ -23,7 +39,7 @@ func main() {
 	}
 }
 
-func run(cmd *cobra.Command, args []string) error {
+func run(opts *GlobalOptions, args []string) error {
 	if len(args) == 0 {
 		return errors.New("last argument needs to be the URL")
 	}
@@ -32,6 +48,7 @@ func run(cmd *cobra.Command, args []string) error {
 		return errors.New("more than one target URL specified")
 	}
 
-	fmt.Println("x")
+	url := args[0]
+	fmt.Printf("fuzzin %v", url)
 	return nil
 }
