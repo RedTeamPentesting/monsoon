@@ -2,9 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"strings"
@@ -44,80 +41,56 @@ func NewRunner(url string) *Runner {
 	}
 }
 
-// Response is an HTTP response.
-type Response struct {
-	Item  string
-	URL   string
-	Error error
+func (r *Runner) request(ctx context.Context, item string) (response Response) {
+	url := strings.Replace(r.URL, "FUZZ", item, -1)
 
-	BodyLength   int64
-	HTTPResponse *http.Response
-}
-
-func (r Response) String() string {
-	if r.Error != nil {
-		return fmt.Sprintf("error: %v", r.Error)
+	response = Response{
+		URL:  url,
+		Item: item,
 	}
 
-	res := r.HTTPResponse
-	status := fmt.Sprintf("%v -> %v", r.URL, res.StatusCode)
-	if res.StatusCode >= 300 && res.StatusCode < 400 {
-		loc, ok := res.Header["Location"]
-		if ok {
-			status += fmt.Sprintf(", Location: %v", loc[0])
-		}
-	}
-	return status
-}
-
-func (r *Runner) request(ctx context.Context, url string) (*http.Response, int64, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, 0, err
+		response.Error = err
+		return
 	}
+
+	req.Header.Add("Accept", "*/*")
 
 	res, err := r.client.Do(req.WithContext(ctx))
 	if err != nil {
-		return nil, 0, err
+		response.Error = err
+		return
 	}
 
-	n, err := io.Copy(ioutil.Discard, res.Body)
+	response.Bytes, response.Words, response.Lines, err = ReadBody(res.Body)
 	if err != nil {
 		_ = res.Body.Close()
-		return nil, 0, err
+		response.Error = err
+		return
 	}
 
 	err = res.Body.Close()
 	if err != nil {
-		return nil, 0, err
+		response.Error = err
+		return
 	}
 
-	return res, n, nil
+	response.HTTPResponse = res
+
+	return
 }
 
 // Run processes items read from ch and executes HTTP requests.
 func (r *Runner) Run(ctx context.Context, wg *sync.WaitGroup, input <-chan string, output chan<- Response) {
 	defer wg.Done()
 	for item := range input {
-		url := strings.Replace(r.URL, "FUZZ", item, -1)
-
-		response := Response{
-			URL:  url,
-			Item: item,
-		}
-
-		res, bodyBytes, err := r.request(ctx, url)
-		if err != nil {
-			response.Error = err
-		} else {
-			response.BodyLength = bodyBytes
-			response.HTTPResponse = res
-		}
+		res := r.request(ctx, item)
 
 		select {
 		case <-ctx.Done():
 			return
-		case output <- response:
+		case output <- res:
 		}
 	}
 }
