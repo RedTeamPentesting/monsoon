@@ -7,8 +7,8 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -44,32 +44,80 @@ func NewRunner(url string) *Runner {
 	}
 }
 
+// Response is an HTTP response.
+type Response struct {
+	Item  string
+	URL   string
+	Error error
+
+	BodyLength   int64
+	HTTPResponse *http.Response
+}
+
+func (r Response) String() string {
+	if r.Error != nil {
+		return fmt.Sprintf("error: %v", r.Error)
+	}
+
+	res := r.HTTPResponse
+	status := fmt.Sprintf("%v -> %v", r.URL, res.StatusCode)
+	if res.StatusCode >= 300 && res.StatusCode < 400 {
+		loc, ok := res.Header["Location"]
+		if ok {
+			status += fmt.Sprintf(", Location: %v", loc[0])
+		}
+	}
+	return status
+}
+
+func (r *Runner) request(ctx context.Context, url string) (*http.Response, int64, error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	res, err := r.client.Do(req.WithContext(ctx))
+	if err != nil {
+		return nil, 0, err
+	}
+
+	n, err := io.Copy(ioutil.Discard, res.Body)
+	if err != nil {
+		_ = res.Body.Close()
+		return nil, 0, err
+	}
+
+	err = res.Body.Close()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return res, n, nil
+}
+
 // Run processes items read from ch and executes HTTP requests.
-func (r *Runner) Run(ctx context.Context, input <-chan string) {
+func (r *Runner) Run(ctx context.Context, wg *sync.WaitGroup, input <-chan string, output chan<- Response) {
+	defer wg.Done()
 	for item := range input {
 		url := strings.Replace(r.URL, "FUZZ", item, -1)
-		res, err := r.client.Get(url)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			continue
+
+		response := Response{
+			URL:  url,
+			Item: item,
 		}
 
-		n, err := io.Copy(ioutil.Discard, res.Body)
+		res, bodyBytes, err := r.request(ctx, url)
 		if err != nil {
-			_ = res.Body.Close()
-			fmt.Printf("error reading body: %v\n", err)
-			continue
+			response.Error = err
+		} else {
+			response.BodyLength = bodyBytes
+			response.HTTPResponse = res
 		}
 
-		err = res.Body.Close()
-		if err != nil {
-			fmt.Printf("error closing body: %v\n", err)
+		select {
+		case <-ctx.Done():
+			return
+		case output <- response:
 		}
-
-		// if res.StatusCode == 404 {
-		// 	continue
-		// }
-
-		fmt.Printf("res: %v (%v) -> %v\n", res.Status, res.StatusCode, n)
 	}
 }

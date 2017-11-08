@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
+	"github.com/fd0/termstatus"
 	"github.com/spf13/cobra"
 )
 
@@ -14,7 +17,8 @@ import (
 type GlobalOptions struct {
 	Range       string
 	RangeFormat string
-	File        string
+	Filename    string
+	Threads     int
 }
 
 var globalOptions GlobalOptions
@@ -23,7 +27,8 @@ func init() {
 	fs := cmdRoot.Flags()
 	fs.StringVarP(&globalOptions.Range, "range", "r", "", "set range `from-to`")
 	fs.StringVar(&globalOptions.RangeFormat, "range-format", "%d", "set `format` for range")
-	fs.StringVarP(&globalOptions.File, "file", "f", "", "read values from `filename`")
+	fs.StringVarP(&globalOptions.Filename, "file", "f", "", "read values from `filename`")
+	fs.IntVarP(&globalOptions.Threads, "threads", "t", 5, "make as many as `n` parallel requests")
 }
 
 var cmdRoot = &cobra.Command{
@@ -45,7 +50,7 @@ func main() {
 
 // Producer yields values for enumerating.
 type Producer interface {
-	Start(context.Context, chan<- string) error
+	Start(context.Context, *sync.WaitGroup, chan<- string) error
 }
 
 func run(opts *GlobalOptions, args []string) error {
@@ -57,34 +62,80 @@ func run(opts *GlobalOptions, args []string) error {
 		return errors.New("more than one target URL specified")
 	}
 
-	url := args[0]
-	fmt.Printf("fuzzing %v\n", url)
-
-	producer := &RangeProducer{
-		Format: opts.RangeFormat,
-	}
-
-	_, err := fmt.Sscanf(opts.Range, "%d-%d", &producer.First, &producer.Last)
-	if err != nil {
-		return fmt.Errorf("wrong format for range: %v", err)
-	}
-
-	ctx, cancel := context.WithCancel(context.Background())
+	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	ch := make(chan string)
+	term := termstatus.New(rootCtx, os.Stdout)
+
+	ctx, cancel := context.WithCancel(rootCtx)
+
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGINT)
+	go func() {
+		for sig := range signalCh {
+			term.Printf("received signal %v\n", sig)
+			cancel()
+		}
+	}()
+
+	url := args[0]
+	term.Printf("fuzzing %v\n", url)
+
+	var producer Producer
+	switch {
+	case opts.Range != "":
+		rp := &RangeProducer{Format: opts.RangeFormat}
+		_, err := fmt.Sscanf(opts.Range, "%d-%d", &rp.First, &rp.Last)
+		if err != nil {
+			return fmt.Errorf("wrong format for range: %v", err)
+		}
+		producer = rp
+	case opts.Filename != "":
+		producer = &FileProducer{Filename: opts.Filename}
+	default:
+		return errors.New("neither file nor range specified, nothing to do")
+	}
+
+	producerChannel := make(chan string)
 	var producerWg sync.WaitGroup
 
-	producer.Start(ctx, &producerWg, ch)
+	producer.Start(ctx, &producerWg, producerChannel)
 
 	go func() {
 		producerWg.Wait()
-		fmt.Printf("producer is done\n")
-		close(ch)
+		term.Printf("producer is done\n")
+		close(producerChannel)
 	}()
 
-	runner := NewRunner(url)
-	runner.Run(ctx, ch)
+	responseChannel := make(chan Response)
 
-	return nil
+	var runnerWg sync.WaitGroup
+	for i := 0; i < opts.Threads; i++ {
+		runner := NewRunner(url)
+		runnerWg.Add(1)
+		go runner.Run(ctx, &runnerWg, producerChannel, responseChannel)
+	}
+
+	go func() {
+		runnerWg.Wait()
+		term.Printf("runners are done\n")
+		close(responseChannel)
+	}()
+
+	filter := &SimpleFilter{
+		Hide: map[int]bool{
+			404: true,
+		},
+	}
+
+	reporter := NewReporter(ctx, term, filter)
+
+	var displayWg sync.WaitGroup
+	displayWg.Add(1)
+
+	go reporter.Display(ctx, &displayWg, responseChannel)
+
+	displayWg.Wait()
+
+	return term.Finish()
 }
