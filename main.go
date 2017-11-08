@@ -19,6 +19,7 @@ type GlobalOptions struct {
 	RangeFormat string
 	Filename    string
 	Threads     int
+	BufferSize  int
 }
 
 var globalOptions GlobalOptions
@@ -29,6 +30,7 @@ func init() {
 	fs.StringVar(&globalOptions.RangeFormat, "range-format", "%d", "set `format` for range")
 	fs.StringVarP(&globalOptions.Filename, "file", "f", "", "read values from `filename`")
 	fs.IntVarP(&globalOptions.Threads, "threads", "t", 5, "make as many as `n` parallel requests")
+	fs.IntVar(&globalOptions.BufferSize, "buffer-size", 100000, "set number of buffered items to `n`")
 }
 
 var cmdRoot = &cobra.Command{
@@ -50,7 +52,7 @@ func main() {
 
 // Producer yields values for enumerating.
 type Producer interface {
-	Start(context.Context, *sync.WaitGroup, chan<- string) error
+	Start(context.Context, *sync.WaitGroup, chan<- string, chan<- int) error
 }
 
 func run(opts *GlobalOptions, args []string) error {
@@ -96,14 +98,15 @@ func run(opts *GlobalOptions, args []string) error {
 		return errors.New("neither file nor range specified, nothing to do")
 	}
 
-	producerChannel := make(chan string)
+	producerChannel := make(chan string, opts.BufferSize)
 	var producerWg sync.WaitGroup
 
-	producer.Start(ctx, &producerWg, producerChannel)
+	countChannel := make(chan int, 1)
+
+	producer.Start(ctx, &producerWg, producerChannel, countChannel)
 
 	go func() {
 		producerWg.Wait()
-		term.Printf("producer is done\n")
 		close(producerChannel)
 	}()
 
@@ -118,7 +121,6 @@ func run(opts *GlobalOptions, args []string) error {
 
 	go func() {
 		runnerWg.Wait()
-		term.Printf("runners are done\n")
 		close(responseChannel)
 	}()
 
@@ -133,7 +135,7 @@ func run(opts *GlobalOptions, args []string) error {
 	var displayWg sync.WaitGroup
 	displayWg.Add(1)
 
-	go reporter.Display(ctx, &displayWg, responseChannel)
+	go reporter.Display(ctx, &displayWg, responseChannel, countChannel)
 
 	displayWg.Wait()
 
