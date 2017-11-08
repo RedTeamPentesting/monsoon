@@ -14,7 +14,7 @@ type Response struct {
 	URL   string
 	Error error
 
-	Bytes, Words, Lines int
+	Header, Body TextStats
 
 	HTTPResponse *http.Response
 }
@@ -25,7 +25,7 @@ func (r Response) String() string {
 	}
 
 	res := r.HTTPResponse
-	status := fmt.Sprintf("%7d %7d %7d %7v -- %v", r.Bytes, r.Words, r.Lines, res.StatusCode, r.Item)
+	status := fmt.Sprintf("%7d %7d %7d %7d %7v -- %v", r.Body.Bytes, r.Body.Words, r.Body.Lines, r.Header.Bytes, res.StatusCode, r.Item)
 	if res.StatusCode >= 300 && res.StatusCode < 400 {
 		loc, ok := res.Header["Location"]
 		if ok {
@@ -35,8 +35,13 @@ func (r Response) String() string {
 	return status
 }
 
-// ReadBody counts the bytes, words and lines in the body.
-func ReadBody(rd io.Reader) (bytes, words, lines int, err error) {
+// TextStats reports statistics about some text.
+type TextStats struct {
+	Bytes, Words, Lines int
+}
+
+// Count counts the bytes, words and lines in the body.
+func Count(rd io.Reader) (stats TextStats, err error) {
 	bufReader := bufio.NewReader(rd)
 	var previous, current byte
 	for {
@@ -50,13 +55,13 @@ func ReadBody(rd io.Reader) (bytes, words, lines int, err error) {
 			return
 		}
 
-		bytes++
+		stats.Bytes++
 		if unicode.IsSpace(rune(current)) && !unicode.IsSpace(rune(previous)) {
-			words++
+			stats.Words++
 		}
 
 		if current == '\n' {
-			lines++
+			stats.Lines++
 		}
 	}
 }

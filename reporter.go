@@ -62,7 +62,7 @@ func (h *HTTPStats) Report() (res []string) {
 func (r *Reporter) Display(ctx context.Context, wg *sync.WaitGroup, ch <-chan Response) {
 	defer wg.Done()
 
-	r.term.Printf("%7s %7s %7s %7s\n", "bytes", "words", "lines", "status")
+	r.term.Printf("%7s %7s %7s %7s %7s\n", "bytes", "words", "lines", "header", "status")
 
 	stats := &HTTPStats{
 		Start:       time.Now(),
