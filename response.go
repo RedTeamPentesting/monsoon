@@ -25,7 +25,7 @@ func (r Response) String() string {
 	}
 
 	res := r.HTTPResponse
-	status := fmt.Sprintf("%7d %8d %8d   %v", res.StatusCode, r.Body.Bytes, r.Header.Bytes, r.Item)
+	status := fmt.Sprintf("%7d %8d %8d   %v", res.StatusCode, r.Header.Bytes, r.Body.Bytes, r.Item)
 	if res.StatusCode >= 300 && res.StatusCode < 400 {
 		loc, ok := res.Header["Location"]
 		if ok {

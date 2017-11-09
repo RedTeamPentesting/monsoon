@@ -22,6 +22,8 @@ type GlobalOptions struct {
 	BufferSize  int
 
 	HideStatusCodes []int
+	HideHeaderSize  []string
+	HideBodySize    []string
 }
 
 var globalOptions GlobalOptions
@@ -39,6 +41,8 @@ func init() {
 	fs.IntVar(&globalOptions.BufferSize, "buffer-size", 100000, "set number of buffered items to `n`")
 
 	fs.IntSliceVar(&globalOptions.HideStatusCodes, "hide-status", nil, "hide http responses with this status `code,[code],[...]`")
+	fs.StringSliceVar(&globalOptions.HideHeaderSize, "hide-header-size", nil, "hide http responses with this header size (`size,from-to,-to`)")
+	fs.StringSliceVar(&globalOptions.HideBodySize, "hide-body-size", nil, "hide http responses with this body size (`size,from-to,-to`)")
 }
 
 var cmdRoot = &cobra.Command{
@@ -110,7 +114,13 @@ func run(opts *GlobalOptions, args []string) error {
 		NewFilterStatusCode(opts.HideStatusCodes),
 	}
 
-	term.Printf("filters: %#v\n", filters)
+	if len(opts.HideHeaderSize) > 0 || len(opts.HideBodySize) > 0 {
+		f, err := NewFilterSize(opts.HideHeaderSize, opts.HideBodySize)
+		if err != nil {
+			return err
+		}
+		filters = append(filters, f)
+	}
 
 	term.Printf("fuzzing %v\n\n", url)
 
