@@ -20,12 +20,15 @@ type GlobalOptions struct {
 	Filename    string
 	Threads     int
 	BufferSize  int
+
+	HideStatusCodes []int
 }
 
 var globalOptions GlobalOptions
 
 func init() {
 	fs := cmdRoot.Flags()
+	fs.SortFlags = false
 
 	fs.StringVarP(&globalOptions.Range, "range", "r", "", "set range `from-to`")
 	fs.StringVar(&globalOptions.RangeFormat, "range-format", "%d", "set `format` for range")
@@ -34,7 +37,8 @@ func init() {
 
 	fs.IntVarP(&globalOptions.Threads, "threads", "t", 5, "make as many as `n` parallel requests")
 	fs.IntVar(&globalOptions.BufferSize, "buffer-size", 100000, "set number of buffered items to `n`")
-	fs.SortFlags = false
+
+	fs.IntSliceVar(&globalOptions.HideStatusCodes, "hide-status", nil, "hide http responses with this status `code,[code],[...]`")
 }
 
 var cmdRoot = &cobra.Command{
@@ -102,6 +106,12 @@ func run(opts *GlobalOptions, args []string) error {
 		return errors.New("neither file nor range specified, nothing to do")
 	}
 
+	filters := []Filter{
+		NewFilterStatusCode(opts.HideStatusCodes),
+	}
+
+	term.Printf("filters: %#v\n", filters)
+
 	term.Printf("fuzzing %v\n\n", url)
 
 	producerChannel := make(chan string, opts.BufferSize)
@@ -129,13 +139,7 @@ func run(opts *GlobalOptions, args []string) error {
 		close(responseChannel)
 	}()
 
-	filter := &SimpleFilter{
-		Hide: map[int]bool{
-			404: true,
-		},
-	}
-
-	reporter := NewReporter(term, filter)
+	reporter := NewReporter(term, filters)
 	displayTomb, _ := tomb.WithContext(ctx)
 	displayTomb.Go(reporter.Display(responseChannel, countChannel))
 	<-displayTomb.Dead()

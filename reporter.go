@@ -8,20 +8,15 @@ import (
 	"github.com/fd0/termstatus"
 )
 
-// Filter decides which response to print.
-type Filter interface {
-	Print(Response) bool
-}
-
 // Reporter prints the Responses to stdout.
 type Reporter struct {
-	term *termstatus.Terminal
-	f    Filter
+	term    *termstatus.Terminal
+	filters []Filter
 }
 
 // NewReporter returns a new reporter.
-func NewReporter(term *termstatus.Terminal, f Filter) *Reporter {
-	return &Reporter{term: term, f: f}
+func NewReporter(term *termstatus.Terminal, filters []Filter) *Reporter {
+	return &Reporter{term: term, filters: filters}
 }
 
 // HTTPStats collects statistics about several HTTP responses.
@@ -110,7 +105,15 @@ func (r *Reporter) Display(ch <-chan Response, countChannel <-chan int) func() e
 				stats.StatusCodes[response.HTTPResponse.StatusCode]++
 			}
 
-			if r.f.Print(response) {
+			print := true
+			for _, f := range r.filters {
+				if f.Reject(response) {
+					print = false
+					break
+				}
+			}
+
+			if print {
 				r.term.Printf("%v\n", response)
 			}
 
