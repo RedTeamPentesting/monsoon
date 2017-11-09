@@ -51,6 +51,7 @@ func formatSeconds(secs float64) string {
 
 // Report returns a report about the received HTTP status codes.
 func (h *HTTPStats) Report(current string) (res []string) {
+	res = append(res, "")
 	status := fmt.Sprintf("%v requests", h.Responses)
 	dur := time.Since(h.Start) / time.Second
 	if dur > 0 && time.Since(h.lastRPS) > time.Second {
@@ -80,7 +81,7 @@ func (h *HTTPStats) Report(current string) (res []string) {
 	for code, count := range h.StatusCodes {
 		res = append(res, fmt.Sprintf("%v: %v", code, count))
 	}
-	sort.Sort(sort.StringSlice(res[1:]))
+	sort.Sort(sort.StringSlice(res[2:]))
 
 	return res
 }
