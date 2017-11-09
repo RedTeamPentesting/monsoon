@@ -26,11 +26,15 @@ var globalOptions GlobalOptions
 
 func init() {
 	fs := cmdRoot.Flags()
+
 	fs.StringVarP(&globalOptions.Range, "range", "r", "", "set range `from-to`")
 	fs.StringVar(&globalOptions.RangeFormat, "range-format", "%d", "set `format` for range")
+
 	fs.StringVarP(&globalOptions.Filename, "file", "f", "", "read values from `filename`")
+
 	fs.IntVarP(&globalOptions.Threads, "threads", "t", 5, "make as many as `n` parallel requests")
 	fs.IntVar(&globalOptions.BufferSize, "buffer-size", 100000, "set number of buffered items to `n`")
+	fs.SortFlags = false
 }
 
 var cmdRoot = &cobra.Command{
@@ -45,7 +49,7 @@ var cmdRoot = &cobra.Command{
 func main() {
 	err := cmdRoot.Execute()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%#v\n", err)
+		fmt.Fprintf(os.Stderr, "%+v\n", err)
 		os.Exit(1)
 	}
 }
@@ -81,7 +85,6 @@ func run(opts *GlobalOptions, args []string) error {
 	}()
 
 	url := args[0]
-	term.Printf("fuzzing %v\n", url)
 
 	var producer Producer
 	switch {
@@ -97,6 +100,8 @@ func run(opts *GlobalOptions, args []string) error {
 	default:
 		return errors.New("neither file nor range specified, nothing to do")
 	}
+
+	term.Printf("fuzzing %v\n", url)
 
 	producerChannel := make(chan string, opts.BufferSize)
 	var producerWg sync.WaitGroup
