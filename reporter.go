@@ -50,7 +50,7 @@ func formatSeconds(secs float64) string {
 }
 
 // Report returns a report about the received HTTP status codes.
-func (h *HTTPStats) Report() (res []string) {
+func (h *HTTPStats) Report(current string) (res []string) {
 	status := fmt.Sprintf("%v requests", h.Responses)
 	dur := time.Since(h.Start) / time.Second
 	if dur > 0 && time.Since(h.lastRPS) > time.Second {
@@ -71,6 +71,10 @@ func (h *HTTPStats) Report() (res []string) {
 		}
 	}
 
+	if current != "" {
+		status += fmt.Sprintf(", current: %v", current)
+	}
+
 	res = append(res, status)
 
 	for code, count := range h.StatusCodes {
@@ -84,7 +88,7 @@ func (h *HTTPStats) Report() (res []string) {
 // Display shows incoming Responses.
 func (r *Reporter) Display(ch <-chan Response, countChannel <-chan int) func() error {
 	return func() error {
-		r.term.Printf("%7s %7s %7s %7s %7s\n", "bytes", "words", "lines", "header", "status")
+		r.term.Printf("%7s %7s %7s %s\n", "status", "body", "header", "value")
 
 		stats := &HTTPStats{
 			Start:       time.Now(),
@@ -109,12 +113,12 @@ func (r *Reporter) Display(ch <-chan Response, countChannel <-chan int) func() e
 				r.term.Printf("%v\n", response)
 			}
 
-			r.term.SetStatus(stats.Report())
+			r.term.SetStatus(stats.Report(response.Item))
 		}
 
 		r.term.Print("\n")
 		r.term.Printf("process %d HTTP requests in %v\n", stats.Responses, formatSeconds(time.Since(stats.Start).Seconds()))
-		for _, line := range stats.Report()[1:] {
+		for _, line := range stats.Report("")[1:] {
 			r.term.Print(line)
 		}
 

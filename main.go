@@ -102,7 +102,7 @@ func run(opts *GlobalOptions, args []string) error {
 		return errors.New("neither file nor range specified, nothing to do")
 	}
 
-	term.Printf("fuzzing %v\n", url)
+	term.Printf("fuzzing %v\n\n", url)
 
 	producerChannel := make(chan string, opts.BufferSize)
 	countChannel := make(chan int, 1)
