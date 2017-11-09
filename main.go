@@ -73,6 +73,9 @@ func run(opts *GlobalOptions, args []string) error {
 
 	term := termstatus.New(rootCtx, os.Stdout)
 
+	ctx, cancel := context.WithCancel(rootCtx)
+	defer cancel()
+
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT)
 	go func() {
@@ -104,7 +107,7 @@ func run(opts *GlobalOptions, args []string) error {
 	producerChannel := make(chan string, opts.BufferSize)
 	countChannel := make(chan int, 1)
 
-	prodTomb, _ := tomb.WithContext(rootCtx)
+	prodTomb, _ := tomb.WithContext(ctx)
 	producer.Start(prodTomb, producerChannel, countChannel)
 	go func() {
 		// wait until the producer is done, then close the output channel
@@ -114,7 +117,7 @@ func run(opts *GlobalOptions, args []string) error {
 
 	responseChannel := make(chan Response)
 
-	runnerTomb, _ := tomb.WithContext(rootCtx)
+	runnerTomb, _ := tomb.WithContext(ctx)
 	for i := 0; i < opts.Threads; i++ {
 		runner := NewRunner(runnerTomb, url, producerChannel, responseChannel)
 		runnerTomb.Go(runner.Run)
@@ -133,7 +136,7 @@ func run(opts *GlobalOptions, args []string) error {
 	}
 
 	reporter := NewReporter(term, filter)
-	displayTomb, _ := tomb.WithContext(rootCtx)
+	displayTomb, _ := tomb.WithContext(ctx)
 	displayTomb.Go(reporter.Display(responseChannel, countChannel))
 	<-displayTomb.Dead()
 
