@@ -2,49 +2,54 @@ package main
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"os"
-	"sync"
+
+	tomb "gopkg.in/tomb.v2"
 )
 
 // FileProducer returns each line read from a file.
 type FileProducer struct {
 	Filename string
-	f        *os.File
+
+	f     *os.File
+	count chan<- int
+	ch    chan<- string
+	t     *tomb.Tomb
 }
 
 // Start runs a goroutine which will send all values [first, last] to the channel.
-func (p *FileProducer) Start(ctx context.Context, wg *sync.WaitGroup, ch chan<- string, count chan<- int) (err error) {
+func (p *FileProducer) Start(t *tomb.Tomb, ch chan<- string, count chan<- int) (err error) {
 	p.f, err = os.Open(p.Filename)
 	if err != nil {
 		return err
 	}
+	p.count = count
+	p.ch = ch
+	p.t = t
 
-	wg.Add(1)
-	go p.run(ctx, wg, ch, count)
+	t.Go(p.run)
 	return nil
 }
 
 // run sends values to the channel.
-func (p *FileProducer) run(ctx context.Context, wg *sync.WaitGroup, ch chan<- string, count chan<- int) {
-	defer wg.Done()
-
+func (p *FileProducer) run() error {
 	sc := bufio.NewScanner(p.f)
 	num := 0
 	for sc.Scan() {
 		if sc.Err() != nil {
 			fmt.Fprintf(os.Stderr, "error reading %v: %v\n", p.Filename, sc.Err())
-			return
+			return sc.Err()
 		}
 
 		num++
 
 		select {
-		case ch <- sc.Text():
-		case <-ctx.Done():
-			return
+		case p.ch <- sc.Text():
+		case <-p.t.Dying():
+			return nil
 		}
 	}
-	count <- num
+	p.count <- num
+	return nil
 }

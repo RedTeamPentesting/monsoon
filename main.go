@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"sync"
 	"syscall"
 
 	"github.com/fd0/termstatus"
 	"github.com/spf13/cobra"
+	tomb "gopkg.in/tomb.v2"
 )
 
 // GlobalOptions contains global options.
@@ -56,7 +56,7 @@ func main() {
 
 // Producer yields values for enumerating.
 type Producer interface {
-	Start(context.Context, *sync.WaitGroup, chan<- string, chan<- int) error
+	Start(*tomb.Tomb, chan<- string, chan<- int) error
 }
 
 func run(opts *GlobalOptions, args []string) error {
@@ -72,8 +72,6 @@ func run(opts *GlobalOptions, args []string) error {
 	defer cancel()
 
 	term := termstatus.New(rootCtx, os.Stdout)
-
-	ctx, cancel := context.WithCancel(rootCtx)
 
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT)
@@ -104,28 +102,27 @@ func run(opts *GlobalOptions, args []string) error {
 	term.Printf("fuzzing %v\n", url)
 
 	producerChannel := make(chan string, opts.BufferSize)
-	var producerWg sync.WaitGroup
-
 	countChannel := make(chan int, 1)
 
-	producer.Start(ctx, &producerWg, producerChannel, countChannel)
-
+	prodTomb, _ := tomb.WithContext(rootCtx)
+	producer.Start(prodTomb, producerChannel, countChannel)
 	go func() {
-		producerWg.Wait()
+		// wait until the producer is done, then close the output channel
+		<-prodTomb.Dead()
 		close(producerChannel)
 	}()
 
 	responseChannel := make(chan Response)
 
-	var runnerWg sync.WaitGroup
+	runnerTomb, _ := tomb.WithContext(rootCtx)
 	for i := 0; i < opts.Threads; i++ {
-		runner := NewRunner(url)
-		runnerWg.Add(1)
-		go runner.Run(ctx, &runnerWg, producerChannel, responseChannel)
+		runner := NewRunner(runnerTomb, url, producerChannel, responseChannel)
+		runnerTomb.Go(runner.Run)
 	}
 
 	go func() {
-		runnerWg.Wait()
+		// wait until the runners are done, then close the output channel
+		<-runnerTomb.Dead()
 		close(responseChannel)
 	}()
 
@@ -135,14 +132,10 @@ func run(opts *GlobalOptions, args []string) error {
 		},
 	}
 
-	reporter := NewReporter(ctx, term, filter)
-
-	var displayWg sync.WaitGroup
-	displayWg.Add(1)
-
-	go reporter.Display(ctx, &displayWg, responseChannel, countChannel)
-
-	displayWg.Wait()
+	reporter := NewReporter(term, filter)
+	displayTomb, _ := tomb.WithContext(rootCtx)
+	displayTomb.Go(reporter.Display(responseChannel, countChannel))
+	<-displayTomb.Dead()
 
 	return term.Finish()
 }

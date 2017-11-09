@@ -1,10 +1,8 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"sort"
-	"sync"
 	"time"
 
 	"github.com/fd0/termstatus"
@@ -22,7 +20,7 @@ type Reporter struct {
 }
 
 // NewReporter returns a new reporter.
-func NewReporter(ctx context.Context, term *termstatus.Terminal, f Filter) *Reporter {
+func NewReporter(term *termstatus.Terminal, f Filter) *Reporter {
 	return &Reporter{term: term, f: f}
 }
 
@@ -84,40 +82,42 @@ func (h *HTTPStats) Report() (res []string) {
 }
 
 // Display shows incoming Responses.
-func (r *Reporter) Display(ctx context.Context, wg *sync.WaitGroup, ch <-chan Response, countChannel <-chan int) {
-	defer wg.Done()
+func (r *Reporter) Display(ch <-chan Response, countChannel <-chan int) func() error {
+	return func() error {
+		r.term.Printf("%7s %7s %7s %7s %7s\n", "bytes", "words", "lines", "header", "status")
 
-	r.term.Printf("%7s %7s %7s %7s %7s\n", "bytes", "words", "lines", "header", "status")
-
-	stats := &HTTPStats{
-		Start:       time.Now(),
-		StatusCodes: make(map[int]int),
-	}
-
-	for response := range ch {
-		select {
-		case c := <-countChannel:
-			stats.Count = c
-		default:
+		stats := &HTTPStats{
+			Start:       time.Now(),
+			StatusCodes: make(map[int]int),
 		}
 
-		stats.Responses++
-		if response.Error != nil {
-			stats.Errors++
-		} else {
-			stats.StatusCodes[response.HTTPResponse.StatusCode]++
+		for response := range ch {
+			select {
+			case c := <-countChannel:
+				stats.Count = c
+			default:
+			}
+
+			stats.Responses++
+			if response.Error != nil {
+				stats.Errors++
+			} else {
+				stats.StatusCodes[response.HTTPResponse.StatusCode]++
+			}
+
+			if r.f.Print(response) {
+				r.term.Printf("%v\n", response)
+			}
+
+			r.term.SetStatus(stats.Report())
 		}
 
-		if r.f.Print(response) {
-			r.term.Printf("%v\n", response)
+		r.term.Print("\n")
+		r.term.Printf("process %d HTTP requests in %v\n", stats.Responses, formatSeconds(time.Since(stats.Start).Seconds()))
+		for _, line := range stats.Report()[1:] {
+			r.term.Print(line)
 		}
 
-		r.term.SetStatus(stats.Report())
-	}
-
-	r.term.Print("\n")
-	r.term.Printf("process %d HTTP requests in %v\n", stats.Responses, formatSeconds(time.Since(stats.Start).Seconds()))
-	for _, line := range stats.Report()[1:] {
-		r.term.Print(line)
+		return nil
 	}
 }
