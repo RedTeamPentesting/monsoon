@@ -48,20 +48,28 @@ func Count(rd io.Reader) (stats TextStats, err error) {
 		current, err = bufReader.ReadByte()
 		if err == io.EOF {
 			err = nil
-			return
+			break
 		}
 
 		if err != nil {
-			return
+			return TextStats{}, err
 		}
 
 		stats.Bytes++
-		if unicode.IsSpace(rune(current)) && !unicode.IsSpace(rune(previous)) {
+		if current != '\n' && unicode.IsSpace(rune(current)) && !unicode.IsSpace(rune(previous)) {
 			stats.Words++
 		}
 
 		if current == '\n' {
 			stats.Lines++
 		}
+
+		previous = current
 	}
+
+	if stats.Bytes > 0 && !unicode.IsSpace(rune(current)) {
+		stats.Words++
+	}
+
+	return stats, nil
 }
