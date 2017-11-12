@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"runtime"
 	"syscall"
 
 	"github.com/fd0/termstatus"
@@ -29,6 +30,8 @@ type GlobalOptions struct {
 	Extract        []string
 	extract        []*regexp.Regexp
 	BodyBufferSize int
+
+	PrintVersion bool
 }
 
 // Valid validates the options and returns an error if something is invalid.
@@ -69,6 +72,8 @@ func init() {
 
 	fs.StringArrayVar(&globalOptions.Extract, "extract", nil, "extract `regex` from response body (can be specified multiple times)")
 	fs.IntVar(&globalOptions.BodyBufferSize, "body-buffer-size", 5, "use `n` MiB as the buffer size for extracting strings from a response body")
+
+	fs.BoolVar(&globalOptions.PrintVersion, "version", false, "print version")
 }
 
 var cmdRoot = &cobra.Command{
@@ -93,7 +98,15 @@ type Producer interface {
 	Start(*tomb.Tomb, chan<- string, chan<- int) error
 }
 
+var version = "compiled manually"
+
 func run(opts *GlobalOptions, args []string) error {
+	if opts.PrintVersion {
+		fmt.Printf("monsoon %s\ncompiled with %v on %v\n",
+			version, runtime.Version(), runtime.GOOS)
+		return nil
+	}
+
 	if len(args) == 0 {
 		return errors.New("last argument needs to be the URL")
 	}
