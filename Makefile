@@ -1,2 +1,2 @@
 monsoon: $(wildcard *.go)
-	go build -o $@
+	go run build.go -o $@
