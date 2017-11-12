@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
 
 	"github.com/fd0/termstatus"
@@ -24,13 +25,27 @@ type GlobalOptions struct {
 	HideStatusCodes []int
 	HideHeaderSize  []string
 	HideBodySize    []string
+
+	Extract        []string
+	extract        []*regexp.Regexp
+	BodyBufferSize int
 }
 
 // Valid validates the options and returns an error if something is invalid.
-func (opts GlobalOptions) Valid() error {
+func (opts *GlobalOptions) Valid() error {
 	if opts.Range != "" && opts.Filename != "" {
 		return errors.New("only one source allowed but both range and filename specified")
 	}
+
+	for _, extract := range opts.Extract {
+		r, err := regexp.Compile(extract)
+		if err != nil {
+			return fmt.Errorf("regexp %q failed to compile: %v", extract, err)
+		}
+
+		opts.extract = append(opts.extract, r)
+	}
+
 	return nil
 }
 
@@ -51,6 +66,9 @@ func init() {
 	fs.IntSliceVar(&globalOptions.HideStatusCodes, "hide-status", nil, "hide http responses with this status `code,[code],[...]`")
 	fs.StringSliceVar(&globalOptions.HideHeaderSize, "hide-header-size", nil, "hide http responses with this header size (`size,from-to,-to`)")
 	fs.StringSliceVar(&globalOptions.HideBodySize, "hide-body-size", nil, "hide http responses with this body size (`size,from-to,-to`)")
+
+	fs.StringArrayVar(&globalOptions.Extract, "extract", nil, "extract `regex` from response body (can be specified multiple times)")
+	fs.IntVar(&globalOptions.BodyBufferSize, "body-buffer-size", 5, "use `n` MiB as the buffer size for extracting strings from a response body")
 }
 
 var cmdRoot = &cobra.Command{
@@ -153,6 +171,8 @@ func run(opts *GlobalOptions, args []string) error {
 	runnerTomb, _ := tomb.WithContext(ctx)
 	for i := 0; i < opts.Threads; i++ {
 		runner := NewRunner(runnerTomb, url, producerChannel, responseChannel)
+		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
+		runner.Extract = opts.extract
 		runnerTomb.Go(runner.Run)
 	}
 

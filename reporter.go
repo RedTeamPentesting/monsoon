@@ -84,7 +84,7 @@ func (h *HTTPStats) Report(current string) (res []string) {
 // Display shows incoming Responses.
 func (r *Reporter) Display(ch <-chan Response, countChannel <-chan int) func() error {
 	return func() error {
-		r.term.Printf("%7s %8s %8s   %s\n", "status", "header", "body", "value")
+		r.term.Printf("%7s %8s %8s   %-8s %s\n", "status", "header", "body", "value", "extract")
 
 		stats := &HTTPStats{
 			Start:       time.Now(),

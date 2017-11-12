@@ -5,6 +5,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -13,13 +14,19 @@ import (
 
 // Runner executes HTTP requests.
 type Runner struct {
-	URL    string
+	URL            string
+	BodyBufferSize int
+	Extract        []*regexp.Regexp
+
 	client *http.Client
 
 	t      *tomb.Tomb
 	input  <-chan string
 	output chan<- Response
 }
+
+// DefaultBodyBufferSize is the default size for peeking at the body to extract strings via regexp.
+const DefaultBodyBufferSize = 5 * 1024 * 1024
 
 // NewRunner returns a new runner to execute HTTP requests.
 func NewRunner(t *tomb.Tomb, url string, input <-chan string, output chan<- Response) *Runner {
@@ -42,11 +49,12 @@ func NewRunner(t *tomb.Tomb, url string, input <-chan string, output chan<- Resp
 	}
 
 	return &Runner{
-		URL:    url,
-		client: c,
-		t:      t,
-		input:  input,
-		output: output,
+		URL:            url,
+		client:         c,
+		t:              t,
+		input:          input,
+		output:         output,
+		BodyBufferSize: DefaultBodyBufferSize,
 	}
 }
 
@@ -72,9 +80,9 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 		return
 	}
 
-	response.Body, err = Count(res.Body)
+	bodyBuf := make([]byte, r.BodyBufferSize)
+	err = response.ExtractBody(res.Body, bodyBuf, r.Extract)
 	if err != nil {
-		_ = res.Body.Close()
 		response.Error = err
 		return
 	}
@@ -90,7 +98,7 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 	buf := bytes.NewBuffer(nil)
 	err = res.Header.Write(buf)
 	if err == nil {
-		response.Header, _ = Count(buf)
+		_ = response.ExtractHeader(buf)
 	}
 
 	return
