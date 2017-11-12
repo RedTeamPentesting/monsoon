@@ -26,6 +26,14 @@ type GlobalOptions struct {
 	HideBodySize    []string
 }
 
+// Valid validates the options and returns an error if something is invalid.
+func (opts GlobalOptions) Valid() error {
+	if opts.Range != "" && opts.Filename != "" {
+		return errors.New("only one source allowed but both range and filename specified")
+	}
+	return nil
+}
+
 var globalOptions GlobalOptions
 
 func init() {
@@ -74,6 +82,11 @@ func run(opts *GlobalOptions, args []string) error {
 
 	if len(args) > 1 {
 		return errors.New("more than one target URL specified")
+	}
+
+	err := opts.Valid()
+	if err != nil {
+		return err
 	}
 
 	rootCtx, cancel := context.WithCancel(context.Background())
