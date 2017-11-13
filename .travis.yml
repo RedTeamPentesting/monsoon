@@ -12,11 +12,10 @@ install:
   - go get golang.org/x/tools/cmd/goimports
 
 script:
-  - gb build
-  - gb test
-  - go run build.go -v -T
-  - diff <(GOPATH="$PWD:$PWD/vendor" goimports -d ./src) <(printf "")
-  - diff <(golint ./src/...) <(printf "")
+  - go run build.go -v
+  - go test ./...
+  - diff <(goimports -d *.go) <(printf "")
+  - diff <(golint *.go) <(printf "")
 
 after_success:
-  - diff <(golint .) <(printf "")
+  - diff <(golint *.go) <(rintf "")
