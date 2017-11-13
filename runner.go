@@ -18,7 +18,8 @@ type Runner struct {
 	BodyBufferSize int
 	Extract        []*regexp.Regexp
 
-	client *http.Client
+	Client    *http.Client
+	Transport *http.Transport
 
 	t      *tomb.Tomb
 	input  <-chan string
@@ -32,17 +33,18 @@ const DefaultBodyBufferSize = 5 * 1024 * 1024
 func NewRunner(t *tomb.Tomb, url string, input <-chan string, output chan<- Response) *Runner {
 	// for timeouts, see
 	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
+	tr := &http.Transport{
+		Dial: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).Dial,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 10 * time.Second,
+		ExpectContinueTimeout: 1 * time.Second,
+		IdleConnTimeout:       15 * time.Second,
+	}
 	c := &http.Client{
-		Transport: &http.Transport{
-			Dial: (&net.Dialer{
-				Timeout:   30 * time.Second,
-				KeepAlive: 30 * time.Second,
-			}).Dial,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ResponseHeaderTimeout: 10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
-			IdleConnTimeout:       15 * time.Second,
-		},
+		Transport: tr,
 		CheckRedirect: func(*http.Request, []*http.Request) error {
 			return http.ErrUseLastResponse
 		},
@@ -50,7 +52,8 @@ func NewRunner(t *tomb.Tomb, url string, input <-chan string, output chan<- Resp
 
 	return &Runner{
 		URL:            url,
-		client:         c,
+		Client:         c,
+		Transport:      tr,
 		t:              t,
 		input:          input,
 		output:         output,
@@ -74,7 +77,7 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 
 	req.Header.Add("Accept", "*/*")
 
-	res, err := r.client.Do(req.WithContext(ctx))
+	res, err := r.Client.Do(req.WithContext(ctx))
 	if err != nil {
 		response.Error = err
 		return

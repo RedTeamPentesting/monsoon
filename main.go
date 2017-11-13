@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"os"
@@ -32,6 +33,7 @@ type GlobalOptions struct {
 	BodyBufferSize int
 
 	PrintVersion bool
+	Insecure     bool
 }
 
 // Valid validates the options and returns an error if something is invalid.
@@ -74,6 +76,7 @@ func init() {
 	fs.IntVar(&globalOptions.BodyBufferSize, "body-buffer-size", 5, "use `n` MiB as the buffer size for extracting strings from a response body")
 
 	fs.BoolVar(&globalOptions.PrintVersion, "version", false, "print version")
+	fs.BoolVarP(&globalOptions.Insecure, "insecure", "k", false, "disable TLS certificate verification")
 }
 
 var cmdRoot = &cobra.Command{
@@ -186,6 +189,9 @@ func run(opts *GlobalOptions, args []string) error {
 		runner := NewRunner(runnerTomb, url, producerChannel, responseChannel)
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
 		runner.Extract = opts.extract
+		if opts.Insecure {
+			runner.Transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		}
 		runnerTomb.Go(runner.Run)
 	}
 
