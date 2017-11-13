@@ -33,7 +33,7 @@ compiled with go1.9.2 on linux
 Run an HTTP GET request for each entry in `raft-large-files.txt`, hide all responses with the status code 404:
 
 ```
-./monsoon -f raft-large-files.txt --hide-status 404 https://wolke.gnuzifer.de/FUZZ
+./monsoon -f raft-large-files.txt --hide-status 403,404 --insecure https://invalid.example.com/FUZZ
 
 fuzzing https://wolke.gnuzifer.de/FUZZ
  status   header     body   value    extract
@@ -50,3 +50,5 @@ fuzzing https://wolke.gnuzifer.de/FUZZ
 403: 2
 404: 618
 ```
+
+![basic demo](demos/demo1.gif)
