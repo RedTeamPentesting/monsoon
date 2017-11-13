@@ -13,7 +13,7 @@ install:
 
 script:
   - go run build.go -v
-  - go test ./...
+  - go test 
   - diff <(goimports -d *.go) <(printf "")
   - diff <(golint *.go) <(printf "")
 
