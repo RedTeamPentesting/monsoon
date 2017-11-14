@@ -18,6 +18,10 @@ type Runner struct {
 	BodyBufferSize int
 	Extract        []*regexp.Regexp
 
+	RequestMethod string
+	Body          string
+	Header        http.Header
+
 	Client    *http.Client
 	Transport *http.Transport
 
@@ -69,13 +73,25 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 		Item: item,
 	}
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequest(r.RequestMethod, url, strings.NewReader(r.Body))
 	if err != nil {
 		response.Error = err
 		return
 	}
 
-	req.Header.Add("Accept", "*/*")
+	req.Header.Set("Accept", "*/*")
+	req.Header.Set("User-Agent", "monsoon")
+
+	for k, vs := range r.Header {
+		if len(vs) == 1 {
+			req.Header.Set(k, vs[0])
+			continue
+		}
+
+		for _, v := range vs {
+			req.Header.Add(k, v)
+		}
+	}
 
 	res, err := r.Client.Do(req.WithContext(ctx))
 	if err != nil {

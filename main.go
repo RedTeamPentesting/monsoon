@@ -5,10 +5,12 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"regexp"
 	"runtime"
+	"strings"
 	"syscall"
 
 	"github.com/fd0/termstatus"
@@ -23,6 +25,11 @@ type GlobalOptions struct {
 	Filename    string
 	Threads     int
 	BufferSize  int
+
+	RequestMethod string
+	Data          string
+	Header        []string
+	header        http.Header
 
 	HideStatusCodes []int
 	HideHeaderSize  []string
@@ -51,6 +58,20 @@ func (opts *GlobalOptions) Valid() error {
 		opts.extract = append(opts.extract, r)
 	}
 
+	opts.header = http.Header{}
+	for _, s := range opts.Header {
+		data := strings.SplitN(s, ":", 2)
+		name := data[0]
+		var val string
+		if len(data) > 1 {
+			val = data[1]
+			if len(val) > 0 && val[0] == ' ' {
+				val = val[1:]
+			}
+		}
+		opts.header.Add(name, val)
+	}
+
 	return nil
 }
 
@@ -67,6 +88,10 @@ func init() {
 
 	fs.IntVarP(&globalOptions.Threads, "threads", "t", 5, "make as many as `n` parallel requests")
 	fs.IntVar(&globalOptions.BufferSize, "buffer-size", 100000, "set number of buffered items to `n`")
+
+	fs.StringVarP(&globalOptions.RequestMethod, "request", "X", "GET", "use HTTP request `method`")
+	fs.StringVarP(&globalOptions.Data, "data", "d", "", "transmit `data` in the HTTP request body")
+	fs.StringArrayVarP(&globalOptions.Header, "header", "H", nil, "add `name: value` as an HTTP request header")
 
 	fs.IntSliceVar(&globalOptions.HideStatusCodes, "hide-status", nil, "hide http responses with this status `code,[code],[...]`")
 	fs.StringSliceVar(&globalOptions.HideHeaderSize, "hide-header-size", nil, "hide http responses with this header size (`size,from-to,-to`)")
@@ -189,6 +214,9 @@ func run(opts *GlobalOptions, args []string) error {
 		runner := NewRunner(runnerTomb, url, producerChannel, responseChannel)
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
 		runner.Extract = opts.extract
+		runner.RequestMethod = opts.RequestMethod
+		runner.Header = opts.header
+		runner.Body = opts.Data
 		if opts.Insecure {
 			runner.Transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		}
