@@ -66,14 +66,21 @@ func NewRunner(t *tomb.Tomb, url string, input <-chan string, output chan<- Resp
 }
 
 func (r *Runner) request(ctx context.Context, item string) (response Response) {
-	url := strings.Replace(r.URL, "FUZZ", item, -1)
+	insertItem := func(s string) string {
+		if !strings.Contains(s, "FUZZ") {
+			return s
+		}
 
+		return strings.Replace(s, "FUZZ", item, -1)
+	}
+
+	url := insertItem(r.URL)
 	response = Response{
 		URL:  url,
 		Item: item,
 	}
 
-	req, err := http.NewRequest(r.RequestMethod, url, strings.NewReader(r.Body))
+	req, err := http.NewRequest(insertItem(r.RequestMethod), url, strings.NewReader(insertItem(r.Body)))
 	if err != nil {
 		response.Error = err
 		return
@@ -83,13 +90,14 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 	req.Header.Set("User-Agent", "monsoon")
 
 	for k, vs := range r.Header {
+		k = insertItem(k)
 		if len(vs) == 1 {
-			req.Header.Set(k, vs[0])
+			req.Header.Set(k, insertItem(vs[0]))
 			continue
 		}
 
 		for _, v := range vs {
-			req.Header.Add(k, v)
+			req.Header.Add(k, insertItem(v))
 		}
 	}
 
