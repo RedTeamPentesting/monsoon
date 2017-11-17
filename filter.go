@@ -135,7 +135,7 @@ func (f FilterSize) Reject(r Response) bool {
 		}
 	}
 
-	for _, f := range f.headerBytes {
+	for _, f := range f.bodyBytes {
 		if f(r.Body.Bytes) {
 			return true
 		}
