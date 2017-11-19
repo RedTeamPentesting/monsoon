@@ -94,8 +94,8 @@ func init() {
 	fs.StringArrayVarP(&globalOptions.Header, "header", "H", nil, "add `name: value` as an HTTP request header")
 
 	fs.IntSliceVar(&globalOptions.HideStatusCodes, "hide-status", nil, "hide http responses with this status `code,[code],[...]`")
-	fs.StringSliceVar(&globalOptions.HideHeaderSize, "hide-header-size", nil, "hide http responses with this header size (`size,from-to,-to`)")
-	fs.StringSliceVar(&globalOptions.HideBodySize, "hide-body-size", nil, "hide http responses with this body size (`size,from-to,-to`)")
+	fs.StringSliceVar(&globalOptions.HideHeaderSize, "hide-header-size", nil, "hide http responses with this header size (`size,from-to,from-,-to`)")
+	fs.StringSliceVar(&globalOptions.HideBodySize, "hide-body-size", nil, "hide http responses with this body size (`size,from-to,from-,-to`)")
 
 	fs.StringArrayVar(&globalOptions.Extract, "extract", nil, "extract `regex` from response body (can be specified multiple times)")
 	fs.IntVar(&globalOptions.BodyBufferSize, "body-buffer-size", 5, "use `n` MiB as the buffer size for extracting strings from a response body")
@@ -104,8 +104,54 @@ func init() {
 	fs.BoolVarP(&globalOptions.Insecure, "insecure", "k", false, "disable TLS certificate verification")
 }
 
+const longHelpText = `
+Monsoon is a fast HTTP enumerator which allows fine-grained control over the
+displayed HTTP responses
+
+Examples:
+
+Use the file filenames.txt as input, hide all 200 and 404 responses:
+
+    monsoon --file filenames.txt \
+      --hide-status 200,404 \
+      https://example.com/FUZZ
+
+Hide responses with body size between 100 and 200 bytes (inclusive), exactly
+533 bytes or more than 10000 bytes:
+
+    monsoon --file filenames.txt \
+      --hide-body-size 100-200,533,10000- \
+      https://example.com/FUZZ
+
+Try all strings in passwords.txt as the password for the admin user, using an
+HTTP POST request:
+
+    monsoon --file passwords.txt \
+      --request POST \
+      --data 'username=admin&password=FUZZ' \
+      --hide-status 403 \
+      https://example.com/login
+
+Run requests with a range from 100 to 500 with the request value inserted into
+the cookie "sessionid":
+
+    monsoon --range 100-500 \
+      --header 'Cookie: sessionid=FUZZ' \
+      --hide-status 500 https://example.com/login/session
+
+Request 500 session IDs and extract the cookie values (matching case insensitive):
+
+    monsoon --range 1-500 \
+      --extract '(?i)Set-Cookie: (.*)' \
+      https://example.com/login
+
+The regular expression syntax documentation can be found here:
+https://golang.org/pkg/regexp/syntax/#hdr-Syntax
+`
+
 var cmdRoot = &cobra.Command{
-	Use:           "monsoon URL",
+	Use:           "monsoon [flags] URL",
+	Long:          longHelpText,
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	RunE: func(cmd *cobra.Command, args []string) error {
