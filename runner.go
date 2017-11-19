@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"net"
 	"net/http"
@@ -122,10 +121,8 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 
 	response.HTTPResponse = res
 
-	buf := bytes.NewBuffer(nil)
-	err = res.Header.Write(buf)
 	if err == nil {
-		_ = response.ExtractHeader(buf)
+		_ = response.ExtractHeader(res, r.Extract)
 	}
 
 	return
