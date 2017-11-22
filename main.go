@@ -219,7 +219,7 @@ func run(opts *GlobalOptions, args []string) error {
 		rp := &RangeProducer{Format: opts.RangeFormat}
 		_, err := fmt.Sscanf(opts.Range, "%d-%d", &rp.First, &rp.Last)
 		if err != nil {
-			return fmt.Errorf("wrong format for range: %v", err)
+			return errors.New("wrong format for range, expected: first-last")
 		}
 		producer = rp
 	case opts.Filename != "":
