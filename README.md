@@ -30,6 +30,6 @@ compiled with go1.9.2 on linux
 
 ## Example
 
-Run an HTTP GET request for each entry in `raft-large-files.txt`, hide all responses with the status code 403 or 404:
+Run an HTTP GET request for each entry in `filenames.txt`, hide all responses with the status code 403 or 404:
 
 ![basic demo](demos/demo1.gif)
