@@ -246,7 +246,10 @@ func run(opts *GlobalOptions, args []string) error {
 	countChannel := make(chan int, 1)
 
 	prodTomb, _ := tomb.WithContext(ctx)
-	producer.Start(prodTomb, producerChannel, countChannel)
+	err = producer.Start(prodTomb, producerChannel, countChannel)
+	if err != nil {
+		return fmt.Errorf("unable to read values from file: %v", err)
+	}
 	go func() {
 		// wait until the producer is done, then close the output channel
 		<-prodTomb.Dead()
