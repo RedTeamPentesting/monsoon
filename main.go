@@ -24,7 +24,10 @@ type GlobalOptions struct {
 	RangeFormat string
 	Filename    string
 	Threads     int
-	BufferSize  int
+
+	BufferSize int
+	Skip       int
+	Limit      int
 
 	RequestMethod string
 	Data          string
@@ -88,6 +91,8 @@ func init() {
 
 	fs.IntVarP(&globalOptions.Threads, "threads", "t", 5, "make as many as `n` parallel requests")
 	fs.IntVar(&globalOptions.BufferSize, "buffer-size", 100000, "set number of buffered items to `n`")
+	fs.IntVar(&globalOptions.Skip, "skip", 0, "skip the first `n` requests")
+	fs.IntVar(&globalOptions.Limit, "limit", 0, "only run `n` requests, then exit")
 
 	fs.StringVarP(&globalOptions.RequestMethod, "request", "X", "GET", "use HTTP request `method`")
 	fs.StringVarP(&globalOptions.Data, "data", "d", "", "transmit `data` in the HTTP request body")
@@ -114,6 +119,14 @@ Use the file filenames.txt as input, hide all 200 and 404 responses:
 
     monsoon --file filenames.txt \
       --hide-status 200,404 \
+      https://example.com/FUZZ
+
+Skip the first 23 entries in filenames.txt and send at most 2000 requests:
+
+    monsoon --file filenames.txt \
+	  --skip 23 \
+	  --limit 2000 \
+      --hide-status 404 \
       https://example.com/FUZZ
 
 Hide responses with body size between 100 and 200 bytes (inclusive), exactly
@@ -237,11 +250,30 @@ func run(opts *GlobalOptions, args []string) error {
 
 	term.Printf("fuzzing %v\n\n", url)
 
-	producerChannel := make(chan string, opts.BufferSize)
-	countChannel := make(chan int, 1)
+	outputChan := make(chan string, opts.BufferSize)
+	inputChan := outputChan
+	outputCountChan := make(chan int, 1)
+	inputCountChan := outputCountChan
+
+	var valueFilters []ValueFilter
+
+	if opts.Skip > 0 {
+		valueFilters = append(valueFilters, &ValueFilterSkip{Skip: opts.Skip})
+	}
+
+	if opts.Limit > 0 {
+		valueFilters = append(valueFilters, &ValueFilterLimit{Max: opts.Limit})
+	}
+
+	for _, f := range valueFilters {
+		outputChan, outputCountChan, err = RunValueFilter(ctx, f, outputChan, outputCountChan)
+		if err != nil {
+			return err
+		}
+	}
 
 	prodTomb, _ := tomb.WithContext(ctx)
-	err = producer.Start(prodTomb, producerChannel, countChannel)
+	err = producer.Start(prodTomb, inputChan, inputCountChan)
 	if err != nil {
 		return fmt.Errorf("unable to start: %v", err)
 	}
@@ -250,7 +282,7 @@ func run(opts *GlobalOptions, args []string) error {
 
 	runnerTomb, _ := tomb.WithContext(ctx)
 	for i := 0; i < opts.Threads; i++ {
-		runner := NewRunner(runnerTomb, url, producerChannel, responseChannel)
+		runner := NewRunner(runnerTomb, url, outputChan, responseChannel)
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
 		runner.Extract = opts.extract
 		runner.RequestMethod = opts.RequestMethod
@@ -270,7 +302,7 @@ func run(opts *GlobalOptions, args []string) error {
 
 	reporter := NewReporter(term, filters)
 	displayTomb, _ := tomb.WithContext(ctx)
-	displayTomb.Go(reporter.Display(responseChannel, countChannel))
+	displayTomb.Go(reporter.Display(responseChannel, outputCountChan))
 	<-displayTomb.Dead()
 
 	return term.Finish()
