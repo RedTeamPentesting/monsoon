@@ -11,11 +11,11 @@ import (
 // Reporter prints the Responses to stdout.
 type Reporter struct {
 	term    *termstatus.Terminal
-	filters []Filter
+	filters []ResponseFilter
 }
 
 // NewReporter returns a new reporter.
-func NewReporter(term *termstatus.Terminal, filters []Filter) *Reporter {
+func NewReporter(term *termstatus.Terminal, filters []ResponseFilter) *Reporter {
 	return &Reporter{term: term, filters: filters}
 }
 

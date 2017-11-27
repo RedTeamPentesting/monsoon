@@ -36,6 +36,7 @@ func (p *RangeProducer) Start(t *tomb.Tomb, ch chan<- string, count chan<- int) 
 
 // run sends values to the channel.
 func (p *RangeProducer) run() error {
+	defer close(p.ch)
 	for i := p.First; i <= p.Last; i++ {
 		v := fmt.Sprintf(p.Format, i)
 		select {

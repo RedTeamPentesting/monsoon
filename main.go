@@ -167,11 +167,6 @@ func main() {
 	}
 }
 
-// Producer yields values for enumerating.
-type Producer interface {
-	Start(*tomb.Tomb, chan<- string, chan<- int) error
-}
-
 var version = "compiled manually"
 
 func run(opts *GlobalOptions, args []string) error {
@@ -228,7 +223,7 @@ func run(opts *GlobalOptions, args []string) error {
 		return errors.New("neither file nor range specified, nothing to do")
 	}
 
-	filters := []Filter{
+	filters := []ResponseFilter{
 		NewFilterStatusCode(opts.HideStatusCodes),
 	}
 
@@ -248,13 +243,8 @@ func run(opts *GlobalOptions, args []string) error {
 	prodTomb, _ := tomb.WithContext(ctx)
 	err = producer.Start(prodTomb, producerChannel, countChannel)
 	if err != nil {
-		return fmt.Errorf("unable to read values from file: %v", err)
+		return fmt.Errorf("unable to start: %v", err)
 	}
-	go func() {
-		// wait until the producer is done, then close the output channel
-		<-prodTomb.Dead()
-		close(producerChannel)
-	}()
 
 	responseChannel := make(chan Response)
 

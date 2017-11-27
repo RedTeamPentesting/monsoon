@@ -34,6 +34,8 @@ func (p *FileProducer) Start(t *tomb.Tomb, ch chan<- string, count chan<- int) (
 
 // run sends values to the channel.
 func (p *FileProducer) run() error {
+	defer close(p.ch)
+
 	sc := bufio.NewScanner(p.f)
 	num := 0
 	for sc.Scan() {

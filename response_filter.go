@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-// Filter decides whether to reject a Response.
-type Filter interface {
+// ResponseFilter decides whether to reject a Response.
+type ResponseFilter interface {
 	Reject(Response) bool
 }
 
