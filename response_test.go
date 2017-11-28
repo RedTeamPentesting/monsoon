@@ -108,10 +108,14 @@ func TestExtractBody(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		buf := make([]byte, 1024*1024)
 		t.Run("", func(t *testing.T) {
 			var r Response
-			err := r.ExtractBody(strings.NewReader(test.body), buf, test.targets)
+			err := r.ReadBody(strings.NewReader(test.body), 1024*1024)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			err = r.ExtractBody(test.targets)
 			if err != nil {
 				t.Fatal(err)
 			}
