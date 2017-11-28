@@ -106,8 +106,13 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 		return
 	}
 
-	bodyBuf := make([]byte, r.BodyBufferSize)
-	err = response.ExtractBody(res.Body, bodyBuf, r.Extract)
+	err = response.ReadBody(res.Body, r.BodyBufferSize)
+	if err != nil {
+		response.Error = err
+		return
+	}
+
+	err = response.ExtractBody(r.Extract)
 	if err != nil {
 		response.Error = err
 		return

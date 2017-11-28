@@ -22,6 +22,7 @@ type Response struct {
 	Extract      []string
 
 	HTTPResponse *http.Response
+	RawBody      []byte
 }
 
 func quote(strs []string) []string {
@@ -76,18 +77,24 @@ func extractRegexp(buf []byte, targets []*regexp.Regexp) (data []string) {
 	return data
 }
 
-// ExtractBody extracts data from an HTTP response body. The body is drained in
-// the process. This fills r.Body and r.Extract.
-func (r *Response) ExtractBody(body io.Reader, buf []byte, targets []*regexp.Regexp) error {
-	n, err := io.ReadFull(body, buf)
-	buf = buf[:n]
-	if err == io.EOF {
+// ReadBody reads at most maxBodySize bytes from the body and saves it to a buffer in the
+// Respons struct for later processing.
+func (r *Response) ReadBody(body io.Reader, maxBodySize int) error {
+	r.RawBody = make([]byte, maxBodySize)
+
+	n, err := io.ReadFull(body, r.RawBody)
+	r.RawBody = r.RawBody[:n]
+	if err == io.ErrUnexpectedEOF {
 		err = nil
 	}
 
-	r.Extract = append(r.Extract, extractRegexp(buf, targets)...)
-	bodyReader := io.MultiReader(bytes.NewReader(buf), body)
-	r.Body, err = Count(bodyReader)
+	return err
+}
+
+// ExtractBody extracts data from the HTTP response body.
+func (r *Response) ExtractBody(targets []*regexp.Regexp) (err error) {
+	r.Extract = append(r.Extract, extractRegexp(r.RawBody, targets)...)
+	r.Body, err = Count(bytes.NewReader(r.RawBody))
 	return err
 }
 
