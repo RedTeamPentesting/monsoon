@@ -1,6 +1,7 @@
 package main
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -142,4 +143,56 @@ func (f FilterSize) Reject(r Response) bool {
 	}
 
 	return false
+}
+
+// FilterRejectPattern filters responses based on patterns (header and body are matched).
+type FilterRejectPattern struct {
+	Pattern []*regexp.Regexp
+}
+
+// Reject decides if r is to be printed.
+func (f FilterRejectPattern) Reject(res Response) bool {
+	if res.RawHeader != nil {
+		for _, r := range f.Pattern {
+			if r.Match(res.RawHeader) {
+				return true
+			}
+		}
+	}
+
+	if res.RawBody != nil {
+		for _, r := range f.Pattern {
+			if r.Match(res.RawBody) {
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// FilterAcceptPattern filters responses based on patterns (header and body are matched).
+type FilterAcceptPattern struct {
+	Pattern []*regexp.Regexp
+}
+
+// Reject decides if r is to be printed.
+func (f FilterAcceptPattern) Reject(res Response) bool {
+	if res.RawHeader != nil {
+		for _, r := range f.Pattern {
+			if r.Match(res.RawHeader) {
+				return false
+			}
+		}
+	}
+
+	if res.RawBody != nil {
+		for _, r := range f.Pattern {
+			if r.Match(res.RawBody) {
+				return false
+			}
+		}
+	}
+
+	return true
 }

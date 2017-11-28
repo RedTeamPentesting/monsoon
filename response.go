@@ -23,6 +23,7 @@ type Response struct {
 
 	HTTPResponse *http.Response
 	RawBody      []byte
+	RawHeader    []byte
 }
 
 func quote(strs []string) []string {
@@ -106,6 +107,7 @@ func (r *Response) ExtractHeader(res *http.Response, targets []*regexp.Regexp) e
 		return err
 	}
 
+	r.RawHeader = buf.Bytes()
 	r.Header, err = Count(bytes.NewReader(buf.Bytes()))
 	r.Extract = append(r.Extract, extractRegexp(buf.Bytes(), targets)...)
 

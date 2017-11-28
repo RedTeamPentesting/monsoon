@@ -37,6 +37,10 @@ type GlobalOptions struct {
 	HideStatusCodes []int
 	HideHeaderSize  []string
 	HideBodySize    []string
+	HidePattern     []string
+	hidePattern     []*regexp.Regexp
+	ShowPattern     []string
+	showPattern     []*regexp.Regexp
 
 	Extract        []string
 	extract        []*regexp.Regexp
@@ -46,19 +50,38 @@ type GlobalOptions struct {
 	Insecure     bool
 }
 
+func compileRegexps(pattern []string) (res []*regexp.Regexp, err error) {
+	for _, pat := range pattern {
+		r, err := regexp.Compile(pat)
+		if err != nil {
+			return nil, fmt.Errorf("regexp %q failed to compile: %v", pat, err)
+		}
+
+		res = append(res, r)
+	}
+
+	return res, nil
+}
+
 // Valid validates the options and returns an error if something is invalid.
-func (opts *GlobalOptions) Valid() error {
+func (opts *GlobalOptions) Valid() (err error) {
 	if opts.Range != "" && opts.Filename != "" {
 		return errors.New("only one source allowed but both range and filename specified")
 	}
 
-	for _, extract := range opts.Extract {
-		r, err := regexp.Compile(extract)
-		if err != nil {
-			return fmt.Errorf("regexp %q failed to compile: %v", extract, err)
-		}
+	opts.extract, err = compileRegexps(opts.Extract)
+	if err != nil {
+		return err
+	}
 
-		opts.extract = append(opts.extract, r)
+	opts.hidePattern, err = compileRegexps(opts.HidePattern)
+	if err != nil {
+		return err
+	}
+
+	opts.showPattern, err = compileRegexps(opts.ShowPattern)
+	if err != nil {
+		return err
 	}
 
 	opts.header = http.Header{}
@@ -101,6 +124,8 @@ func init() {
 	fs.IntSliceVar(&globalOptions.HideStatusCodes, "hide-status", nil, "hide http responses with this status `code,[code],[...]`")
 	fs.StringSliceVar(&globalOptions.HideHeaderSize, "hide-header-size", nil, "hide http responses with this header size (`size,from-to,from-,-to`)")
 	fs.StringSliceVar(&globalOptions.HideBodySize, "hide-body-size", nil, "hide http responses with this body size (`size,from-to,from-,-to`)")
+	fs.StringArrayVar(&globalOptions.HidePattern, "hide-pattern", nil, "hide all responses containing `regex` in response header or body (can be specified multiple times)")
+	fs.StringArrayVar(&globalOptions.ShowPattern, "show-pattern", nil, "show only responses containing `regex` in response header or body (can be specified multiple times)")
 
 	fs.StringArrayVar(&globalOptions.Extract, "extract", nil, "extract `regex` from response body (can be specified multiple times)")
 	fs.IntVar(&globalOptions.BodyBufferSize, "body-buffer-size", 5, "use `n` MiB as the buffer size for extracting strings from a response body")
@@ -113,7 +138,8 @@ const longHelpText = `
 Monsoon is a fast HTTP enumerator which allows fine-grained control over the
 displayed HTTP responses
 
-Examples:
+Examples
+########
 
 Use the file filenames.txt as input, hide all 200 and 404 responses:
 
@@ -124,8 +150,8 @@ Use the file filenames.txt as input, hide all 200 and 404 responses:
 Skip the first 23 entries in filenames.txt and send at most 2000 requests:
 
     monsoon --file filenames.txt \
-	  --skip 23 \
-	  --limit 2000 \
+      --skip 23 \
+      --limit 2000 \
       --hide-status 404 \
       https://example.com/FUZZ
 
@@ -157,6 +183,33 @@ Request 500 session IDs and extract the cookie values (matching case insensitive
     monsoon --range 1-500 \
       --extract '(?i)Set-Cookie: (.*)' \
       https://example.com/login
+
+Hide responses which contain a Date header with an uneven number of seconds:
+
+    monsoon --range 1-500 \
+      --hide-pattern 'Date: .* ..:..:.[13579] GMT' \
+      https://example.com/FUZZ
+
+Only show responses which contain the pattern "The secret is: " in the response:
+
+    monsoon --range 1-500 \
+      --show-pattern 'The secret is: ' \
+      https://example.com/FUZZ
+
+
+Filter Evaluation Order
+#######################
+
+The filters are evaluated in the following order. A response is displayed if:
+
+ * The status code is not hidden (--hide-status)
+ * The header and body size are not hidden (--header-size, --body-size)
+ * The header and body does not contain a hide pattern (--hide-pattern)
+ * The header or body contain all show pattern (--show-pattern, if specified)
+
+
+References
+##########
 
 The regular expression syntax documentation can be found here:
 https://golang.org/pkg/regexp/syntax/#hdr-Syntax
@@ -246,6 +299,14 @@ func run(opts *GlobalOptions, args []string) error {
 			return err
 		}
 		filters = append(filters, f)
+	}
+
+	if len(opts.hidePattern) > 0 {
+		filters = append(filters, FilterRejectPattern{Pattern: opts.hidePattern})
+	}
+
+	if len(opts.showPattern) > 0 {
+		filters = append(filters, FilterAcceptPattern{Pattern: opts.showPattern})
 	}
 
 	term.Printf("fuzzing %v\n\n", url)
