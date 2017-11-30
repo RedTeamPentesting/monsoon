@@ -38,7 +38,7 @@ func quote(strs []string) []string {
 
 func (r Response) String() string {
 	if r.Error != nil {
-		return fmt.Sprintf("error: %v", r.Error)
+		return fmt.Sprintf("%7s %18s   %v", "error", r.Error, r.Item)
 	}
 
 	res := r.HTTPResponse
@@ -84,6 +84,10 @@ func (r *Response) ReadBody(body io.Reader, maxBodySize int) error {
 	r.RawBody = make([]byte, maxBodySize)
 
 	n, err := io.ReadFull(body, r.RawBody)
+	if n == 0 && err == io.EOF {
+		err = nil
+	}
+
 	r.RawBody = r.RawBody[:n]
 	if err == io.ErrUnexpectedEOF {
 		err = nil
