@@ -2,20 +2,66 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/fd0/termstatus"
 )
 
+// Terminal prints data with intermediate status.
+type Terminal interface {
+	Printf(msg string, data ...interface{}) error
+	Print(msg string) error
+	SetStatus([]string) error
+	Finish() error
+}
+
+// LogTerminal writes data to a second writer in addition to the terminal.
+type LogTerminal struct {
+	*termstatus.Terminal
+	w io.WriteCloser
+}
+
+// Printf prints a messsage with formatting.
+func (lt *LogTerminal) Printf(msg string, data ...interface{}) error {
+	return lt.Print(fmt.Sprintf(msg, data...))
+}
+
+// Print prints a message.
+func (lt *LogTerminal) Print(msg string) error {
+	if !strings.HasSuffix(msg, "\n") {
+		msg += "\n"
+	}
+	err := lt.Terminal.Print(msg)
+	if err != nil {
+		return err
+	}
+
+	_, err = fmt.Fprintf(lt.w, msg)
+	return err
+}
+
+// Finish closes the terminal.
+func (lt *LogTerminal) Finish() error {
+	err := lt.Terminal.Finish()
+	if err != nil {
+		_ = lt.w.Close()
+		return err
+	}
+
+	return lt.w.Close()
+}
+
 // Reporter prints the Responses to stdout.
 type Reporter struct {
-	term    *termstatus.Terminal
+	term    Terminal
 	filters []ResponseFilter
 }
 
 // NewReporter returns a new reporter.
-func NewReporter(term *termstatus.Terminal, filters []ResponseFilter) *Reporter {
+func NewReporter(term Terminal, filters []ResponseFilter) *Reporter {
 	return &Reporter{term: term, filters: filters}
 }
 
@@ -121,7 +167,7 @@ func (r *Reporter) Display(ch <-chan Response, countChannel <-chan int) func() e
 		}
 
 		r.term.Print("\n")
-		r.term.Printf("process %d HTTP requests in %v\n", stats.Responses, formatSeconds(time.Since(stats.Start).Seconds()))
+		r.term.Printf("processed %d HTTP requests in %v\n", stats.Responses, formatSeconds(time.Since(stats.Start).Seconds()))
 		for _, line := range stats.Report("")[1:] {
 			r.term.Print(line)
 		}

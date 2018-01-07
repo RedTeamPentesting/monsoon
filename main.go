@@ -23,6 +23,7 @@ type GlobalOptions struct {
 	Range       string
 	RangeFormat string
 	Filename    string
+	Logfile     string
 	Threads     int
 
 	BufferSize int
@@ -111,6 +112,7 @@ func init() {
 	fs.StringVar(&globalOptions.RangeFormat, "range-format", "%d", "set `format` for range")
 
 	fs.StringVarP(&globalOptions.Filename, "file", "f", "", "read values from `filename`")
+	fs.StringVar(&globalOptions.Logfile, "logfile", "", "write copy of printed messages to `filename`")
 
 	fs.IntVarP(&globalOptions.Threads, "threads", "t", 5, "make as many as `n` parallel requests")
 	fs.IntVar(&globalOptions.BufferSize, "buffer-size", 100000, "set number of buffered items to `n`")
@@ -258,7 +260,21 @@ func run(opts *GlobalOptions, args []string) error {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	term := termstatus.New(rootCtx, os.Stdout)
+	var term Terminal
+	if opts.Logfile != "" {
+		logfile, err := os.Create(opts.Logfile)
+		if err != nil {
+			return err
+		}
+
+		// write copies of messages to logfile
+		term = &LogTerminal{
+			Terminal: termstatus.New(rootCtx, os.Stdout),
+			w:        logfile,
+		}
+	} else {
+		term = termstatus.New(rootCtx, os.Stdout)
+	}
 
 	ctx, cancel := context.WithCancel(rootCtx)
 	defer cancel()
