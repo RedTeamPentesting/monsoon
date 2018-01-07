@@ -5,7 +5,7 @@
   branch = "master"
   name = "github.com/fd0/termstatus"
   packages = ["."]
-  revision = "da05e0f6e0b3fab26e3e346b9aeae60b5ad5801b"
+  revision = "03f9317acd3b434af9e619f9af35514d561dc875"
 
 [[projects]]
   name = "github.com/inconshreveable/mousetrap"
@@ -35,13 +35,13 @@
   branch = "master"
   name = "golang.org/x/net"
   packages = ["context"]
-  revision = "a337091b0525af65de94df2eb7e98bd9962dcbe2"
+  revision = "42fe2e1c20de1054d3d30f82cc9fb5b41e2e3767"
 
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
   packages = ["unix"]
-  revision = "4b45465282a4624cf39876842a017334f13b8aff"
+  revision = "dd9ec17814d5b1de388ebe438ec013d57d8b3779"
 
 [[projects]]
   branch = "v2"

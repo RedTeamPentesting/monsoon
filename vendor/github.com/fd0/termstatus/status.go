@@ -138,6 +138,9 @@ func (t *Terminal) runWithoutStatus(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
+		case errch := <-t.finish:
+			errch <- nil
+			return
 		case msg := <-t.msg:
 			var err error
 			if w, ok := t.dst.(stringWriter); ok {
