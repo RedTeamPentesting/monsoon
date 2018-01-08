@@ -3,9 +3,11 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -38,6 +40,14 @@ func quote(strs []string) []string {
 
 func (r Response) String() string {
 	if r.Error != nil {
+		// don't print anything if the request has been cancelled
+		if r.Error == context.Canceled {
+			return ""
+		}
+		if e, ok := r.Error.(*url.Error); ok && e.Err == context.Canceled {
+			return ""
+		}
+
 		return fmt.Sprintf("%7s %18s   %v", "error", r.Error, r.Item)
 	}
 
