@@ -343,7 +343,7 @@ func run(opts *GlobalOptions, args []string) error {
 		filters = append(filters, FilterAcceptPattern{Pattern: opts.showPattern})
 	}
 
-	term.Printf("fuzzing %v\n\n", url)
+	term.Printf("input URL %v\n\n", inputURL)
 
 	outputChan := make(chan string, opts.BufferSize)
 	inputChan := outputChan
