@@ -6,12 +6,15 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/fd0/termstatus"
 	"github.com/spf13/cobra"
@@ -24,6 +27,7 @@ type GlobalOptions struct {
 	RangeFormat string
 	Filename    string
 	Logfile     string
+	Logdir      string
 	Threads     int
 
 	BufferSize int
@@ -113,6 +117,7 @@ func init() {
 
 	fs.StringVarP(&globalOptions.Filename, "file", "f", "", "read values from `filename`")
 	fs.StringVar(&globalOptions.Logfile, "logfile", "", "write copy of printed messages to `filename`")
+	fs.StringVar(&globalOptions.Logdir, "logdir", os.Getenv("MONSOON_LOG_DIR"), "automatically log all output to files in `dir`")
 
 	fs.IntVarP(&globalOptions.Threads, "threads", "t", 5, "make as many as `n` parallel requests")
 	fs.IntVar(&globalOptions.BufferSize, "buffer-size", 100000, "set number of buffered items to `n`")
@@ -260,8 +265,23 @@ func run(opts *GlobalOptions, args []string) error {
 	rootCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	inputURL := args[0]
+
 	var term Terminal
+	if opts.Logdir != "" && opts.Logfile == "" {
+		url, err := url.Parse(inputURL)
+		if err != nil {
+			return err
+		}
+
+		ts := time.Now().Format("20060102_150405")
+		fn := fmt.Sprintf("monsoon_%s_%s.log", url.Hostname(), ts)
+		opts.Logfile = filepath.Join(opts.Logdir, fn)
+	}
+
 	if opts.Logfile != "" {
+		fmt.Printf("logfile is %s\n", opts.Logfile)
+
 		logfile, err := os.Create(opts.Logfile)
 		if err != nil {
 			return err
@@ -287,8 +307,6 @@ func run(opts *GlobalOptions, args []string) error {
 			cancel()
 		}
 	}()
-
-	url := args[0]
 
 	var producer Producer
 	switch {
@@ -359,7 +377,7 @@ func run(opts *GlobalOptions, args []string) error {
 
 	runnerTomb, _ := tomb.WithContext(ctx)
 	for i := 0; i < opts.Threads; i++ {
-		runner := NewRunner(runnerTomb, url, outputChan, responseChannel)
+		runner := NewRunner(runnerTomb, inputURL, outputChan, responseChannel)
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
 		runner.Extract = opts.extract
 		runner.RequestMethod = opts.RequestMethod
