@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 )
 
@@ -22,15 +23,17 @@ var (
 )
 
 var config = struct {
-	Name      string
-	Namespace string
-	Main      string
-	Tests     []string
+	Name       string
+	Namespace  string
+	Main       string
+	Tests      []string
+	MinVersion GoVersion
 }{
-	Name:      "monsoon",                             // name of the program executable and directory
-	Namespace: "github.com/happal/monsoon",           // subdir of GOPATH, e.g. "github.com/foo/bar"
-	Main:      "github.com/happal/monsoon",           // package name for the main package
-	Tests:     []string{"github.com/happal/monsoon"}, // tests to run
+	Name:       "monsoon",                               // name of the program executable and directory
+	Namespace:  "github.com/happal/monsoon",             // subdir of GOPATH, e.g. "github.com/foo/bar"
+	Main:       "github.com/happal/monsoon",             // package name for the main package
+	Tests:      []string{"github.com/happal/monsoon"},   // tests to run
+	MinVersion: GoVersion{Major: 1, Minor: 8, Patch: 0}, // minimum Go version supported
 }
 
 // specialDir returns true if the file begins with a special character ('.' or '_').
@@ -308,7 +311,83 @@ func (cs Constants) LDFlags() string {
 	return strings.Join(l, " ")
 }
 
+// GoVersion is the version of Go used to compile the project.
+type GoVersion struct {
+	Major int
+	Minor int
+	Patch int
+}
+
+// ParseGoVersion parses the Go version s. If s cannot be parsed, the returned GoVersion is null.
+func ParseGoVersion(s string) (v GoVersion) {
+	if !strings.HasPrefix(s, "go") {
+		return
+	}
+
+	s = s[2:]
+	data := strings.Split(s, ".")
+	if len(data) != 3 {
+		return
+	}
+
+	major, err := strconv.Atoi(data[0])
+	if err != nil {
+		return
+	}
+
+	minor, err := strconv.Atoi(data[1])
+	if err != nil {
+		return
+	}
+
+	patch, err := strconv.Atoi(data[2])
+	if err != nil {
+		return
+	}
+
+	v = GoVersion{
+		Major: major,
+		Minor: minor,
+		Patch: patch,
+	}
+	return
+}
+
+// AtLeast returns true if v is at least as new as other. If v is empty, true is returned.
+func (v GoVersion) AtLeast(other GoVersion) bool {
+	var empty GoVersion
+
+	// the empty version satisfies all versions
+	if v == empty {
+		return true
+	}
+
+	if v.Major < other.Major {
+		return false
+	}
+
+	if v.Minor < other.Minor {
+		return false
+	}
+
+	if v.Patch < other.Patch {
+		return false
+	}
+
+	return true
+}
+
+func (v GoVersion) String() string {
+	return fmt.Sprintf("Go %d.%d.%d", v.Major, v.Minor, v.Patch)
+}
+
 func main() {
+	ver := ParseGoVersion(runtime.Version())
+	if !ver.AtLeast(config.MinVersion) {
+		fmt.Fprintf(os.Stderr, "%s detected, this program requires at least %s\n", ver, config.MinVersion)
+		os.Exit(1)
+	}
+
 	buildTags := []string{}
 
 	skipNext := false
