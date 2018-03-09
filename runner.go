@@ -85,6 +85,12 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 		return
 	}
 
+	if req.URL.User != nil {
+		u := req.URL.User.Username()
+		p, _ := req.URL.User.Password()
+		req.SetBasicAuth(u, p)
+	}
+
 	req.Header.Set("Accept", "*/*")
 	req.Header.Set("User-Agent", "monsoon")
 
