@@ -287,6 +287,8 @@ func run(opts *GlobalOptions, args []string) error {
 			return err
 		}
 
+		fmt.Fprintln(logfile, recreateCommandline(os.Args))
+
 		// write copies of messages to logfile
 		term = &LogTerminal{
 			Terminal: termstatus.New(rootCtx, os.Stdout),
