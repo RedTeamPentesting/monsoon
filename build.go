@@ -50,7 +50,7 @@ var config = Config{
 	Namespace:  "github.com/happal/monsoon",               // subdir of GOPATH this repo/checkout needs to be at, e.g. "github.com/foo/bar"
 	Main:       "github.com/happal/monsoon",               // package path for the main package to build
 	Tests:      []string{"github.com/happal/monsoon/..."}, // tests to run
-	MinVersion: GoVersion{1, 8, 0},                        // minimum Go version needed for this program
+	MinVersion: GoVersion{1, 7, 0},                        // minimum Go version needed for this program
 }
 
 // Config configures the build.

@@ -275,7 +275,7 @@ func run(opts *GlobalOptions, args []string) error {
 		}
 
 		ts := time.Now().Format("20060102_150405")
-		fn := fmt.Sprintf("monsoon_%s_%s.log", url.Hostname(), ts)
+		fn := fmt.Sprintf("monsoon_%s_%s.log", url.Host, ts)
 		opts.Logfile = filepath.Join(opts.Logdir, fn)
 	}
 
