@@ -34,10 +34,11 @@ type GlobalOptions struct {
 	Skip       int
 	Limit      int
 
-	RequestMethod string
-	Data          string
-	Header        []string
-	header        http.Header
+	RequestMethod  string
+	Data           string
+	Header         []string
+	header         http.Header
+	FollowRedirect int
 
 	HideStatusCodes []int
 	HideHeaderSize  []string
@@ -127,6 +128,7 @@ func init() {
 	fs.StringVarP(&globalOptions.RequestMethod, "request", "X", "GET", "use HTTP request `method`")
 	fs.StringVarP(&globalOptions.Data, "data", "d", "", "transmit `data` in the HTTP request body")
 	fs.StringArrayVarP(&globalOptions.Header, "header", "H", nil, "add `name: value` as an HTTP request header")
+	fs.IntVar(&globalOptions.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
 
 	fs.IntSliceVar(&globalOptions.HideStatusCodes, "hide-status", nil, "hide http responses with this status `code,[code],[...]`")
 	fs.StringSliceVar(&globalOptions.HideHeaderSize, "hide-header-size", nil, "hide http responses with this header size (`size,from-to,from-,-to`)")
@@ -385,6 +387,12 @@ func run(opts *GlobalOptions, args []string) error {
 		runner.RequestMethod = opts.RequestMethod
 		runner.Header = opts.header
 		runner.Body = opts.Data
+		runner.Client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			if len(via) <= opts.FollowRedirect {
+				return nil
+			}
+			return http.ErrUseLastResponse
+		}
 		if opts.Insecure {
 			runner.Transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		}
