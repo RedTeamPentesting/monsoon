@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -299,6 +300,10 @@ func run(opts *GlobalOptions, args []string) error {
 	} else {
 		term = termstatus.New(rootCtx, os.Stdout)
 	}
+
+	// make sure error messages logged via the log package are printed nicely
+	w := NewStdioWrapper(term)
+	log.SetOutput(w.Stderr())
 
 	ctx, cancel := context.WithCancel(rootCtx)
 	defer cancel()
