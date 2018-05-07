@@ -36,12 +36,12 @@ func (w *StdioWrapper) Stderr() io.WriteCloser {
 
 type lineWriter struct {
 	buf   *bytes.Buffer
-	print func(string) error
+	print func(string)
 }
 
 var _ io.WriteCloser = &lineWriter{}
 
-func newLineWriter(print func(string) error) *lineWriter {
+func newLineWriter(print func(string)) *lineWriter {
 	return &lineWriter{buf: bytes.NewBuffer(nil), print: print}
 }
 

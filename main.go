@@ -282,6 +282,8 @@ func run(opts *GlobalOptions, args []string) error {
 		opts.Logfile = filepath.Join(opts.Logdir, fn)
 	}
 
+	termTomb, _ := tomb.WithContext(rootCtx)
+
 	if opts.Logfile != "" {
 		fmt.Printf("logfile is %s\n", opts.Logfile)
 
@@ -294,12 +296,17 @@ func run(opts *GlobalOptions, args []string) error {
 
 		// write copies of messages to logfile
 		term = &LogTerminal{
-			Terminal: termstatus.New(rootCtx, os.Stdout),
+			Terminal: termstatus.New(os.Stdout, os.Stderr, false),
 			w:        logfile,
 		}
 	} else {
-		term = termstatus.New(rootCtx, os.Stdout)
+		term = termstatus.New(os.Stdout, os.Stderr, false)
 	}
+
+	termTomb.Go(func() error {
+		term.Run(termTomb.Context(rootCtx))
+		return nil
+	})
 
 	// make sure error messages logged via the log package are printed nicely
 	w := NewStdioWrapper(term)
@@ -415,5 +422,6 @@ func run(opts *GlobalOptions, args []string) error {
 	displayTomb.Go(reporter.Display(responseChannel, outputCountChan))
 	<-displayTomb.Dead()
 
-	return term.Finish()
+	termTomb.Kill(nil)
+	return termTomb.Wait()
 }

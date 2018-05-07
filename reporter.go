@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"sort"
@@ -12,10 +13,10 @@ import (
 
 // Terminal prints data with intermediate status.
 type Terminal interface {
-	Printf(msg string, data ...interface{}) error
-	Print(msg string) error
-	SetStatus([]string) error
-	Finish() error
+	Printf(msg string, data ...interface{})
+	Print(msg string)
+	SetStatus([]string)
+	Run(context.Context)
 }
 
 // LogTerminal writes data to a second writer in addition to the terminal.
@@ -25,33 +26,17 @@ type LogTerminal struct {
 }
 
 // Printf prints a messsage with formatting.
-func (lt *LogTerminal) Printf(msg string, data ...interface{}) error {
-	return lt.Print(fmt.Sprintf(msg, data...))
+func (lt *LogTerminal) Printf(msg string, data ...interface{}) {
+	lt.Print(fmt.Sprintf(msg, data...))
 }
 
 // Print prints a message.
-func (lt *LogTerminal) Print(msg string) error {
+func (lt *LogTerminal) Print(msg string) {
 	if !strings.HasSuffix(msg, "\n") {
 		msg += "\n"
 	}
-	err := lt.Terminal.Print(msg)
-	if err != nil {
-		return err
-	}
-
-	_, err = fmt.Fprintf(lt.w, msg)
-	return err
-}
-
-// Finish closes the terminal.
-func (lt *LogTerminal) Finish() error {
-	err := lt.Terminal.Finish()
-	if err != nil {
-		_ = lt.w.Close()
-		return err
-	}
-
-	return lt.w.Close()
+	lt.Terminal.Print(msg)
+	fmt.Fprintf(lt.w, msg)
 }
 
 // Reporter prints the Responses to stdout.
