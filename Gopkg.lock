@@ -2,10 +2,10 @@
 
 
 [[projects]]
-  branch = "master"
   name = "github.com/fd0/termstatus"
   packages = ["."]
-  revision = "03f9317acd3b434af9e619f9af35514d561dc875"
+  revision = "b33346aff828e5e94af2dbbc1a85d57ad0310f86"
+  version = "v1.0.0"
 
 [[projects]]
   name = "github.com/inconshreveable/mousetrap"

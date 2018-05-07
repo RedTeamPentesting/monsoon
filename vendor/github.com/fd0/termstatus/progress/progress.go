@@ -10,8 +10,8 @@ import (
 // displaying a set of status lines that are updated whenever new information
 // is avaliable.
 type Terminal interface {
-	Printf(string, ...interface{}) error
-	SetStatus([]string) error
+	Printf(string, ...interface{})
+	SetStatus([]string)
 }
 
 type progressReader struct {

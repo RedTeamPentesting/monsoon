@@ -3,27 +3,44 @@
 package termstatus
 
 import (
-	"errors"
+	"io"
 	"syscall"
 	"unsafe"
 )
 
-// clearLines clears the current line and n lines above it.
-func clearLines(wr TerminalWriter) func(TerminalWriter, int) error {
+// clearCurrentLine removes all characters from the current line and resets the
+// cursor position to the first column.
+func clearCurrentLine(wr io.Writer, fd uintptr) func(io.Writer, uintptr) {
 	// easy case, the terminal is cmd or psh, without redirection
-	if isWindowsTerminal(wr.Fd()) {
-		return windowsClearLines
+	if isWindowsTerminal(fd) {
+		return windowsClearCurrentLine
 	}
 
 	// check if the output file type is a pipe (0x0003)
-	if getFileType(wr.Fd()) != fileTypePipe {
-		return func(TerminalWriter, int) error {
-			return errors.New("update states not possible on this terminal")
-		}
+	if getFileType(fd) != fileTypePipe {
+		// return empty func, update state is not possible on this terminal
+		return func(io.Writer, uintptr) {}
 	}
 
 	// assume we're running in mintty/cygwin
-	return posixClearLines
+	return posixClearCurrentLine
+}
+
+// moveCursorUp moves the cursor to the line n lines above the current one.
+func moveCursorUp(wr io.Writer, fd uintptr) func(io.Writer, uintptr, int) {
+	// easy case, the terminal is cmd or psh, without redirection
+	if isWindowsTerminal(fd) {
+		return windowsMoveCursorUp
+	}
+
+	// check if the output file type is a pipe (0x0003)
+	if getFileType(fd) != fileTypePipe {
+		// return empty func, update state is not possible on this terminal
+		return func(io.Writer, uintptr, int) {}
+	}
+
+	// assume we're running in mintty/cygwin
+	return posixMoveCursorUp
 }
 
 var kernel32 = syscall.NewLazyDLL("kernel32.dll")
@@ -61,36 +78,39 @@ type (
 	}
 )
 
-// windowsClearLines clears the current line and n lines above it.
-func windowsClearLines(wr TerminalWriter, n int) error {
+// windowsClearCurrentLine removes all characters from the current line and
+// resets the cursor position to the first column.
+func windowsClearCurrentLine(wr io.Writer, fd uintptr) {
 	var info consoleScreenBufferInfo
-	procGetConsoleScreenBufferInfo.Call(wr.Fd(), uintptr(unsafe.Pointer(&info)))
+	procGetConsoleScreenBufferInfo.Call(fd, uintptr(unsafe.Pointer(&info)))
 
-	for i := 0; i <= n; i++ {
-		// clear the line
-		cursor := coord{
-			x: info.window.left,
-			y: info.cursorPosition.y - short(i),
-		}
-		var count, w dword
-		count = dword(info.size.x)
-		procFillConsoleOutputAttribute.Call(wr.Fd(), uintptr(info.attributes), uintptr(count), *(*uintptr)(unsafe.Pointer(&cursor)), uintptr(unsafe.Pointer(&w)))
-		procFillConsoleOutputCharacter.Call(wr.Fd(), uintptr(' '), uintptr(count), *(*uintptr)(unsafe.Pointer(&cursor)), uintptr(unsafe.Pointer(&w)))
+	// clear the line
+	cursor := coord{
+		x: info.window.left,
+		y: info.cursorPosition.y,
 	}
+	var count, w dword
+	count = dword(info.size.x)
+	procFillConsoleOutputAttribute.Call(fd, uintptr(info.attributes), uintptr(count), *(*uintptr)(unsafe.Pointer(&cursor)), uintptr(unsafe.Pointer(&w)))
+	procFillConsoleOutputCharacter.Call(fd, uintptr(' '), uintptr(count), *(*uintptr)(unsafe.Pointer(&cursor)), uintptr(unsafe.Pointer(&w)))
+}
+
+// windowsMoveCursorUp moves the cursor to the line n lines above the current one.
+func windowsMoveCursorUp(wr io.Writer, fd uintptr, n int) {
+	var info consoleScreenBufferInfo
+	procGetConsoleScreenBufferInfo.Call(fd, uintptr(unsafe.Pointer(&info)))
 
 	// move cursor up by n lines and to the first column
 	info.cursorPosition.y -= short(n)
 	info.cursorPosition.x = 0
-	procSetConsoleCursorPosition.Call(wr.Fd(), uintptr(*(*int32)(unsafe.Pointer(&info.cursorPosition))))
-
-	return nil
+	procSetConsoleCursorPosition.Call(fd, uintptr(*(*int32)(unsafe.Pointer(&info.cursorPosition))))
 }
 
 // getTermSize returns the dimensions of the given terminal.
 // the code is taken from "golang.org/x/crypto/ssh/terminal"
-func getTermSize(wr TerminalWriter) (width, height int, err error) {
+func getTermSize(fd uintptr) (width, height int, err error) {
 	var info consoleScreenBufferInfo
-	_, _, e := syscall.Syscall(procGetConsoleScreenBufferInfo.Addr(), 2, uintptr(wr.Fd()), uintptr(unsafe.Pointer(&info)), 0)
+	_, _, e := syscall.Syscall(procGetConsoleScreenBufferInfo.Addr(), 2, fd, uintptr(unsafe.Pointer(&info)), 0)
 	if e != 0 {
 		return 0, 0, error(e)
 	}
@@ -118,14 +138,14 @@ func getFileType(fd uintptr) int {
 
 // canUpdateStatus returns true if status lines can be printed, the process
 // output is not redirected to a file or pipe.
-func canUpdateStatus(wr TerminalWriter) bool {
+func canUpdateStatus(fd uintptr) bool {
 	// easy case, the terminal is cmd or psh, without redirection
-	if isWindowsTerminal(wr.Fd()) {
+	if isWindowsTerminal(fd) {
 		return true
 	}
 
 	// check if the output file type is a pipe (0x0003)
-	if getFileType(wr.Fd()) != fileTypePipe {
+	if getFileType(fd) != fileTypePipe {
 		return false
 	}
 

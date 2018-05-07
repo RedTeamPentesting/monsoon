@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"sync"
 
 	"github.com/fd0/termstatus"
 	"github.com/fd0/termstatus/progress"
@@ -13,18 +14,21 @@ import (
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
-	t := termstatus.New(ctx, os.Stdout)
+	t := termstatus.New(os.Stdout, os.Stderr, false)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		t.Run(ctx)
+		wg.Done()
+	}()
 
 	rd := progress.Reader(os.Stdin, t)
 
 	io.Copy(ioutil.Discard, rd)
 
-	err := t.Finish()
-	if err != nil {
-		panic(err)
-	}
-
 	fmt.Printf("done\n")
+	cancel()
+	wg.Wait()
 }
