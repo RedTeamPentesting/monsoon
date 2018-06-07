@@ -8,6 +8,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
@@ -88,6 +90,24 @@ func extractRegexp(buf []byte, targets []*regexp.Regexp) (data []string) {
 	return data
 }
 
+func extractCommand(buf []byte, cmds [][]string) (data []string, err error) {
+	for _, command := range cmds {
+		if len(command) < 1 {
+			panic("command is invalid")
+		}
+		cmd := exec.Command(command[0], command[1:]...)
+		cmd.Stdin = bytes.NewReader(buf)
+		cmd.Stderr = os.Stderr
+
+		buf, err := cmd.Output()
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, string(buf))
+	}
+	return data, nil
+}
+
 // ReadBody reads at most maxBodySize bytes from the body and saves it to a buffer in the
 // Respons struct for later processing.
 func (r *Response) ReadBody(body io.Reader, maxBodySize int) error {
@@ -107,8 +127,13 @@ func (r *Response) ReadBody(body io.Reader, maxBodySize int) error {
 }
 
 // ExtractBody extracts data from the HTTP response body.
-func (r *Response) ExtractBody(targets []*regexp.Regexp) (err error) {
+func (r *Response) ExtractBody(targets []*regexp.Regexp, cmds [][]string) (err error) {
 	r.Extract = append(r.Extract, extractRegexp(r.RawBody, targets)...)
+	data, err := extractCommand(r.RawBody, cmds)
+	if err != nil {
+		return err
+	}
+	r.Extract = append(r.Extract, data...)
 	r.Body, err = Count(bytes.NewReader(r.RawBody))
 	return err
 }

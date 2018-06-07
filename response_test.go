@@ -115,7 +115,7 @@ func TestExtractBody(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = r.ExtractBody(test.targets)
+			err = r.ExtractBody(test.targets, nil)
 			if err != nil {
 				t.Fatal(err)
 			}

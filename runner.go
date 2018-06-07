@@ -16,6 +16,7 @@ type Runner struct {
 	URL            string
 	BodyBufferSize int
 	Extract        []*regexp.Regexp
+	ExtractPipe    [][]string
 
 	RequestMethod string
 	Body          string
@@ -118,7 +119,7 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 		return
 	}
 
-	err = response.ExtractBody(r.Extract)
+	err = response.ExtractBody(r.Extract, r.ExtractPipe)
 	if err != nil {
 		response.Error = err
 		return

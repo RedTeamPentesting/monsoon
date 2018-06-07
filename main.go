@@ -51,6 +51,8 @@ type GlobalOptions struct {
 
 	Extract        []string
 	extract        []*regexp.Regexp
+	ExtractPipe    []string
+	extractPipe    [][]string
 	BodyBufferSize int
 
 	PrintVersion bool
@@ -70,6 +72,21 @@ func compileRegexps(pattern []string) (res []*regexp.Regexp, err error) {
 	return res, nil
 }
 
+func splitShell(cmds []string) ([][]string, error) {
+	var data [][]string
+	for _, cmd := range cmds {
+		args, err := SplitShellStrings(cmd)
+		if err != nil {
+			return nil, err
+		}
+		if len(args) < 1 {
+			return nil, fmt.Errorf("invalid command: %q", cmd)
+		}
+		data = append(data, args)
+	}
+	return data, nil
+}
+
 // Valid validates the options and returns an error if something is invalid.
 func (opts *GlobalOptions) Valid() (err error) {
 	if opts.Range != "" && opts.Filename != "" {
@@ -77,6 +94,11 @@ func (opts *GlobalOptions) Valid() (err error) {
 	}
 
 	opts.extract, err = compileRegexps(opts.Extract)
+	if err != nil {
+		return err
+	}
+
+	opts.extractPipe, err = splitShell(opts.ExtractPipe)
 	if err != nil {
 		return err
 	}
@@ -138,6 +160,7 @@ func init() {
 	fs.StringArrayVar(&globalOptions.ShowPattern, "show-pattern", nil, "show only responses containing `regex` in response header or body (can be specified multiple times)")
 
 	fs.StringArrayVar(&globalOptions.Extract, "extract", nil, "extract `regex` from response body (can be specified multiple times)")
+	fs.StringArrayVar(&globalOptions.ExtractPipe, "extract-pipe", nil, "pipe response body to `cmd` to extract data (can be specified multiple times)")
 	fs.IntVar(&globalOptions.BodyBufferSize, "body-buffer-size", 5, "use `n` MiB as the buffer size for extracting strings from a response body")
 
 	fs.BoolVar(&globalOptions.PrintVersion, "version", false, "print version")
@@ -396,6 +419,7 @@ func run(opts *GlobalOptions, args []string) error {
 		runner := NewRunner(runnerTomb, inputURL, outputChan, responseChannel)
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
 		runner.Extract = opts.extract
+		runner.ExtractPipe = opts.extractPipe
 		runner.RequestMethod = opts.RequestMethod
 		runner.Header = opts.header
 		runner.Body = opts.Data
