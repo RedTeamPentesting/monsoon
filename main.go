@@ -150,7 +150,7 @@ func init() {
 
 	fs.StringVarP(&globalOptions.RequestMethod, "request", "X", "GET", "use HTTP request `method`")
 	fs.StringVarP(&globalOptions.Data, "data", "d", "", "transmit `data` in the HTTP request body")
-	fs.StringArrayVarP(&globalOptions.Header, "header", "H", nil, "add `name: value` as an HTTP request header")
+	fs.StringArrayVarP(&globalOptions.Header, "header", "H", nil, "add `\"name: value\"` as an HTTP request header")
 	fs.IntVar(&globalOptions.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
 
 	fs.IntSliceVar(&globalOptions.HideStatusCodes, "hide-status", nil, "hide http responses with this status `code,[code],[...]`")
