@@ -165,6 +165,9 @@ func init() {
 
 	fs.BoolVar(&globalOptions.PrintVersion, "version", false, "print version")
 	fs.BoolVarP(&globalOptions.Insecure, "insecure", "k", false, "disable TLS certificate verification")
+
+	// configure cobra help texts
+	setupHelp(cmdRoot)
 }
 
 const longHelpText = `
@@ -261,7 +264,7 @@ var cmdRoot = &cobra.Command{
 func main() {
 	err := cmdRoot.Execute()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%+v\n", err)
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 }
