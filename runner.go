@@ -18,9 +18,9 @@ type Runner struct {
 	Extract        []*regexp.Regexp
 	ExtractPipe    [][]string
 
-	RequestMethod string
-	Body          string
-	Header        http.Header
+	Method string
+	Body   string
+	Header http.Header
 
 	Client    *http.Client
 	Transport *http.Transport
@@ -80,7 +80,7 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 		Item: item,
 	}
 
-	req, err := http.NewRequest(insertItem(r.RequestMethod), url, strings.NewReader(insertItem(r.Body)))
+	req, err := http.NewRequest(insertItem(r.Method), url, strings.NewReader(insertItem(r.Body)))
 	if err != nil {
 		response.Error = err
 		return

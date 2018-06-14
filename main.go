@@ -35,7 +35,7 @@ type GlobalOptions struct {
 	Skip       int
 	Limit      int
 
-	RequestMethod  string
+	Method         string
 	Data           string
 	Header         []string
 	header         http.Header
@@ -148,7 +148,10 @@ func init() {
 	fs.IntVar(&globalOptions.Skip, "skip", 0, "skip the first `n` requests")
 	fs.IntVar(&globalOptions.Limit, "limit", 0, "only run `n` requests, then exit")
 
-	fs.StringVarP(&globalOptions.RequestMethod, "request", "X", "GET", "use HTTP request `method`")
+	fs.StringVar(&globalOptions.Method, "request", "GET", "use HTTP request `method`")
+	fs.MarkDeprecated("request", "use --method")
+	fs.StringVarP(&globalOptions.Method, "method", "X", "GET", "use HTTP request `method`")
+
 	fs.StringVarP(&globalOptions.Data, "data", "d", "", "transmit `data` in the HTTP request body")
 	fs.StringArrayVarP(&globalOptions.Header, "header", "H", nil, "add `\"name: value\"` as an HTTP request header")
 	fs.IntVar(&globalOptions.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
@@ -202,7 +205,7 @@ Try all strings in passwords.txt as the password for the admin user, using an
 HTTP POST request:
 
     monsoon --file passwords.txt \
-      --request POST \
+      --method POST \
       --data 'username=admin&password=FUZZ' \
       --hide-status 403 \
       https://example.com/login
@@ -423,7 +426,7 @@ func run(opts *GlobalOptions, args []string) error {
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
 		runner.Extract = opts.extract
 		runner.ExtractPipe = opts.extractPipe
-		runner.RequestMethod = opts.RequestMethod
+		runner.Method = opts.Method
 		runner.Header = opts.header
 		runner.Body = opts.Data
 		runner.Client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
