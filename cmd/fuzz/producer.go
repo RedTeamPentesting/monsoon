@@ -1,4 +1,4 @@
-package main
+package fuzz
 
 import (
 	tomb "gopkg.in/tomb.v2"
