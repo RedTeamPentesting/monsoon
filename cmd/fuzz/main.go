@@ -273,6 +273,21 @@ func run(opts *RunOptions, args []string) error {
 
 	inputURL := args[0]
 
+	var producer Producer
+	switch {
+	case opts.Range != "":
+		rp := &RangeProducer{Format: opts.RangeFormat}
+		_, err := fmt.Sscanf(opts.Range, "%d-%d", &rp.First, &rp.Last)
+		if err != nil {
+			return errors.New("wrong format for range, expected: first-last")
+		}
+		producer = rp
+	case opts.Filename != "":
+		producer = &FileProducer{Filename: opts.Filename}
+	default:
+		return errors.New("neither file nor range specified, nothing to do")
+	}
+
 	var term Terminal
 	if opts.Logdir != "" && opts.Logfile == "" {
 		url, err := url.Parse(inputURL)
@@ -326,21 +341,6 @@ func run(opts *RunOptions, args []string) error {
 			cancel()
 		}
 	}()
-
-	var producer Producer
-	switch {
-	case opts.Range != "":
-		rp := &RangeProducer{Format: opts.RangeFormat}
-		_, err := fmt.Sscanf(opts.Range, "%d-%d", &rp.First, &rp.Last)
-		if err != nil {
-			return errors.New("wrong format for range, expected: first-last")
-		}
-		producer = rp
-	case opts.Filename != "":
-		producer = &FileProducer{Filename: opts.Filename}
-	default:
-		return errors.New("neither file nor range specified, nothing to do")
-	}
 
 	filters := []ResponseFilter{
 		NewFilterStatusCode(opts.HideStatusCodes),
