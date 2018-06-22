@@ -17,16 +17,40 @@ Debian, install the package `golang-go`
 Clone the repository, then from within the checkout run the following command:
 
 ```
-go run build.go
+$ go run build.go
 ```
 
-Afterwards you'll find a `monsoon` binary in the current directory. You can test it by running `./monsoon --version`, which will print the version:
+Afterwards you'll find a `monsoon` binary in the current directory. You can test it by running `./monsoon version`, which will print the version:
 
 ```
-./monsoon --version
+$ ./monsoon version
 monsoon v0.1.0-3-g4a39f0e
 compiled with go1.9.2 on linux
 ```
+
+The program has several subcommands, the most important one is `fuzz` which
+contains the main functionality. You can display a list of commands as follows:
+
+```
+$ ./monsoon -h
+
+Usage:
+  monsoon command [options]
+
+Available Commands:
+  fuzz        Execute and filter HTTP requests
+  help        Help about any command
+  version     Display version information
+
+Options:
+  -h, --help   help for monsoon
+
+Use "monsoon [command] --help" for more information about a command.
+```
+
+For each command, calling it with `--help` (e.g. `monsoon fuzz --help` will
+display a description of all the options, and calling `monsoon help fuzz`
+also shows an extensive list of examples.
 
 ## Example
 
