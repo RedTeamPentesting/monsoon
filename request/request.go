@@ -2,10 +2,15 @@
 package request
 
 import (
+	"bufio"
 	"bytes"
+	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"net/http"
 	"net/textproto"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -111,6 +116,8 @@ type Request struct {
 	Header Header
 	Body   string
 
+	TemplateFile string
+
 	ForceChunkedEncoding bool
 }
 
@@ -129,11 +136,13 @@ func New() *Request {
 // AddFlags adds flags for all options of a request to fs.
 func (r *Request) AddFlags(fs *pflag.FlagSet) {
 	// basics
-	fs.StringVar(&r.Method, "request", "GET", "use HTTP request `method`")
+	fs.StringVar(&r.Method, "request", "", "use HTTP request `method`")
 	fs.MarkDeprecated("request", "use --method")
-	fs.StringVarP(&r.Method, "method", "X", "GET", "use HTTP request `method`")
-	fs.StringVarP(&r.Body, "data", "d", "", "transmit `data` in the HTTP request body")
+	fs.StringVarP(&r.Method, "method", "X", "", "use HTTP request `method`")
 	fs.VarP(r.Header, "header", "H", "add `\"name: value\"` as an HTTP request header")
+	fs.StringVarP(&r.Body, "data", "d", "", "transmit `data` in the HTTP request body")
+
+	fs.StringVar(&r.TemplateFile, "template-file", "", "read HTTP request from `file`")
 
 	// configure request
 	fs.BoolVar(&r.ForceChunkedEncoding, "force-chunked-encoding", false, `do not set the Content-Length HTTP header and use chunked encoding`)
@@ -154,11 +163,93 @@ func (r *Request) Apply(template, value string) (*http.Request, error) {
 		return replaceTemplate(s, template, value)
 	}
 
-	url := insertValue(r.URL)
+	targetURL := insertValue(r.URL)
 	body := []byte(insertValue(r.Body))
-	req, err := http.NewRequest(insertValue(r.Method), url, bytes.NewReader(body))
-	if err != nil {
-		return nil, err
+
+	var req *http.Request
+
+	// if a template file is given, read the HTTP request from it as a basis
+	if r.TemplateFile != "" {
+		buf, err := ioutil.ReadFile(r.TemplateFile)
+		if err != nil {
+			return nil, err
+		}
+
+		// replace the placeholder in the file we just read
+		buf = bytes.Replace(buf, []byte(template), []byte(value), -1)
+
+		rd := bufio.NewReader(bytes.NewReader(buf))
+		req, err = http.ReadRequest(rd)
+		if err != nil {
+			return nil, fmt.Errorf("error reading HTTP request from %v: %v", r.TemplateFile, err)
+		}
+
+		// append the rest of the file to the body
+		rest, err := ioutil.ReadAll(rd)
+		if err == io.EOF {
+			// if nothing further can be read, that's fine with us
+			err = nil
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		// rebuild body
+		origBody, err := ioutil.ReadAll(req.Body)
+		if err == io.ErrUnexpectedEOF {
+			err = nil
+		}
+		if err != nil {
+			return nil, err
+		}
+
+		origBody = append(origBody, rest...)
+		req.Body = ioutil.NopCloser(bytes.NewReader(origBody))
+		req.ContentLength = int64(len(origBody))
+
+		// fill some details from the URL
+		u, err := url.Parse(targetURL)
+		if err != nil {
+			return nil, err
+		}
+
+		// check that the URL does not contain too much information, only host,
+		// port, and scheme are considered
+		if u.Path != "" && u.Path != "/" {
+			return nil, errors.New("URL must not contain a path, it's taken from the template file")
+		}
+
+		if u.RawQuery != "" {
+			return nil, errors.New("URL must not contain a query string, it's taken from the template file")
+		}
+
+		req.URL.Scheme = u.Scheme
+		req.URL.Host = u.Host
+
+		if u.User != nil {
+			req.URL.User = u.User
+		}
+
+		if len(body) > 0 {
+			// use new body and set content length
+			req.Body = ioutil.NopCloser(bytes.NewReader(body))
+			req.ContentLength = int64(len(body))
+		} else {
+			// make sure the body is complete
+		}
+
+		if r.Method != "" {
+			req.Method = insertValue(r.Method)
+		}
+
+	} else {
+		var err error
+
+		// create new request from scratch
+		req, err = http.NewRequest(insertValue(r.Method), targetURL, bytes.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if r.ForceChunkedEncoding {
@@ -178,7 +269,14 @@ func (r *Request) Apply(template, value string) (*http.Request, error) {
 
 	// apply template headers
 	for k, vs := range r.Header {
-		// remove default value if present
+		// don't set the header if it is already set in the request (e.g. when
+		// reading the request from a template file) and the value is the
+		// default one
+		if _, ok := req.Header[k]; ok && headerDefaultValue(r.Header, k) {
+			continue
+		}
+
+		// remove value if present
 		req.Header.Del(k)
 
 		// add values
