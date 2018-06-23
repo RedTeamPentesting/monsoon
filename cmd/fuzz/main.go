@@ -12,7 +12,6 @@ import (
 	"os/signal"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"syscall"
 	"time"
 
@@ -35,10 +34,7 @@ type RunOptions struct {
 	Skip       int
 	Limit      int
 
-	Method         string
-	Data           string
-	Header         []string
-	header         http.Header
+	Request        *request.Request // the template for the HTTP request
 	FollowRedirect int
 
 	HideStatusCodes []int
@@ -114,20 +110,6 @@ func (opts *RunOptions) Valid() (err error) {
 		return err
 	}
 
-	opts.header = http.Header{}
-	for _, s := range opts.Header {
-		data := strings.SplitN(s, ":", 2)
-		name := data[0]
-		var val string
-		if len(data) > 1 {
-			val = data[1]
-			if len(val) > 0 && val[0] == ' ' {
-				val = val[1:]
-			}
-		}
-		opts.header.Add(name, val)
-	}
-
 	return nil
 }
 
@@ -159,12 +141,10 @@ func AddCommand(cmd *cobra.Command) {
 	fs.IntVar(&runOptions.Skip, "skip", 0, "skip the first `n` requests")
 	fs.IntVar(&runOptions.Limit, "limit", 0, "only run `n` requests, then exit")
 
-	fs.StringVar(&runOptions.Method, "request", "GET", "use HTTP request `method`")
-	fs.MarkDeprecated("request", "use --method")
-	fs.StringVarP(&runOptions.Method, "method", "X", "GET", "use HTTP request `method`")
+	// add all options to define a request
+	runOptions.Request = request.New()
+	runOptions.Request.AddFlags(fs)
 
-	fs.StringVarP(&runOptions.Data, "data", "d", "", "transmit `data` in the HTTP request body")
-	fs.StringArrayVarP(&runOptions.Header, "header", "H", nil, "add `\"name: value\"` as an HTTP request header")
 	fs.IntVar(&runOptions.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
 
 	fs.IntSliceVar(&runOptions.HideStatusCodes, "hide-status", nil, "hide http responses with this status `code,[code],[...]`")
@@ -198,6 +178,7 @@ func run(opts *RunOptions, args []string) error {
 	defer cancel()
 
 	inputURL := args[0]
+	opts.Request.URL = inputURL
 
 	var producer Producer
 	switch {
@@ -322,13 +303,7 @@ func run(opts *RunOptions, args []string) error {
 
 	runnerTomb, _ := tomb.WithContext(ctx)
 	for i := 0; i < opts.Threads; i++ {
-		template := request.Request{
-			URL: inputURL,
-			Method: opts.Method,
-			Header: opts.header,
-			Body: opts.Data,
-		}
-		runner := NewRunner(runnerTomb, template, outputChan, responseChannel)
+		runner := NewRunner(runnerTomb, opts.Request, outputChan, responseChannel)
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
 		runner.Extract = opts.extract
 		runner.ExtractPipe = opts.extractPipe

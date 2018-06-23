@@ -102,7 +102,7 @@ func TestRequestApply(t *testing.T) {
 	var tests = []struct {
 		URL      string
 		Method   string
-		Header   http.Header
+		Header   Header
 		Body     string
 		Template string
 		Value    string
@@ -194,7 +194,7 @@ func TestRequestApply(t *testing.T) {
 		},
 		{
 			URL: "https://www.example.com",
-			Header: http.Header{
+			Header: Header{
 				"User-Agent": []string{"foobar"},
 			},
 			Checks: []CheckFunc{
@@ -205,7 +205,7 @@ func TestRequestApply(t *testing.T) {
 		},
 		{
 			URL: "https://www.example.com",
-			Header: http.Header{
+			Header: Header{
 				"User-Agent": []string{"fooFUZZbar"},
 			},
 			Value: "xxxx",
@@ -217,7 +217,7 @@ func TestRequestApply(t *testing.T) {
 		},
 		{
 			URL: "https://www.example.com",
-			Header: http.Header{
+			Header: Header{
 				"User-Agent": []string{"foo", "bar"},
 			},
 			Value: "xxxx",

@@ -13,7 +13,7 @@ import (
 
 // Runner executes HTTP requests.
 type Runner struct {
-	Template request.Request
+	Template *request.Request
 
 	BodyBufferSize int
 	Extract        []*regexp.Regexp
@@ -31,7 +31,7 @@ type Runner struct {
 const DefaultBodyBufferSize = 5 * 1024 * 1024
 
 // NewRunner returns a new runner to execute HTTP requests.
-func NewRunner(t *tomb.Tomb, template request.Request, input <-chan string, output chan<- Response) *Runner {
+func NewRunner(t *tomb.Tomb, template *request.Request, input <-chan string, output chan<- Response) *Runner {
 	// for timeouts, see
 	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
 	tr := &http.Transport{
