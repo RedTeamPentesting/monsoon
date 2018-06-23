@@ -68,6 +68,16 @@ func TestRequestApply(t *testing.T) {
 		}
 	}
 
+	checkHeaderNotPresent := func(name string) CheckFunc {
+		return func(t testing.TB, req *http.Request) {
+			_, ok := req.Header[name]
+			if ok {
+				t.Errorf("header %q is present (but should not be)", name)
+				return
+			}
+		}
+	}
+
 	checkBasicAuth := func(user, password string) CheckFunc {
 		return func(t testing.TB, req *http.Request) {
 			u, p, ok := req.BasicAuth()
@@ -102,7 +112,7 @@ func TestRequestApply(t *testing.T) {
 	var tests = []struct {
 		URL      string
 		Method   string
-		Header   Header
+		Header   []string // passed in as a sequence of "name: value" strings
 		Body     string
 		Template string
 		Value    string
@@ -114,6 +124,8 @@ func TestRequestApply(t *testing.T) {
 			Checks: []CheckFunc{
 				checkURL("https://www.example.com"),
 				checkMethod("GET"),
+				checkHeader("User-Agent", "monsoon"),
+				checkHeader("Accept", "*/*"),
 			},
 		},
 		{
@@ -194,9 +206,16 @@ func TestRequestApply(t *testing.T) {
 		},
 		{
 			URL: "https://www.example.com",
-			Header: Header{
-				"User-Agent": []string{"foobar"},
+			Header: []string{"User-Agent"}, // empty value means remove header
+			Checks: []CheckFunc{
+				checkURL("https://www.example.com"),
+				checkMethod("GET"),
+				checkHeaderNotPresent("User-Agent"),
 			},
+		},
+		{
+			URL: "https://www.example.com",
+			Header: []string{"User-Agent: foobar"},
 			Checks: []CheckFunc{
 				checkURL("https://www.example.com"),
 				checkMethod("GET"),
@@ -205,9 +224,7 @@ func TestRequestApply(t *testing.T) {
 		},
 		{
 			URL: "https://www.example.com",
-			Header: Header{
-				"User-Agent": []string{"fooFUZZbar"},
-			},
+			Header: []string{"User-Agent: fooFUZZbar"},
 			Value: "xxxx",
 			Checks: []CheckFunc{
 				checkURL("https://www.example.com"),
@@ -217,8 +234,9 @@ func TestRequestApply(t *testing.T) {
 		},
 		{
 			URL: "https://www.example.com",
-			Header: Header{
-				"User-Agent": []string{"foo", "bar"},
+			Header: []string{
+				"User-Agent: foo",
+				"User-Agent: bar",
 			},
 			Value: "xxxx",
 			Checks: []CheckFunc{
@@ -270,11 +288,15 @@ func TestRequestApply(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			req := Request{
-				URL: test.URL,
-				Method: test.Method,
-				Header: test.Header,
-				Body: test.Body,
+			req := New()
+			req.URL = test.URL
+			req.Method = test.Method
+			req.Body = test.Body
+			for _, hdr := range test.Header{
+				err := req.Header.Set(hdr)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 
 			template := "FUZZ"

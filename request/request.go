@@ -2,8 +2,10 @@
 package request
 
 import (
+	"bytes"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 
 	"github.com/spf13/pflag"
@@ -24,23 +26,63 @@ func (h Header) String() (s string) {
 	return s
 }
 
-// Set allows setting an HTTP header via options and pflag.
-func (h Header) Set(s string) error {
-	if !strings.ContainsAny(s, ":") {
-		return fmt.Errorf("invalid format for HTTP header, need `name: value`: %q", s)
+func headerDefaultValue(h Header, name string) bool {
+	v, ok := h[name]
+	if !ok {
+		return false
 	}
 
+	def, ok := DefaultHeader[name]
+	if !ok {
+		return false
+	}
+
+	if len(v) != len(def) {
+		return false
+	}
+
+	// make copies of the two slices to prevent modifying the original data by
+	// sorting
+	a := make([]string, len(v))
+	copy(a, v)
+	sort.Strings(a)
+
+	b := make([]string, len(v))
+	copy(b, def)
+	sort.Strings(b)
+
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
+}
+
+// Set allows setting an HTTP header via options and pflag.
+func (h Header) Set(s string) error {
 	// get name and value from s
 	data := strings.SplitN(s, ":", 2)
 	name := data[0]
-	var val string
-	// set val to the value if some was passed
-	if len(data) > 1 {
-		val = data[1]
-		// strip the leading space if necessary
-		if len(val) > 0 && val[0] == ' ' {
-			val = val[1:]
-		}
+
+	if len(data) == 1 {
+		// no value specified, this means the header is to be removed
+		delete(h, name)
+		return nil
+	}
+
+	// otherwise we have a name: value pair
+	val := data[1]
+
+	// if the header is still at the default value, remove the default value first
+	if headerDefaultValue(h, name) {
+		delete(h, name)
+	}
+
+	// strip the leading space if necessary
+	if len(val) > 0 && val[0] == ' ' {
+		val = val[1:]
 	}
 
 	http.Header(h).Add(name, val)
@@ -58,15 +100,23 @@ type Request struct {
 	Method string
 	Header Header
 	Body   string
+
+	ForceChunkedEncoding bool
+}
+
+// DefaultHeader contains all HTTP header values that are added by default. If
+// the header is already present, it is not added.
+var DefaultHeader = Header{
+	"Accept":     []string{"*/*"},
+	"User-Agent": []string{"monsoon"},
 }
 
 // New returns a new request.
 func New() *Request {
 	hdr := make(http.Header)
-
-	// set default header
-	hdr.Set("Accept", "*/*")
-	hdr.Set("User-Agent", "monsoon")
+	for k, v := range DefaultHeader {
+		hdr[k] = v
+	}
 
 	return &Request{
 		Header: Header(hdr),
@@ -75,12 +125,15 @@ func New() *Request {
 
 // AddFlags adds flags for all options of a request to fs.
 func (r *Request) AddFlags(fs *pflag.FlagSet) {
+	// basics
 	fs.StringVar(&r.Method, "request", "GET", "use HTTP request `method`")
 	fs.MarkDeprecated("request", "use --method")
 	fs.StringVarP(&r.Method, "method", "X", "GET", "use HTTP request `method`")
-
 	fs.StringVarP(&r.Body, "data", "d", "", "transmit `data` in the HTTP request body")
 	fs.VarP(r.Header, "header", "H", "add `\"name: value\"` as an HTTP request header")
+
+	// configure request
+	fs.BoolVar(&r.ForceChunkedEncoding, "force-chunked-encoding", false, `do not set the Content-Length HTTP header and use chunked encoding`)
 }
 
 func replaceTemplate(s, template, value string) string {
@@ -99,9 +152,14 @@ func (r *Request) Apply(template, value string) (*http.Request, error) {
 	}
 
 	url := insertValue(r.URL)
-	req, err := http.NewRequest(insertValue(r.Method), url, strings.NewReader(insertValue(r.Body)))
+	body := []byte(insertValue(r.Body))
+	req, err := http.NewRequest(insertValue(r.Method), url, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
+	}
+
+	if r.ForceChunkedEncoding {
+		req.ContentLength = -1
 	}
 
 	if req.URL.User != nil {
