@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	"github.com/happal/monsoon/cmd/fuzz"
+	"github.com/happal/monsoon/cmd/show"
 	"github.com/spf13/cobra"
 )
 
@@ -34,6 +35,7 @@ var cmdVersion = &cobra.Command{
 func init() {
 	cmdRoot.AddCommand(cmdVersion)
 	fuzz.AddCommand(cmdRoot)
+	show.AddCommand(cmdRoot)
 }
 
 func injectDefaultCommand(args []string) []string {
