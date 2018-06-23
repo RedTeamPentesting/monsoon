@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/fd0/termstatus"
+	"github.com/happal/monsoon/request"
 	"github.com/spf13/cobra"
 	tomb "gopkg.in/tomb.v2"
 )
@@ -321,13 +322,17 @@ func run(opts *RunOptions, args []string) error {
 
 	runnerTomb, _ := tomb.WithContext(ctx)
 	for i := 0; i < opts.Threads; i++ {
-		runner := NewRunner(runnerTomb, inputURL, outputChan, responseChannel)
+		template := request.Request{
+			URL: inputURL,
+			Method: opts.Method,
+			Header: opts.header,
+			Body: opts.Data,
+		}
+		runner := NewRunner(runnerTomb, template, outputChan, responseChannel)
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
 		runner.Extract = opts.extract
 		runner.ExtractPipe = opts.extractPipe
-		runner.Method = opts.Method
-		runner.Header = opts.header
-		runner.Body = opts.Data
+
 		runner.Client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			if len(via) <= opts.FollowRedirect {
 				return nil

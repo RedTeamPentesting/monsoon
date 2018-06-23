@@ -5,22 +5,19 @@ import (
 	"net"
 	"net/http"
 	"regexp"
-	"strings"
 	"time"
 
+	"github.com/happal/monsoon/request"
 	tomb "gopkg.in/tomb.v2"
 )
 
 // Runner executes HTTP requests.
 type Runner struct {
-	URL            string
+	Template request.Request
+
 	BodyBufferSize int
 	Extract        []*regexp.Regexp
 	ExtractPipe    [][]string
-
-	Method string
-	Body   string
-	Header http.Header
 
 	Client    *http.Client
 	Transport *http.Transport
@@ -34,7 +31,7 @@ type Runner struct {
 const DefaultBodyBufferSize = 5 * 1024 * 1024
 
 // NewRunner returns a new runner to execute HTTP requests.
-func NewRunner(t *tomb.Tomb, url string, input <-chan string, output chan<- Response) *Runner {
+func NewRunner(t *tomb.Tomb, template request.Request, input <-chan string, output chan<- Response) *Runner {
 	// for timeouts, see
 	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
 	tr := &http.Transport{
@@ -55,7 +52,7 @@ func NewRunner(t *tomb.Tomb, url string, input <-chan string, output chan<- Resp
 	}
 
 	return &Runner{
-		URL:            url,
+		Template:       template,
 		Client:         c,
 		Transport:      tr,
 		t:              t,
@@ -66,45 +63,15 @@ func NewRunner(t *tomb.Tomb, url string, input <-chan string, output chan<- Resp
 }
 
 func (r *Runner) request(ctx context.Context, item string) (response Response) {
-	insertItem := func(s string) string {
-		if !strings.Contains(s, "FUZZ") {
-			return s
-		}
-
-		return strings.Replace(s, "FUZZ", item, -1)
-	}
-
-	url := insertItem(r.URL)
-	response = Response{
-		URL:  url,
-		Item: item,
-	}
-
-	req, err := http.NewRequest(insertItem(r.Method), url, strings.NewReader(insertItem(r.Body)))
+	req, err := r.Template.Apply("FUZZ", item)
 	if err != nil {
 		response.Error = err
 		return
 	}
 
-	if req.URL.User != nil {
-		u := req.URL.User.Username()
-		p, _ := req.URL.User.Password()
-		req.SetBasicAuth(u, p)
-	}
-
-	req.Header.Set("Accept", "*/*")
-	req.Header.Set("User-Agent", "monsoon")
-
-	for k, vs := range r.Header {
-		k = insertItem(k)
-		if len(vs) == 1 {
-			req.Header.Set(k, insertItem(vs[0]))
-			continue
-		}
-
-		for _, v := range vs {
-			req.Header.Add(k, insertItem(v))
-		}
+	response = Response{
+		URL:  req.URL.String(),
+		Item: item,
 	}
 
 	res, err := r.Client.Do(req.WithContext(ctx))
