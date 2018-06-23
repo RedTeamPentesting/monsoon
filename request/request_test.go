@@ -1,13 +1,74 @@
 package request
 
 import (
+	"bufio"
+	"bytes"
 	"io/ioutil"
 	"net/http"
+	"net/http/httputil"
 	"sort"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
+
+func TestHeaderSet(t *testing.T) {
+	var tests = []struct {
+		start  Header
+		values []string
+		want   Header
+	}{
+		{
+			// this is a default value also contained in DefaultHeader
+			start: Header{"User-Agent": []string{"monsoon"}},
+			// overwrite default value
+			values: []string{"user-agent: foobar"},
+			want:   Header{"User-Agent": []string{"foobar"}},
+		},
+		{
+			start: Header{"User-Agent": []string{"monsoon"}},
+			// overwrite default value with empty string
+			values: []string{"user-agent:"},
+			want:   Header{"User-Agent": []string{""}},
+		},
+		{
+			start: Header{
+				"User-Agent": []string{"monsoon"},
+				"X-Others":   []string{"out-there"},
+			},
+			// just header name -> remove header completely
+			values: []string{"user-agent"},
+			want: Header{
+				"X-Others": []string{"out-there"},
+			},
+		},
+		{
+			start: Header{"User-Agent": []string{"monsoon"}},
+			values: []string{
+				"foo: bar",
+				"foo: baz",
+				"foo: quux",
+			},
+			want: Header{
+				"User-Agent": []string{"monsoon"},
+				"Foo":        []string{"bar", "baz", "quux"},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			h := test.start
+			for _, v := range test.values {
+				h.Set(v)
+			}
+
+			if !cmp.Equal(test.want, h) {
+				t.Errorf("want:\n  %v\ngot:\n  %v", test.want, h)
+			}
+		})
+	}
+}
 
 func TestRequestApply(t *testing.T) {
 	// CheckFunc is one test for an http request generated
@@ -68,11 +129,11 @@ func TestRequestApply(t *testing.T) {
 		}
 	}
 
-	checkHeaderNotPresent := func(name string) CheckFunc {
+	checkHeaderAbsent := func(name string) CheckFunc {
 		return func(t testing.TB, req *http.Request) {
-			_, ok := req.Header[name]
+			v, ok := req.Header[name]
 			if ok {
-				t.Errorf("header %q is present (but should not be)", name)
+				t.Errorf("header %q (%q) is present (but should not be)", name, v)
 				return
 			}
 		}
@@ -122,7 +183,7 @@ func TestRequestApply(t *testing.T) {
 		{
 			URL: "https://www.example.com",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com"),
+				checkURL("https://www.example.com/"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "monsoon"),
 				checkHeader("Accept", "*/*"),
@@ -165,7 +226,7 @@ func TestRequestApply(t *testing.T) {
 		{
 			URL: "https://foo:bar@www.example.com",
 			Checks: []CheckFunc{
-				checkURL("https://foo:bar@www.example.com"),
+				checkURL("https://foo:bar@www.example.com/"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "monsoon"),
 				checkHeader("Accept", "*/*"),
@@ -176,7 +237,7 @@ func TestRequestApply(t *testing.T) {
 			URL:   "https://fooFUZZ:secret@www.example.com",
 			Value: "bar",
 			Checks: []CheckFunc{
-				checkURL("https://foobar:secret@www.example.com"),
+				checkURL("https://foobar:secret@www.example.com/"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "monsoon"),
 				checkHeader("Accept", "*/*"),
@@ -187,7 +248,7 @@ func TestRequestApply(t *testing.T) {
 			URL:   "https://foo:secFUZZret@www.example.com",
 			Value: "bar",
 			Checks: []CheckFunc{
-				checkURL("https://foo:secbarret@www.example.com"),
+				checkURL("https://foo:secbarret@www.example.com/"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "monsoon"),
 				checkHeader("Accept", "*/*"),
@@ -198,36 +259,36 @@ func TestRequestApply(t *testing.T) {
 		{
 			URL: "https://www.example.com",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com"),
+				checkURL("https://www.example.com/"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "monsoon"),
 				checkHeader("Accept", "*/*"),
 			},
 		},
 		{
-			URL: "https://www.example.com",
+			URL:    "https://www.example.com",
 			Header: []string{"User-Agent"}, // empty value means remove header
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com"),
+				checkURL("https://www.example.com/"),
 				checkMethod("GET"),
-				checkHeaderNotPresent("User-Agent"),
+				checkHeaderAbsent("User-Agent"),
 			},
 		},
 		{
-			URL: "https://www.example.com",
+			URL:    "https://www.example.com",
 			Header: []string{"User-Agent: foobar"},
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com"),
+				checkURL("https://www.example.com/"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "foobar"),
 			},
 		},
 		{
-			URL: "https://www.example.com",
+			URL:    "https://www.example.com",
 			Header: []string{"User-Agent: fooFUZZbar"},
-			Value: "xxxx",
+			Value:  "xxxx",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com"),
+				checkURL("https://www.example.com/"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "fooxxxxbar"),
 			},
@@ -235,14 +296,14 @@ func TestRequestApply(t *testing.T) {
 		{
 			URL: "https://www.example.com",
 			Header: []string{
-				"User-Agent: foo",
-				"User-Agent: bar",
+				"Accept: foo",
+				"Accept: bar",
 			},
 			Value: "xxxx",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com"),
+				checkURL("https://www.example.com/"),
 				checkMethod("GET"),
-				checkHeaderMulti("User-Agent", []string{"foo", "bar"}),
+				checkHeaderMulti("Accept", []string{"foo", "bar"}),
 			},
 		},
 		// methods
@@ -250,7 +311,7 @@ func TestRequestApply(t *testing.T) {
 			URL:    "https://www.example.com",
 			Method: "POST",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com"),
+				checkURL("https://www.example.com/"),
 				checkMethod("POST"),
 			},
 		},
@@ -259,7 +320,7 @@ func TestRequestApply(t *testing.T) {
 			Method: "POSTFUZZ",
 			Value:  "xxxx",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com"),
+				checkURL("https://www.example.com/"),
 				checkMethod("POSTxxxx"),
 			},
 		},
@@ -268,7 +329,7 @@ func TestRequestApply(t *testing.T) {
 			Method: "POST",
 			Body:   "foobar baz",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com"),
+				checkURL("https://www.example.com/"),
 				checkMethod("POST"),
 				checkBody("foobar baz"),
 			},
@@ -279,7 +340,7 @@ func TestRequestApply(t *testing.T) {
 			Body:   "foobarFUZZbaz",
 			Value:  "xxxx",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com"),
+				checkURL("https://www.example.com/"),
 				checkMethod("POST"),
 				checkBody("foobarxxxxbaz"),
 			},
@@ -292,7 +353,7 @@ func TestRequestApply(t *testing.T) {
 			req.URL = test.URL
 			req.Method = test.Method
 			req.Body = test.Body
-			for _, hdr := range test.Header{
+			for _, hdr := range test.Header {
 				err := req.Header.Set(hdr)
 				if err != nil {
 					t.Fatal(err)
@@ -304,17 +365,33 @@ func TestRequestApply(t *testing.T) {
 				template = test.Template
 			}
 
-			res, err := req.Apply(template, test.Value)
+			genReq, err := req.Apply(template, test.Value)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			if res == nil {
+			if genReq == nil {
 				t.Fatalf("returned *http.Request is nil")
 			}
 
+			// dump the request and parse it again, then run the tests
+			buf, err := httputil.DumpRequestOut(genReq, true)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			parsedReq, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(buf)))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// fill in URL details that were lost in transit
+			parsedReq.URL.Host = genReq.URL.Host
+			parsedReq.URL.Scheme = genReq.URL.Scheme
+			parsedReq.URL.User = genReq.URL.User
+
 			for _, fn := range test.Checks {
-				fn(t, res)
+				fn(t, parsedReq)
 			}
 		})
 	}
