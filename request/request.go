@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/http"
+	"net/textproto"
 	"sort"
 	"strings"
 
@@ -26,13 +27,49 @@ func (h Header) String() (s string) {
 	return s
 }
 
+// Set allows setting an HTTP header via options and pflag.
+func (h Header) Set(s string) error {
+	// get name and value from s
+	data := strings.SplitN(s, ":", 2)
+	name := data[0]
+
+	if len(data) == 1 {
+		// no value specified, this means the header is to be removed
+		http.Header(h).Del(name)
+		return nil
+	}
+
+	// otherwise we have a name: value pair
+	val := data[1]
+
+	// if the header is still at the default value, remove the default value first
+	if headerDefaultValue(h, name) {
+		http.Header(h).Del(name)
+	}
+
+	// strip the leading space if necessary
+	if len(val) > 0 && val[0] == ' ' {
+		val = val[1:]
+	}
+
+	http.Header(h).Add(name, val)
+	return nil
+}
+
+// Type returns a description string for header.
+func (h Header) Type() string {
+	return "name: value"
+}
+
 func headerDefaultValue(h Header, name string) bool {
-	v, ok := h[name]
+	key := textproto.CanonicalMIMEHeaderKey(name)
+
+	v, ok := h[key]
 	if !ok {
 		return false
 	}
 
-	def, ok := DefaultHeader[name]
+	def, ok := DefaultHeader[key]
 	if !ok {
 		return false
 	}
@@ -60,38 +97,11 @@ func headerDefaultValue(h Header, name string) bool {
 	return true
 }
 
-// Set allows setting an HTTP header via options and pflag.
-func (h Header) Set(s string) error {
-	// get name and value from s
-	data := strings.SplitN(s, ":", 2)
-	name := data[0]
-
-	if len(data) == 1 {
-		// no value specified, this means the header is to be removed
-		delete(h, name)
-		return nil
-	}
-
-	// otherwise we have a name: value pair
-	val := data[1]
-
-	// if the header is still at the default value, remove the default value first
-	if headerDefaultValue(h, name) {
-		delete(h, name)
-	}
-
-	// strip the leading space if necessary
-	if len(val) > 0 && val[0] == ' ' {
-		val = val[1:]
-	}
-
-	http.Header(h).Add(name, val)
-	return nil
-}
-
-// Type returns a description string for header.
-func (h Header) Type() string {
-	return "name: value"
+// DefaultHeader contains all HTTP header values that are added by default. If
+// the header is already present, it is not added.
+var DefaultHeader = Header{
+	"Accept":     []string{"*/*"},
+	"User-Agent": []string{"monsoon"},
 }
 
 // Request is a template for an HTTP request.
@@ -102,13 +112,6 @@ type Request struct {
 	Body   string
 
 	ForceChunkedEncoding bool
-}
-
-// DefaultHeader contains all HTTP header values that are added by default. If
-// the header is already present, it is not added.
-var DefaultHeader = Header{
-	"Accept":     []string{"*/*"},
-	"User-Agent": []string{"monsoon"},
 }
 
 // New returns a new request.
@@ -168,6 +171,11 @@ func (r *Request) Apply(template, value string) (*http.Request, error) {
 		req.SetBasicAuth(u, p)
 	}
 
+	// make sure there's a valid path
+	if req.URL.Path == "" {
+		req.URL.Path = "/"
+	}
+
 	// apply template headers
 	for k, vs := range r.Header {
 		// remove default value if present
@@ -178,6 +186,13 @@ func (r *Request) Apply(template, value string) (*http.Request, error) {
 		for _, v := range vs {
 			req.Header.Add(k, insertValue(v))
 		}
+	}
+
+	// special handling for sending a request without any user-agent header:
+	// it must be set to the empty string in the http.Request.Header to prevent
+	// Go stdlib from setting the default user agent
+	if _, ok := r.Header["User-Agent"]; !ok {
+		req.Header.Set("User-Agent", "")
 	}
 
 	return req, nil
