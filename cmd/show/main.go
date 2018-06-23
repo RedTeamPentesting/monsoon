@@ -66,7 +66,7 @@ var cmd = &cobra.Command{
 		}
 
 		// remote server
-		fmt.Printf("target endpoint: %v:%v\n\n", req.URL.Hostname(), port)
+		fmt.Printf("target server: %v:%v\n\n", req.URL.Hostname(), port)
 
 		// print request with body
 		buf, err := httputil.DumpRequestOut(req, true)
@@ -74,6 +74,7 @@ var cmd = &cobra.Command{
 			return err
 		}
 
+		// be nice to the CLI user and append a newline if there isn't one yet
 		if !bytes.HasSuffix(buf, []byte("\n")) {
 			buf = append(buf, '\n')
 		}
