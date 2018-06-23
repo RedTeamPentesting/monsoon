@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
+	"net/textproto"
 	"sort"
 	"testing"
 
@@ -91,6 +92,7 @@ func TestRequestApply(t *testing.T) {
 	}
 
 	checkHeader := func(name, value string) CheckFunc {
+		name = textproto.CanonicalMIMEHeaderKey(name)
 		return func(t testing.TB, req *http.Request) {
 			v, ok := req.Header[name]
 			if !ok {
@@ -109,6 +111,7 @@ func TestRequestApply(t *testing.T) {
 	}
 
 	checkHeaderMulti := func(name string, values []string) CheckFunc {
+		name = textproto.CanonicalMIMEHeaderKey(name)
 		return func(t testing.TB, req *http.Request) {
 			v, ok := req.Header[name]
 			if !ok {
@@ -130,6 +133,7 @@ func TestRequestApply(t *testing.T) {
 	}
 
 	checkHeaderAbsent := func(name string) CheckFunc {
+		name = textproto.CanonicalMIMEHeaderKey(name)
 		return func(t testing.TB, req *http.Request) {
 			v, ok := req.Header[name]
 			if ok {
@@ -171,13 +175,14 @@ func TestRequestApply(t *testing.T) {
 	}
 
 	var tests = []struct {
-		URL      string
-		Method   string
-		Header   []string // passed in as a sequence of "name: value" strings
-		Body     string
-		Template string
-		Value    string
-		Checks   []CheckFunc
+		URL                  string
+		Method               string
+		Header               []string // passed in as a sequence of "name: value" strings
+		Body                 string
+		Template             string
+		Value                string
+		ForceChunkedEncoding bool
+		Checks               []CheckFunc
 	}{
 		// basic URL tests
 		{
@@ -343,6 +348,19 @@ func TestRequestApply(t *testing.T) {
 				checkURL("https://www.example.com/"),
 				checkMethod("POST"),
 				checkBody("foobarxxxxbaz"),
+				checkHeader("Content-Length", "13"),
+			},
+		},
+		{
+			URL:                  "https://www.example.com",
+			Method:               "POST",
+			Body:                 "foobar",
+			ForceChunkedEncoding: true,
+			Checks: []CheckFunc{
+				checkURL("https://www.example.com/"),
+				checkMethod("POST"),
+				checkBody("foobar"),
+				checkHeaderAbsent("Content-Length"),
 			},
 		},
 	}
@@ -353,6 +371,7 @@ func TestRequestApply(t *testing.T) {
 			req.URL = test.URL
 			req.Method = test.Method
 			req.Body = test.Body
+			req.ForceChunkedEncoding = test.ForceChunkedEncoding
 			for _, hdr := range test.Header {
 				err := req.Header.Set(hdr)
 				if err != nil {
