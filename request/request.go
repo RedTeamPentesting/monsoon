@@ -195,5 +195,9 @@ func (r *Request) Apply(template, value string) (*http.Request, error) {
 		req.Header.Set("User-Agent", "")
 	}
 
+	// known limitation: due to the way the Go stdlib handles setting the
+	// user-agent header, it's currently not possible to send a request with
+	// multiple user-agent headers.
+
 	return req, nil
 }
