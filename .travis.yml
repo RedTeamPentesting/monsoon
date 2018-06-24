@@ -13,7 +13,9 @@ install:
   - go get golang.org/x/tools/cmd/goimports
 
 script:
-  - go run build.go -v
+  - go run build.go --goos linux
+  - go run build.go --goos windows
+  - go run build.go --goos darwin
   - go test
   - diff <(goimports -d *.go) <(printf "")
   - diff <(golint *.go) <(printf "")
