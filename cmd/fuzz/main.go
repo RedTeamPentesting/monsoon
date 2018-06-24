@@ -147,7 +147,7 @@ func AddCommand(cmd *cobra.Command) {
 
 	// add all options to define a request
 	runOptions.Request = request.New()
-	runOptions.Request.AddFlags(fs)
+	request.AddFlags(runOptions.Request, fs)
 
 	fs.IntVar(&runOptions.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
 

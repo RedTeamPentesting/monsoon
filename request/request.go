@@ -13,8 +13,6 @@ import (
 	"net/url"
 	"sort"
 	"strings"
-
-	"github.com/spf13/pflag"
 )
 
 // Header is an HTTP header that implements the pflag.Value interface.
@@ -167,21 +165,6 @@ func New() *Request {
 	return &Request{
 		Header: NewHeader(DefaultHeader),
 	}
-}
-
-// AddFlags adds flags for all options of a request to fs.
-func (r *Request) AddFlags(fs *pflag.FlagSet) {
-	// basics
-	fs.StringVar(&r.Method, "request", "", "use HTTP request `method`")
-	fs.MarkDeprecated("request", "use --method")
-	fs.StringVarP(&r.Method, "method", "X", "", "use HTTP request `method`")
-	fs.VarP(r.Header, "header", "H", "add `\"name: value\"` as an HTTP request header")
-	fs.StringVarP(&r.Body, "data", "d", "", "transmit `data` in the HTTP request body")
-
-	fs.StringVar(&r.TemplateFile, "template-file", "", "read HTTP request from `file`")
-
-	// configure request
-	fs.BoolVar(&r.ForceChunkedEncoding, "force-chunked-encoding", false, `do not set the Content-Length HTTP header and use chunked encoding`)
 }
 
 func replaceTemplate(s, template, value string) string {

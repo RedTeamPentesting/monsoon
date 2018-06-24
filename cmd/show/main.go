@@ -27,7 +27,7 @@ func AddCommand(c *cobra.Command) {
 	fs.SortFlags = false
 
 	opts.Request = request.New()
-	opts.Request.AddFlags(fs)
+	request.AddFlags(opts.Request, fs)
 
 	fs.StringVarP(&opts.Value, "value", "v", "FUZZ", "Use `string` instead for the placeholder")
 }
