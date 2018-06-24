@@ -1,12 +1,13 @@
 package request
 
 import (
-	"bufio"
-	"bytes"
+	"fmt"
 	"io/ioutil"
+	"net"
 	"net/http"
-	"net/http/httputil"
+	"net/http/httptest"
 	"net/textproto"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -178,249 +179,6 @@ func checkBody(body string) CheckFunc {
 
 func TestRequestApply(t *testing.T) {
 	var tests = []struct {
-		URL                  string
-		Method               string
-		Header               []string // passed in as a sequence of "name: value" strings
-		Body                 string
-		Template             string
-		Value                string
-		ForceChunkedEncoding bool
-		Checks               []CheckFunc
-	}{
-		// basic URL tests
-		{
-			URL: "https://www.example.com",
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
-				checkMethod("GET"),
-				checkHeader("User-Agent", "monsoon"),
-				checkHeader("Accept", "*/*"),
-			},
-		},
-		{
-			URL: "https://www.example.com/FUZZ",
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
-				checkMethod("GET"),
-			},
-		},
-		{
-			URL:   "https://www.example.com/FUZZ",
-			Value: "foobar",
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/foobar"),
-				checkMethod("GET"),
-			},
-		},
-		{
-			URL:      "https://www.example.com/xxx",
-			Template: "xx",
-			Value:    "foobar",
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/foobarx"),
-				checkMethod("GET"),
-			},
-		},
-		{
-			URL:      "https://www.example.com/xxx",
-			Template: "xx",
-			Value:    "foobar",
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/foobarx"),
-				checkMethod("GET"),
-			},
-		},
-		// basic auth
-		{
-			URL: "https://foo:bar@www.example.com",
-			Checks: []CheckFunc{
-				checkURL("https://foo:bar@www.example.com/"),
-				checkMethod("GET"),
-				checkHeader("User-Agent", "monsoon"),
-				checkHeader("Accept", "*/*"),
-				checkBasicAuth("foo", "bar"),
-			},
-		},
-		{
-			URL:   "https://fooFUZZ:secret@www.example.com",
-			Value: "bar",
-			Checks: []CheckFunc{
-				checkURL("https://foobar:secret@www.example.com/"),
-				checkMethod("GET"),
-				checkHeader("User-Agent", "monsoon"),
-				checkHeader("Accept", "*/*"),
-				checkBasicAuth("foobar", "secret"),
-			},
-		},
-		{
-			URL:   "https://foo:secFUZZret@www.example.com",
-			Value: "bar",
-			Checks: []CheckFunc{
-				checkURL("https://foo:secbarret@www.example.com/"),
-				checkMethod("GET"),
-				checkHeader("User-Agent", "monsoon"),
-				checkHeader("Accept", "*/*"),
-				checkBasicAuth("foo", "secbarret"),
-			},
-		},
-		// header tests
-		{
-			URL: "https://www.example.com",
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
-				checkMethod("GET"),
-				checkHeader("User-Agent", "monsoon"),
-				checkHeader("Accept", "*/*"),
-			},
-		},
-		{
-			URL:    "https://www.example.com",
-			Header: []string{"User-Agent"}, // empty value means remove header
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
-				checkMethod("GET"),
-				checkHeaderAbsent("User-Agent"),
-			},
-		},
-		{
-			URL:    "https://www.example.com",
-			Header: []string{"User-Agent: foobar"},
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
-				checkMethod("GET"),
-				checkHeader("User-Agent", "foobar"),
-			},
-		},
-		{
-			URL:    "https://www.example.com",
-			Header: []string{"User-Agent: fooFUZZbar"},
-			Value:  "xxxx",
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
-				checkMethod("GET"),
-				checkHeader("User-Agent", "fooxxxxbar"),
-			},
-		},
-		{
-			URL: "https://www.example.com",
-			Header: []string{
-				"Accept: foo",
-				"Accept: bar",
-			},
-			Value: "xxxx",
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
-				checkMethod("GET"),
-				checkHeaderMulti("Accept", []string{"foo", "bar"}),
-			},
-		},
-		// methods
-		{
-			URL:    "https://www.example.com",
-			Method: "POST",
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
-				checkMethod("POST"),
-			},
-		},
-		{
-			URL:    "https://www.example.com",
-			Method: "POSTFUZZ",
-			Value:  "xxxx",
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
-				checkMethod("POSTxxxx"),
-			},
-		},
-		{
-			URL:    "https://www.example.com",
-			Method: "POST",
-			Body:   "foobar baz",
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
-				checkMethod("POST"),
-				checkBody("foobar baz"),
-			},
-		},
-		{
-			URL:    "https://www.example.com",
-			Method: "POST",
-			Body:   "foobarFUZZbaz",
-			Value:  "xxxx",
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
-				checkMethod("POST"),
-				checkBody("foobarxxxxbaz"),
-				checkHeader("Content-Length", "13"),
-			},
-		},
-		{
-			URL:                  "https://www.example.com",
-			Method:               "POST",
-			Body:                 "foobar",
-			ForceChunkedEncoding: true,
-			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
-				checkMethod("POST"),
-				checkBody("foobar"),
-				checkHeaderAbsent("Content-Length"),
-			},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
-			req := New()
-			req.URL = test.URL
-			req.Method = test.Method
-			req.Body = test.Body
-			req.ForceChunkedEncoding = test.ForceChunkedEncoding
-			for _, hdr := range test.Header {
-				err := req.Header.Set(hdr)
-				if err != nil {
-					t.Fatal(err)
-				}
-			}
-
-			template := "FUZZ"
-			if test.Template != "" {
-				template = test.Template
-			}
-
-			genReq, err := req.Apply(template, test.Value)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			if genReq == nil {
-				t.Fatalf("returned *http.Request is nil")
-			}
-
-			// dump the request and parse it again, then run the tests
-			buf, err := httputil.DumpRequestOut(genReq, true)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			parsedReq, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(buf)))
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			// fill in URL details that were lost in transit
-			parsedReq.URL.Host = genReq.URL.Host
-			parsedReq.URL.Scheme = genReq.URL.Scheme
-			parsedReq.URL.User = genReq.URL.User
-
-			for _, fn := range test.Checks {
-				fn(t, parsedReq)
-			}
-		})
-	}
-}
-
-func TestRequestApplyFile(t *testing.T) {
-	var tests = []struct {
 		URL  string
 		File string
 
@@ -435,38 +193,56 @@ func TestRequestApplyFile(t *testing.T) {
 	}{
 		// basic URL tests
 		{
+			URL: "http://www.example.com",
+			Checks: []CheckFunc{
+				checkURL("/"),
+				checkMethod("GET"),
+				checkHeader("User-Agent", "monsoon"),
+				checkHeader("Accept", "*/*"),
+			},
+		},
+		{
 			// set some headers, including User-Agent
-			URL: "https://www.example.com",
-			File: `GET / HTTP/1.1
+			URL: "http://www.example.com",
+			File: `GET /?x=y HTTP/1.1
 User-Agent: Firefox
 Accept: application/json
 X-foo: bar
 
 `,
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/?x=y"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "Firefox"),
 				checkHeader("Accept", "application/json"),
 				checkHeader("x-foo", "bar"),
+				checkBody(""),
 			},
 		},
 		{
 			// replace FUZZ in path with empty string
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
 			File: `GET /FUZZ HTTP/1.1
 User-Agent: Firefox
 
 `,
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/"),
+				checkMethod("GET"),
+				checkHeader("Accept", "*/*"),
+			},
+		},
+		{
+			URL: "http://www.example.com/FUZZ",
+			Checks: []CheckFunc{
+				checkURL("/"),
 				checkMethod("GET"),
 				checkHeader("Accept", "*/*"),
 			},
 		},
 		{
 			// replace FUZZ in path with value
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
 			File: `GET /FUZZ HTTP/1.1
 User-Agent: Firefox
 Accept: */*
@@ -474,19 +250,27 @@ Accept: */*
 `,
 			Value: "foobar",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/foobar"),
+				checkURL("/foobar"),
+				checkMethod("GET"),
+			},
+		},
+		{
+			URL:   "http://www.example.com/FUZZ",
+			Value: "foobar",
+			Checks: []CheckFunc{
+				checkURL("/foobar"),
 				checkMethod("GET"),
 			},
 		},
 		{
 			// replace value for Host header with target URL
-			URL: "https://www.example.com:8443",
+			URL: "http://www.example.com:8443",
 			File: `GET / HTTP/1.1
 Host: www2.example.com:8888
 
 `,
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com:8443/"),
+				checkURL("/"),
 				checkMethod("GET"),
 				checkHeader("Accept", "*/*"),
 			},
@@ -494,27 +278,27 @@ Host: www2.example.com:8888
 		{
 			// host name is taken from the target URL, regardless of what's in
 			// the template
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
 			File: `GET /secret HTTP/1.1
 Host: other.com
 
 `,
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/secret"),
+				checkURL("/secret"),
 				checkMethod("GET"),
 			},
 		},
 		// basic auth
 		{
 			// if supplied in the target URL, use that
-			URL: "https://foo:bar@www.example.com",
+			URL: "http://foo:bar@www.example.com",
 			File: `GET /secret HTTP/1.1
 Host: other.com
 Authorization: Basic Zm9vOnp6eg==
 
 `,
 			Checks: []CheckFunc{
-				checkURL("https://foo:bar@www.example.com/secret"),
+				checkURL("/secret"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "monsoon"),
 				checkHeader("Accept", "*/*"),
@@ -523,15 +307,25 @@ Authorization: Basic Zm9vOnp6eg==
 			},
 		},
 		{
+			URL: "http://foo:bar@www.example.com",
+			Checks: []CheckFunc{
+				checkURL("/"),
+				checkMethod("GET"),
+				checkHeader("User-Agent", "monsoon"),
+				checkHeader("Accept", "*/*"),
+				checkBasicAuth("foo", "bar"),
+			},
+		},
+		{
 			// if not supplied in the target URL, use the header
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
 			File: `GET /secret HTTP/1.1
 Host: other.com
 Authorization: Basic Zm9vOnp6eg==
 
 `,
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/secret"),
+				checkURL("/secret"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "monsoon"),
 				checkHeader("Accept", "*/*"),
@@ -540,13 +334,13 @@ Authorization: Basic Zm9vOnp6eg==
 			},
 		},
 		{
-			URL: "https://fooFUZZ:secret@www.example.com",
+			URL: "http://fooFUZZ:secret@www.example.com",
 			File: `GET /secret HTTP/1.1
 
 `,
 			Value: "bar",
 			Checks: []CheckFunc{
-				checkURL("https://foobar:secret@www.example.com/secret"),
+				checkURL("/secret"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "monsoon"),
 				checkHeader("Accept", "*/*"),
@@ -554,13 +348,13 @@ Authorization: Basic Zm9vOnp6eg==
 			},
 		},
 		{
-			URL: "https://foo:secFUZZret@www.example.com",
+			URL: "http://foo:secFUZZret@www.example.com",
 			File: `GET /secret HTTP/1.1
 
 `,
 			Value: "bar",
 			Checks: []CheckFunc{
-				checkURL("https://foo:secbarret@www.example.com/secret"),
+				checkURL("/secret"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "monsoon"),
 				checkHeader("Accept", "*/*"),
@@ -569,56 +363,98 @@ Authorization: Basic Zm9vOnp6eg==
 		},
 		// header tests
 		{
-			URL:  "https://www.example.com",
+			URL:  "http://www.example.com",
 			File: "GET / HTTP/1.1\n\n",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "monsoon"),
 				checkHeader("Accept", "*/*"),
 			},
 		},
 		{
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
+			Checks: []CheckFunc{
+				checkURL("/"),
+				checkMethod("GET"),
+				checkHeader("User-Agent", "monsoon"),
+				checkHeader("Accept", "*/*"),
+			},
+		},
+		{
+			URL:    "http://www.example.com",
+			Header: []string{"User-Agent"}, // empty value means remove header
+			Checks: []CheckFunc{
+				checkURL("/"),
+				checkMethod("GET"),
+				checkHeaderAbsent("User-Agent"),
+			},
+		},
+		{
+			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 User-Agent: Firefox
 
 `,
 			Header: []string{"User-Agent"}, // empty value means remove header
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/"),
 				checkMethod("GET"),
 				checkHeaderAbsent("User-Agent"),
 			},
 		},
 		{
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 User-Agent: Firefox
 
 `,
 			Header: []string{"User-Agent: foobar"},
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "foobar"),
 			},
 		},
 		{
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 User-Agent: fooFUZZbar
 
 `,
 			Value: "xxxx",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "fooxxxxbar"),
 			},
 		},
 		{
-			URL: "https://www.example.com",
+			URL:    "http://www.example.com",
+			Header: []string{"User-Agent: fooFUZZbar"},
+			Value:  "xxxx",
+			Checks: []CheckFunc{
+				checkURL("/"),
+				checkMethod("GET"),
+				checkHeader("User-Agent", "fooxxxxbar"),
+			},
+		},
+		{
+			URL: "http://www.example.com",
+			File: `GET / HTTP/1.1
+User-Agent: fooFUZZbar
+
+`,
+			Header: []string{"User-Agent: testFUZZvalue"},
+			Value:  "xxxx",
+			Checks: []CheckFunc{
+				checkURL("/"),
+				checkMethod("GET"),
+				checkHeader("User-Agent", "testxxxxvalue"),
+			},
+		},
+		{
+			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 User-Agent: foobar
 
@@ -626,13 +462,13 @@ User-Agent: foobar
 			Value:  "xxxx",
 			Header: []string{"User-Agent: fooFUZZbar"},
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/"),
 				checkMethod("GET"),
 				checkHeader("User-Agent", "fooxxxxbar"),
 			},
 		},
 		{
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 Accept: foo
 Accept: bar
@@ -640,13 +476,13 @@ Accept: bar
 `,
 			Value: "xxxx",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/"),
 				checkMethod("GET"),
 				checkHeaderMulti("Accept", []string{"foo", "bar"}),
 			},
 		},
 		{
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 
 `,
@@ -656,82 +492,109 @@ Accept: bar
 			},
 			Value: "xxxx",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/"),
 				checkMethod("GET"),
 				checkHeaderMulti("Accept", []string{"foo", "bar"}),
 			},
 		},
 		// methods
 		{
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
 			File: `POST / HTTP/1.1
 
 `,
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/"),
 				checkMethod("POST"),
 			},
 		},
 		{
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 
 `,
 			Method: "POST",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/"),
 				checkMethod("POST"),
 			},
 		},
 		{
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 
 `,
 			Method: "POSTFUZZ",
 			Value:  "xxxx",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/"),
 				checkMethod("POSTxxxx"),
 			},
 		},
 		{
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
 			File: `POSTFUZZ / HTTP/1.1
 
 `,
 			Value: "xxxx",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/"),
 				checkMethod("POSTxxxx"),
 			},
 		},
 		{
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
+			File: `POST / HTTP/1.1
+Content-Length: 80
+
+foobarFUZZbaz`,
+			Body:  "otherFUZZvalue",
+			Value: "xxxx",
+			Checks: []CheckFunc{
+				checkURL("/"),
+				checkMethod("POST"),
+				checkBody("otherxxxxvalue"),
+				checkHeader("Content-Length", "14"),
+			},
+		},
+		{
+			URL: "http://www.example.com",
 			File: `POST / HTTP/1.1
 Content-Length: 80
 
 foobarFUZZbaz`,
 			Value: "xxxx",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/"),
 				checkMethod("POST"),
 				checkBody("foobarxxxxbaz"),
 				checkHeader("Content-Length", "13"),
 			},
 		},
 		{
-			URL: "https://www.example.com",
+			URL: "http://www.example.com",
 			File: `POST / HTTP/1.1
 
 `,
 			Body:  "foobarFUZZbaz",
 			Value: "xxxx",
 			Checks: []CheckFunc{
-				checkURL("https://www.example.com/"),
+				checkURL("/"),
 				checkMethod("POST"),
 				checkBody("foobarxxxxbaz"),
 				checkHeader("Content-Length", "13"),
+			},
+		},
+		{
+			URL:                  "http://www.example.com",
+			Method:               "POST",
+			Body:                 "foobar",
+			ForceChunkedEncoding: true,
+			Checks: []CheckFunc{
+				checkURL("/"),
+				checkMethod("POST"),
+				checkBody("foobar"),
+				checkHeaderAbsent("Content-Length"),
 			},
 		},
 	}
@@ -749,22 +612,27 @@ foobarFUZZbaz`,
 		}()
 
 		t.Run("", func(t *testing.T) {
-			filename := filepath.Join(tempdir, "test-"+strings.Replace(t.Name(), "/", "_", -1))
-			err := ioutil.WriteFile(filename, []byte(test.File), 0644)
-			if err != nil {
-				t.Fatal(err)
-			}
-
-			defer func() {
-				err := os.Remove(filename)
+			var filename string
+			if test.File != "" {
+				filename = filepath.Join(tempdir, "test-"+strings.Replace(t.Name(), "/", "_", -1))
+				err := ioutil.WriteFile(filename, []byte(test.File), 0644)
 				if err != nil {
 					t.Fatal(err)
 				}
-			}()
+
+				defer func() {
+					err := os.Remove(filename)
+					if err != nil {
+						t.Fatal(err)
+					}
+				}()
+			}
 
 			req := New()
 			req.URL = test.URL
-			req.TemplateFile = filename
+			if test.File != "" {
+				req.TemplateFile = filename
+			}
 			req.Method = test.Method
 			req.Body = test.Body
 			req.ForceChunkedEncoding = test.ForceChunkedEncoding
@@ -789,24 +657,41 @@ foobarFUZZbaz`,
 				t.Fatalf("returned *http.Request is nil")
 			}
 
-			// dump the request and parse it again, then run the tests
-			buf, err := httputil.DumpRequestOut(genReq, true)
+			// run the request against a test server, parse it, then run the tests
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				for _, fn := range test.Checks {
+					fn(t, r)
+				}
+			}))
+			defer srv.Close()
+
+			srvURL, err := url.Parse(srv.URL)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			parsedReq, err := http.ReadRequest(bufio.NewReader(bytes.NewReader(buf)))
-			if err != nil {
-				t.Fatal(err)
+			// send the request to the test server
+			tr := &http.Transport{
+				Dial: func(network, addr string) (net.Conn, error) {
+					port := srvURL.Port()
+					if port == "" {
+						switch srvURL.Scheme {
+						case "http":
+							port = "80"
+						case "https":
+							port = "443"
+						default:
+							panic("unknown scheme " + srvURL.Scheme)
+						}
+					}
+					addr = fmt.Sprintf("%v:%v", srvURL.Hostname(), port)
+					return net.Dial("tcp", addr)
+				},
 			}
 
-			// fill in URL details that were lost in transit
-			parsedReq.URL.Host = genReq.URL.Host
-			parsedReq.URL.Scheme = genReq.URL.Scheme
-			parsedReq.URL.User = genReq.URL.User
-
-			for _, fn := range test.Checks {
-				fn(t, parsedReq)
+			_, err = tr.RoundTrip(genReq)
+			if err != nil {
+				t.Fatal(err)
 			}
 		})
 	}
