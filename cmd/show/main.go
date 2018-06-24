@@ -56,21 +56,13 @@ var cmd = &cobra.Command{
 			return err
 		}
 
-		port := req.URL.Port()
-		if port == "" {
-			// fill in default ports
-			switch req.URL.Scheme {
-			case "http":
-				port = "80"
-			case "https":
-				port = "443"
-			default:
-				return fmt.Errorf("unknown URL scheme %q", req.URL.Scheme)
-			}
+		target, err := request.Target(req)
+		if err != nil {
+			return err
 		}
 
 		// remote server
-		fmt.Printf("target server: %v:%v\n\n", req.URL.Hostname(), port)
+		fmt.Printf("target server: %v\n\n", target)
 
 		// print request with body
 		buf, err := httputil.DumpRequestOut(req, true)
