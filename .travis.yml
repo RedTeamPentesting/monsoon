@@ -16,9 +16,9 @@ script:
   - go run build.go --goos linux
   - go run build.go --goos windows
   - go run build.go --goos darwin
-  - go test
-  - diff <(goimports -d *.go) <(printf "")
-  - diff <(golint *.go) <(printf "")
+  - go test ./...
+  - diff <(goimports -d *.go */*.go */*/*.go) <(printf "")
+  - diff <(golint *.go */*.go */*/*.go) <(printf "")
 
 after_success:
-  - diff <(golint *.go) <(rintf "")
+  - diff <(golint *.go */*.go */*/*.go) <(printf "")
