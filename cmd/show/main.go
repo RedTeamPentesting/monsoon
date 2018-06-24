@@ -29,7 +29,7 @@ func AddCommand(c *cobra.Command) {
 	opts.Request = request.New()
 	request.AddFlags(opts.Request, fs)
 
-	fs.StringVarP(&opts.Value, "value", "v", "FUZZ", "Use `string` instead for the placeholder")
+	fs.StringVarP(&opts.Value, "value", "v", "FUZZ", "use `string` instead for the placeholder")
 }
 
 var cmd = &cobra.Command{

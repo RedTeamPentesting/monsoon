@@ -152,10 +152,10 @@ func AddCommand(c *cobra.Command) {
 
 	fs.IntVar(&opts.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
 
-	fs.IntSliceVar(&opts.HideStatusCodes, "hide-status", nil, "hide http responses with this status `code,[code],[...]`")
-	fs.StringSliceVar(&opts.HideHeaderSize, "hide-header-size", nil, "hide http responses with this header size (`size,from-to,from-,-to`)")
-	fs.StringSliceVar(&opts.HideBodySize, "hide-body-size", nil, "hide http responses with this body size (`size,from-to,from-,-to`)")
-	fs.StringArrayVar(&opts.HidePattern, "hide-pattern", nil, "hide all responses containing `regex` in response header or body (can be specified multiple times)")
+	fs.IntSliceVar(&opts.HideStatusCodes, "hide-status", nil, "hide responses with this status `code,[code],[...]`")
+	fs.StringSliceVar(&opts.HideHeaderSize, "hide-header-size", nil, "hide responses with this header size (`size,from-to,from-,-to`)")
+	fs.StringSliceVar(&opts.HideBodySize, "hide-body-size", nil, "hide responses with this body size (`size,from-to,from-,-to`)")
+	fs.StringArrayVar(&opts.HidePattern, "hide-pattern", nil, "hide responses containing `regex` in response header or body (can be specified multiple times)")
 	fs.StringArrayVar(&opts.ShowPattern, "show-pattern", nil, "show only responses containing `regex` in response header or body (can be specified multiple times)")
 
 	fs.StringArrayVar(&opts.Extract, "extract", nil, "extract `regex` from response body (can be specified multiple times)")
