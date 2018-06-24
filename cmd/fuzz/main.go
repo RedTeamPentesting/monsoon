@@ -17,6 +17,7 @@ import (
 
 	"github.com/fd0/termstatus"
 	"github.com/happal/monsoon/request"
+	"github.com/happal/monsoon/response"
 	"github.com/spf13/cobra"
 	tomb "gopkg.in/tomb.v2"
 )
@@ -253,12 +254,12 @@ func run(opts *Options, args []string) error {
 		}
 	}()
 
-	filters := []ResponseFilter{
-		NewFilterStatusCode(opts.HideStatusCodes),
+	filters := []response.Filter{
+		response.NewFilterStatusCode(opts.HideStatusCodes),
 	}
 
 	if len(opts.HideHeaderSize) > 0 || len(opts.HideBodySize) > 0 {
-		f, err := NewFilterSize(opts.HideHeaderSize, opts.HideBodySize)
+		f, err := response.NewFilterSize(opts.HideHeaderSize, opts.HideBodySize)
 		if err != nil {
 			return err
 		}
@@ -266,11 +267,11 @@ func run(opts *Options, args []string) error {
 	}
 
 	if len(opts.hidePattern) > 0 {
-		filters = append(filters, FilterRejectPattern{Pattern: opts.hidePattern})
+		filters = append(filters, response.FilterRejectPattern{Pattern: opts.hidePattern})
 	}
 
 	if len(opts.showPattern) > 0 {
-		filters = append(filters, FilterAcceptPattern{Pattern: opts.showPattern})
+		filters = append(filters, response.FilterAcceptPattern{Pattern: opts.showPattern})
 	}
 
 	term.Printf("input URL %v\n\n", inputURL)
@@ -303,11 +304,11 @@ func run(opts *Options, args []string) error {
 		return fmt.Errorf("unable to start: %v", err)
 	}
 
-	responseChannel := make(chan Response)
+	responseChannel := make(chan response.Response)
 
 	runnerTomb, _ := tomb.WithContext(ctx)
 	for i := 0; i < opts.Threads; i++ {
-		runner := NewRunner(runnerTomb, opts.Request, outputChan, responseChannel)
+		runner := response.NewRunner(runnerTomb, opts.Request, outputChan, responseChannel)
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
 		runner.Extract = opts.extract
 		runner.ExtractPipe = opts.extractPipe

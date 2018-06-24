@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/fd0/termstatus"
+	"github.com/happal/monsoon/response"
 )
 
 // Terminal prints data with intermediate status.
@@ -42,11 +43,11 @@ func (lt *LogTerminal) Print(msg string) {
 // Reporter prints the Responses to stdout.
 type Reporter struct {
 	term    Terminal
-	filters []ResponseFilter
+	filters []response.Filter
 }
 
 // NewReporter returns a new reporter.
-func NewReporter(term Terminal, filters []ResponseFilter) *Reporter {
+func NewReporter(term Terminal, filters []response.Filter) *Reporter {
 	return &Reporter{term: term, filters: filters}
 }
 
@@ -113,7 +114,7 @@ func (h *HTTPStats) Report(current string) (res []string) {
 }
 
 // Display shows incoming Responses.
-func (r *Reporter) Display(ch <-chan Response, countChannel <-chan int) func() error {
+func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int) func() error {
 	return func() error {
 		r.term.Printf("%7s %8s %8s   %-8s %s\n", "status", "header", "body", "value", "extract")
 

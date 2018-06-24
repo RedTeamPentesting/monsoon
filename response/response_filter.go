@@ -1,4 +1,4 @@
-package fuzz
+package response
 
 import (
 	"regexp"
@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// ResponseFilter decides whether to reject a Response.
-type ResponseFilter interface {
+// Filter decides whether to reject a Response.
+type Filter interface {
 	Reject(Response) bool
 }
 
