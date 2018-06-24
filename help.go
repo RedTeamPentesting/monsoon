@@ -5,7 +5,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"golang.org/x/sys/unix"
 )
 
 // setupHelp sets the templates used by cobra to format the help messages.
@@ -34,11 +33,7 @@ func setupHelp(cmd *cobra.Command) {
 
 // wrapFlags returns a help text for all flags wrapped at the terminal size.
 func wrapFlags(f *pflag.FlagSet) string {
-	width := 80
-	size, err := unix.IoctlGetWinsize(int(os.Stdout.Fd()), unix.TIOCGWINSZ)
-	if err == nil {
-		width = int(size.Col)
-	}
+	width := getTermWidth(int(os.Stdout.Fd()))
 	return f.FlagUsagesWrapped(width)
 }
 
