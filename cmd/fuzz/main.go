@@ -21,8 +21,8 @@ import (
 	tomb "gopkg.in/tomb.v2"
 )
 
-// RunOptions collect options for a run.
-type RunOptions struct {
+// Options collect options for a run.
+type Options struct {
 	Range       string
 	RangeFormat string
 	Filename    string
@@ -54,7 +54,7 @@ type RunOptions struct {
 	Insecure bool
 }
 
-var runOptions RunOptions
+var opts Options
 
 func compileRegexps(pattern []string) (res []*regexp.Regexp, err error) {
 	for _, pat := range pattern {
@@ -84,8 +84,8 @@ func splitShell(cmds []string) ([][]string, error) {
 	return data, nil
 }
 
-// Valid validates the options and returns an error if something is invalid.
-func (opts *RunOptions) Valid() (err error) {
+// valid validates the options and returns an error if something is invalid.
+func (opts *Options) valid() (err error) {
 	if opts.Range != "" && opts.Filename != "" {
 		return errors.New("only one source allowed but both range and filename specified")
 	}
@@ -113,7 +113,7 @@ func (opts *RunOptions) Valid() (err error) {
 	return nil
 }
 
-var cmdFuzz = &cobra.Command{
+var cmd = &cobra.Command{
 	Use: "fuzz [options] URL",
 	DisableFlagsInUseLine: true,
 
@@ -122,49 +122,49 @@ var cmdFuzz = &cobra.Command{
 	Example: helpExamples,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return run(&runOptions, args)
+		return run(&opts, args)
 	},
 }
 
 // AddCommand adds the 'run' command to cmd.
-func AddCommand(cmd *cobra.Command) {
-	cmd.AddCommand(cmdFuzz)
+func AddCommand(c *cobra.Command) {
+	c.AddCommand(cmd)
 
-	fs := cmdFuzz.Flags()
+	fs := cmd.Flags()
 	fs.SortFlags = false
 
-	fs.StringVarP(&runOptions.Range, "range", "r", "", "set range `from-to`")
-	fs.StringVar(&runOptions.RangeFormat, "range-format", "%d", "set `format` for range")
+	fs.StringVarP(&opts.Range, "range", "r", "", "set range `from-to`")
+	fs.StringVar(&opts.RangeFormat, "range-format", "%d", "set `format` for range")
 
-	fs.StringVarP(&runOptions.Filename, "file", "f", "", "read values from `filename`")
-	fs.StringVar(&runOptions.Logfile, "logfile", "", "write copy of printed messages to `filename`")
-	fs.StringVar(&runOptions.Logdir, "logdir", os.Getenv("MONSOON_LOG_DIR"), "automatically log all output to files in `dir`")
+	fs.StringVarP(&opts.Filename, "file", "f", "", "read values from `filename`")
+	fs.StringVar(&opts.Logfile, "logfile", "", "write copy of printed messages to `filename`")
+	fs.StringVar(&opts.Logdir, "logdir", os.Getenv("MONSOON_LOG_DIR"), "automatically log all output to files in `dir`")
 
-	fs.IntVarP(&runOptions.Threads, "threads", "t", 5, "make as many as `n` parallel requests")
-	fs.IntVar(&runOptions.BufferSize, "buffer-size", 100000, "set number of buffered items to `n`")
-	fs.IntVar(&runOptions.Skip, "skip", 0, "skip the first `n` requests")
-	fs.IntVar(&runOptions.Limit, "limit", 0, "only run `n` requests, then exit")
+	fs.IntVarP(&opts.Threads, "threads", "t", 5, "make as many as `n` parallel requests")
+	fs.IntVar(&opts.BufferSize, "buffer-size", 100000, "set number of buffered items to `n`")
+	fs.IntVar(&opts.Skip, "skip", 0, "skip the first `n` requests")
+	fs.IntVar(&opts.Limit, "limit", 0, "only run `n` requests, then exit")
 
 	// add all options to define a request
-	runOptions.Request = request.New()
-	request.AddFlags(runOptions.Request, fs)
+	opts.Request = request.New()
+	request.AddFlags(opts.Request, fs)
 
-	fs.IntVar(&runOptions.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
+	fs.IntVar(&opts.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
 
-	fs.IntSliceVar(&runOptions.HideStatusCodes, "hide-status", nil, "hide http responses with this status `code,[code],[...]`")
-	fs.StringSliceVar(&runOptions.HideHeaderSize, "hide-header-size", nil, "hide http responses with this header size (`size,from-to,from-,-to`)")
-	fs.StringSliceVar(&runOptions.HideBodySize, "hide-body-size", nil, "hide http responses with this body size (`size,from-to,from-,-to`)")
-	fs.StringArrayVar(&runOptions.HidePattern, "hide-pattern", nil, "hide all responses containing `regex` in response header or body (can be specified multiple times)")
-	fs.StringArrayVar(&runOptions.ShowPattern, "show-pattern", nil, "show only responses containing `regex` in response header or body (can be specified multiple times)")
+	fs.IntSliceVar(&opts.HideStatusCodes, "hide-status", nil, "hide http responses with this status `code,[code],[...]`")
+	fs.StringSliceVar(&opts.HideHeaderSize, "hide-header-size", nil, "hide http responses with this header size (`size,from-to,from-,-to`)")
+	fs.StringSliceVar(&opts.HideBodySize, "hide-body-size", nil, "hide http responses with this body size (`size,from-to,from-,-to`)")
+	fs.StringArrayVar(&opts.HidePattern, "hide-pattern", nil, "hide all responses containing `regex` in response header or body (can be specified multiple times)")
+	fs.StringArrayVar(&opts.ShowPattern, "show-pattern", nil, "show only responses containing `regex` in response header or body (can be specified multiple times)")
 
-	fs.StringArrayVar(&runOptions.Extract, "extract", nil, "extract `regex` from response body (can be specified multiple times)")
-	fs.StringArrayVar(&runOptions.ExtractPipe, "extract-pipe", nil, "pipe response body to `cmd` to extract data (can be specified multiple times)")
-	fs.IntVar(&runOptions.BodyBufferSize, "body-buffer-size", 5, "use `n` MiB as the buffer size for extracting strings from a response body")
+	fs.StringArrayVar(&opts.Extract, "extract", nil, "extract `regex` from response body (can be specified multiple times)")
+	fs.StringArrayVar(&opts.ExtractPipe, "extract-pipe", nil, "pipe response body to `cmd` to extract data (can be specified multiple times)")
+	fs.IntVar(&opts.BodyBufferSize, "body-buffer-size", 5, "use `n` MiB as the buffer size for extracting strings from a response body")
 
-	fs.BoolVarP(&runOptions.Insecure, "insecure", "k", false, "disable TLS certificate verification")
+	fs.BoolVarP(&opts.Insecure, "insecure", "k", false, "disable TLS certificate verification")
 }
 
-func run(opts *RunOptions, args []string) error {
+func run(opts *Options, args []string) error {
 	if len(args) == 0 {
 		return errors.New("last argument needs to be the URL")
 	}
@@ -173,7 +173,7 @@ func run(opts *RunOptions, args []string) error {
 		return errors.New("more than one target URL specified")
 	}
 
-	err := opts.Valid()
+	err := opts.valid()
 	if err != nil {
 		return err
 	}
