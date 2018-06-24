@@ -16,7 +16,7 @@ script:
   - go run build.go --goos linux
   - go run build.go --goos windows
   - go run build.go --goos darwin
-  - go test ./...
+  - go test $(go list ./... | grep -v /vendor/)
   - diff <(goimports -d *.go */*.go */*/*.go) <(printf "")
   - diff <(golint *.go */*.go */*/*.go) <(printf "")
 
