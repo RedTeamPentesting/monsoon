@@ -56,13 +56,13 @@ var cmd = &cobra.Command{
 			return err
 		}
 
-		target, err := request.Target(req)
+		host, port, err := request.Target(req)
 		if err != nil {
 			return err
 		}
 
 		// remote server
-		fmt.Printf("target server: %v\n\n", target)
+		fmt.Printf("remote %v, port %v\n\n", host, port)
 
 		// print request with body
 		buf, err := httputil.DumpRequestOut(req, true)

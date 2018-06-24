@@ -320,9 +320,9 @@ func (r *Request) Apply(template, value string) (*http.Request, error) {
 	return req, nil
 }
 
-// Target returns a string in the form host:port for the request.
-func Target(req *http.Request) (string, error) {
-	port := req.URL.Port()
+// Target returns the host and port for the request.
+func Target(req *http.Request) (host, port string, err error) {
+	port = req.URL.Port()
 	if port == "" {
 		// fill in default ports
 		switch req.URL.Scheme {
@@ -331,9 +331,9 @@ func Target(req *http.Request) (string, error) {
 		case "https":
 			port = "443"
 		default:
-			return "", fmt.Errorf("unknown URL scheme %q", req.URL.Scheme)
+			return "", "", fmt.Errorf("unknown URL scheme %q", req.URL.Scheme)
 		}
 	}
 
-	return fmt.Sprintf("%s:%s", req.URL.Hostname(), port), nil
+	return req.URL.Hostname(), port, nil
 }
