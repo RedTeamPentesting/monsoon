@@ -228,6 +228,9 @@ func readRequestFromFile(filename string, target *url.URL, replace func([]byte) 
 	req.URL.Scheme = target.Scheme
 	req.URL.Host = target.Host
 
+	// RequestURI must be empty for client requests
+	req.RequestURI = ""
+
 	if target.User != nil {
 		req.URL.User = target.User
 	}
