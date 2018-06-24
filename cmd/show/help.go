@@ -11,7 +11,7 @@ const helpShort = "Construct and display an HTTP request"
 var helpLong = strings.TrimSpace(`
 The 'show' command can be use to construct a request and inspect it. The
 options are the same as for the 'fuzz' command, so they can directly applied to
-it once the request is works.
+it once the request works.
 ` + request.LongHelp)
 
 const helpExamples = `
