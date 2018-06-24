@@ -1,6 +1,20 @@
 package fuzz
 
-const longHelpText = `
+import (
+	"strings"
+
+	"github.com/happal/monsoon/request"
+)
+
+const helpShort = "Execute and filter HTTP requests"
+
+var helpLong = strings.TrimSpace(`
+The 'fuzz' command constructs HTTP requests, sends them to the server and
+filters the returned results. The 'show' command can be used to try out and
+improve generating the HTTP requests.
+` + request.LongHelp)
+
+const helpExamples = `
 Use the file filenames.txt as input, hide all 200 and 404 responses:
 
     monsoon fuzz --file filenames.txt \
@@ -55,6 +69,14 @@ Only show responses which contain the pattern "The secret is: " in the response:
     monsoon fuzz --range 1-500 \
       --show-pattern 'The secret is: ' \
       https://example.com/FUZZ
+
+Load a request from the file 'template.txt', setting the 'User-Agent' header
+and replacing the string FUZZ from the file:
+
+    monsoon fuzz --range 1-500 \
+      --template-file template.txt \
+      --header 'user-agent: foobar' \
+      https://example.com
 
 
 Filter Evaluation Order

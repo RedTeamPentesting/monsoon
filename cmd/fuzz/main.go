@@ -114,9 +114,13 @@ func (opts *RunOptions) Valid() (err error) {
 }
 
 var cmdFuzz = &cobra.Command{
-	Use:     "fuzz [options] URL",
-	Short:   "Execute and filter HTTP requests",
-	Example: longHelpText,
+	Use: "fuzz [options] URL",
+	DisableFlagsInUseLine: true,
+
+	Short:   helpShort,
+	Long:    helpLong,
+	Example: helpExamples,
+
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return run(&runOptions, args)
 	},

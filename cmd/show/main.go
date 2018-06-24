@@ -33,9 +33,13 @@ func AddCommand(c *cobra.Command) {
 }
 
 var cmd = &cobra.Command{
-	Use:   "show [options] URL",
-	Short: "Construct and display an HTTP request",
-	// Example: longHelpText,
+	Use: "show [options] URL",
+	DisableFlagsInUseLine: true,
+
+	Short:   helpShort,
+	Long:    helpLong,
+	Example: helpExamples,
+
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if len(args) == 0 {
 			return errors.New("last argument needs to be the URL")
