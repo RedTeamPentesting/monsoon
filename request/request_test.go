@@ -21,6 +21,7 @@ func TestHeaderSet(t *testing.T) {
 	var tests = []struct {
 		start  http.Header
 		values []string
+		item   string
 		want   http.Header
 	}{
 		{
@@ -59,6 +60,16 @@ func TestHeaderSet(t *testing.T) {
 				"Foo":        []string{"bar", "baz", "quux"},
 			},
 		},
+		{
+			// make sure that replacing FUZZ in header names still works
+			start:  http.Header{"User-Agent": []string{"monsoon"}},
+			values: []string{"x-FUZZ: foobar"},
+			item:   "testing",
+			want: http.Header{
+				"User-Agent": []string{"monsoon"},
+				"X-Testing":  []string{"foobar"},
+			},
+		},
 	}
 
 	for _, test := range tests {
@@ -68,8 +79,12 @@ func TestHeaderSet(t *testing.T) {
 				hdr.Set(v)
 			}
 
+			insertValue := func(s string) string {
+				return replaceTemplate(s, "FUZZ", test.item)
+			}
+
 			res := make(http.Header)
-			hdr.Apply(res, func(s string) string { return s })
+			hdr.Apply(res, insertValue)
 
 			if !cmp.Equal(test.want, res) {
 				t.Errorf("want:\n  %v\ngot:\n  %v", test.want, res)
@@ -656,6 +671,54 @@ Host: server:1234
 				checkURL("/secret"),
 				checkMethod("GET"),
 				checkHost("foobar:8888"),
+			},
+		},
+		{
+			// replace strings in header values
+			URL: "http://www.example.com",
+			Header: []string{
+				"Accept: foo-FUZZ",
+				"Accept: other",
+			},
+			Value: "xxxx",
+			Checks: []CheckFunc{
+				checkHeaderMulti("Accept", []string{"foo-xxxx", "other"}),
+			},
+		},
+		{
+			URL: "http://www.example.com",
+			File: `GET /secret HTTP/1.1
+Host: server:1234
+
+`,
+			Header: []string{
+				"Accept: foo-FUZZ",
+				"Accept: other",
+			},
+			Value: "xxxx",
+			Checks: []CheckFunc{
+				checkHeaderMulti("Accept", []string{"foo-xxxx", "other"}),
+			},
+		},
+		{
+			// replace strings in header names
+			URL:    "http://www.example.com",
+			Header: []string{"X-FUZZ: fooboar"},
+			Value:  "testheader",
+			Checks: []CheckFunc{
+				checkHeader("X-testheader", "fooboar"),
+			},
+		},
+		{
+			URL: "http://www.example.com",
+			File: `GET /secret HTTP/1.1
+Host: server:1234
+
+`,
+			Header: []string{"X-FUZZ: fooboar"},
+			Value:  "testheader",
+			Checks: []CheckFunc{
+				checkHeader("X-testheader", "fooboar"),
 			},
 		},
 	}

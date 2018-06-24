@@ -39,7 +39,7 @@ func (h Header) String() (s string) {
 func (h Header) Set(s string) error {
 	// get name and value from s
 	data := strings.SplitN(s, ":", 2)
-	name := textproto.CanonicalMIMEHeaderKey(data[0])
+	name := data[0]
 
 	if len(data) == 1 {
 		// no value specified, this means the header is to be removed
@@ -52,7 +52,7 @@ func (h Header) Set(s string) error {
 
 	// if the header is still at the default value, remove the default value first
 	if headerDefaultValue(h, name) {
-		h.Header.Del(name)
+		delete(h.Header, name)
 	}
 
 	// strip the leading space if necessary
@@ -60,7 +60,8 @@ func (h Header) Set(s string) error {
 		val = val[1:]
 	}
 
-	h.Header.Add(name, val)
+	// use original name in case there's a string we need to replace later
+	h.Header[name] = append(h.Header[name], val)
 	return nil
 }
 
@@ -305,30 +306,33 @@ func (r *Request) Apply(template, value string) (*http.Request, error) {
 	// apply template headers
 	r.Header.Apply(req.Header, insertValue)
 
-	// special handling for sending a request without any user-agent header:
-	// it must be set to the empty string in the http.Request.Header to prevent
-	// Go stdlib from setting the default user agent
-	if _, ok := r.Header.Remove["User-Agent"]; ok {
-		req.Header.Set("User-Agent", "")
-	}
-
 	// special handling for the Host header, which needs to be set on the
 	// request field Host
-	if v, ok := r.Header.Header["Host"]; ok {
-		if len(v) < 1 {
-			return nil, errors.New("Host header is empty")
+	for k, v := range r.Header.Header {
+		if textproto.CanonicalMIMEHeaderKey(k) == "Host" {
+			req.Host = v[0]
 		}
-		req.Host = v[0]
 	}
 
-	// special handling if the Host header is to be removed
-	if _, ok := r.Header.Remove["Host"]; ok {
-		return nil, errors.New("request without Host header is not supported")
-	}
+	for k := range r.Header.Remove {
+		name := textproto.CanonicalMIMEHeaderKey(k)
 
-	// known limitation: due to the way the Go stdlib handles setting the
-	// user-agent header, it's currently not possible to send a request with
-	// multiple user-agent headers.
+		// special handling for sending a request without any user-agent header:
+		// it must be set to the empty string in the http.Request.Header to prevent
+		// Go stdlib from setting the default user agent
+		if name == "User-Agent" {
+			req.Header.Set("User-Agent", "")
+		}
+
+		// known limitation: due to the way the Go stdlib handles setting the
+		// user-agent header, it's currently not possible to send a request with
+		// multiple user-agent headers.
+
+		// special handling if the Host header is to be removed
+		if name == "Host" {
+			return nil, errors.New("request without Host header is not supported")
+		}
+	}
 
 	return req, nil
 }
