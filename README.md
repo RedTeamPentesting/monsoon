@@ -35,13 +35,14 @@ contains the main functionality. You can display a list of commands as follows:
 
 ```
 $ ./monsoon -h
-
 Usage:
   monsoon command [options]
 
 Available Commands:
   fuzz        Execute and filter HTTP requests
   help        Help about any command
+  show        Construct and display an HTTP request
+  test        Send an HTTP request to a server and show the result
   version     Display version information
 
 Options:
