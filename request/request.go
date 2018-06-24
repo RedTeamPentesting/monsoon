@@ -175,6 +175,66 @@ func replaceTemplate(s, template, value string) string {
 	return strings.Replace(s, template, value, -1)
 }
 
+func readRequestFromFile(filename string, target *url.URL, replace func([]byte) []byte) (*http.Request, error) {
+	buf, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	// replace the placeholder in the file we just read
+	buf = replace(buf)
+
+	rd := bufio.NewReader(bytes.NewReader(buf))
+	req, err := http.ReadRequest(rd)
+	if err != nil {
+		return nil, fmt.Errorf("error reading HTTP request from %v: %v", filename, err)
+	}
+
+	// append the rest of the file to the body
+	rest, err := ioutil.ReadAll(rd)
+	if err == io.EOF {
+		// if nothing further can be read, that's fine with us
+		err = nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	// rebuild body
+	origBody, err := ioutil.ReadAll(req.Body)
+	if err == io.ErrUnexpectedEOF {
+		err = nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	origBody = append(origBody, rest...)
+	req.Body = ioutil.NopCloser(bytes.NewReader(origBody))
+	req.ContentLength = int64(len(origBody))
+
+	// fill some details from the URL
+
+	// check that the URL does not contain too much information, only host,
+	// port, and scheme are considered
+	if target.Path != "" && target.Path != "/" {
+		return nil, errors.New("URL must not contain a path, it's taken from the template file")
+	}
+
+	if target.RawQuery != "" {
+		return nil, errors.New("URL must not contain a query string, it's taken from the template file")
+	}
+
+	req.URL.Scheme = target.Scheme
+	req.URL.Host = target.Host
+
+	if target.User != nil {
+		req.URL.User = target.User
+	}
+
+	return req, nil
+}
+
 // Apply replaces the template with value in all fields of the request and
 // returns a new http.Request.
 func (r *Request) Apply(template, value string) (*http.Request, error) {
@@ -189,72 +249,22 @@ func (r *Request) Apply(template, value string) (*http.Request, error) {
 
 	// if a template file is given, read the HTTP request from it as a basis
 	if r.TemplateFile != "" {
-		buf, err := ioutil.ReadFile(r.TemplateFile)
+		target, err := url.Parse(targetURL)
 		if err != nil {
 			return nil, err
 		}
 
-		// replace the placeholder in the file we just read
-		buf = bytes.Replace(buf, []byte(template), []byte(value), -1)
-
-		rd := bufio.NewReader(bytes.NewReader(buf))
-		req, err = http.ReadRequest(rd)
-		if err != nil {
-			return nil, fmt.Errorf("error reading HTTP request from %v: %v", r.TemplateFile, err)
-		}
-
-		// append the rest of the file to the body
-		rest, err := ioutil.ReadAll(rd)
-		if err == io.EOF {
-			// if nothing further can be read, that's fine with us
-			err = nil
-		}
+		req, err = readRequestFromFile(r.TemplateFile, target, func(buf []byte) []byte {
+			return bytes.Replace(buf, []byte(template), []byte(value), -1)
+		})
 		if err != nil {
 			return nil, err
-		}
-
-		// rebuild body
-		origBody, err := ioutil.ReadAll(req.Body)
-		if err == io.ErrUnexpectedEOF {
-			err = nil
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		origBody = append(origBody, rest...)
-		req.Body = ioutil.NopCloser(bytes.NewReader(origBody))
-		req.ContentLength = int64(len(origBody))
-
-		// fill some details from the URL
-		u, err := url.Parse(targetURL)
-		if err != nil {
-			return nil, err
-		}
-
-		// check that the URL does not contain too much information, only host,
-		// port, and scheme are considered
-		if u.Path != "" && u.Path != "/" {
-			return nil, errors.New("URL must not contain a path, it's taken from the template file")
-		}
-
-		if u.RawQuery != "" {
-			return nil, errors.New("URL must not contain a query string, it's taken from the template file")
-		}
-
-		req.URL.Scheme = u.Scheme
-		req.URL.Host = u.Host
-
-		if u.User != nil {
-			req.URL.User = u.User
 		}
 
 		if len(body) > 0 {
 			// use new body and set content length
 			req.Body = ioutil.NopCloser(bytes.NewReader(body))
 			req.ContentLength = int64(len(body))
-		} else {
-			// make sure the body is complete
 		}
 
 		if r.Method != "" {
