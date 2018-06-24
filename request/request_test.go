@@ -19,42 +19,42 @@ import (
 
 func TestHeaderSet(t *testing.T) {
 	var tests = []struct {
-		start  Header
+		start  http.Header
 		values []string
-		want   Header
+		want   http.Header
 	}{
 		{
 			// this is a default value also contained in DefaultHeader
-			start: Header{"User-Agent": []string{"monsoon"}},
+			start: http.Header{"User-Agent": []string{"monsoon"}},
 			// overwrite default value
 			values: []string{"user-agent: foobar"},
-			want:   Header{"User-Agent": []string{"foobar"}},
+			want:   http.Header{"User-Agent": []string{"foobar"}},
 		},
 		{
-			start: Header{"User-Agent": []string{"monsoon"}},
+			start: http.Header{"User-Agent": []string{"monsoon"}},
 			// overwrite default value with empty string
 			values: []string{"user-agent:"},
-			want:   Header{"User-Agent": []string{""}},
+			want:   http.Header{"User-Agent": []string{""}},
 		},
 		{
-			start: Header{
+			start: http.Header{
 				"User-Agent": []string{"monsoon"},
 				"X-Others":   []string{"out-there"},
 			},
 			// just header name -> remove header completely
 			values: []string{"user-agent"},
-			want: Header{
+			want: http.Header{
 				"X-Others": []string{"out-there"},
 			},
 		},
 		{
-			start: Header{"User-Agent": []string{"monsoon"}},
+			start: http.Header{"User-Agent": []string{"monsoon"}},
 			values: []string{
 				"foo: bar",
 				"foo: baz",
 				"foo: quux",
 			},
-			want: Header{
+			want: http.Header{
 				"User-Agent": []string{"monsoon"},
 				"Foo":        []string{"bar", "baz", "quux"},
 			},
@@ -63,13 +63,16 @@ func TestHeaderSet(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			h := test.start
+			hdr := NewHeader(test.start)
 			for _, v := range test.values {
-				h.Set(v)
+				hdr.Set(v)
 			}
 
-			if !cmp.Equal(test.want, h) {
-				t.Errorf("want:\n  %v\ngot:\n  %v", test.want, h)
+			res := make(http.Header)
+			hdr.Apply(res, func(s string) string { return s })
+
+			if !cmp.Equal(test.want, res) {
+				t.Errorf("want:\n  %v\ngot:\n  %v", test.want, res)
 			}
 		})
 	}
@@ -109,6 +112,14 @@ func checkHeader(name, value string) CheckFunc {
 
 		if v[0] != value {
 			t.Errorf("wrong value for header %v, want %q, got %q", name, value, v[0])
+		}
+	}
+}
+
+func checkHost(value string) CheckFunc {
+	return func(t testing.TB, req *http.Request) {
+		if req.Host != value {
+			t.Errorf("invalid value for host: want %q, got %q", value, req.Host)
 		}
 	}
 }
@@ -391,12 +402,34 @@ Authorization: Basic Zm9vOnp6eg==
 			},
 		},
 		{
+			URL:    "http://www.example.com",
+			Header: []string{"user-agent"}, // empty value means remove header
+			Checks: []CheckFunc{
+				checkURL("/"),
+				checkMethod("GET"),
+				checkHeaderAbsent("User-Agent"),
+			},
+		},
+		{
 			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 User-Agent: Firefox
 
 `,
 			Header: []string{"User-Agent"}, // empty value means remove header
+			Checks: []CheckFunc{
+				checkURL("/"),
+				checkMethod("GET"),
+				checkHeaderAbsent("User-Agent"),
+			},
+		},
+		{
+			URL: "http://www.example.com",
+			File: `GET / HTTP/1.1
+user-agent: Firefox
+
+`,
+			Header: []string{"user-agent"}, // empty value means remove header
 			Checks: []CheckFunc{
 				checkURL("/"),
 				checkMethod("GET"),
@@ -586,6 +619,7 @@ foobarFUZZbaz`,
 			},
 		},
 		{
+			// test chunked encoding
 			URL:                  "http://www.example.com",
 			Method:               "POST",
 			Body:                 "foobar",
@@ -595,6 +629,33 @@ foobarFUZZbaz`,
 				checkMethod("POST"),
 				checkBody("foobar"),
 				checkHeaderAbsent("Content-Length"),
+			},
+		},
+		{
+			// ensure that the Host header is passed on directly and not taken from the target URL
+			URL: "http://www.example.com",
+			File: `GET /secret HTTP/1.1
+Host: server:1234
+
+`,
+			Checks: []CheckFunc{
+				checkURL("/secret"),
+				checkMethod("GET"),
+				checkHost("server:1234"),
+			},
+		},
+		{
+			// overwrite host header
+			URL: "http://www.example.com",
+			File: `GET /secret HTTP/1.1
+Host: server:1234
+
+`,
+			Header: []string{"host: foobar:8888"},
+			Checks: []CheckFunc{
+				checkURL("/secret"),
+				checkMethod("GET"),
+				checkHost("foobar:8888"),
 			},
 		},
 	}

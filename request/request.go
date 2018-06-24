@@ -18,10 +18,13 @@ import (
 )
 
 // Header is an HTTP header that implements the pflag.Value interface.
-type Header http.Header
+type Header struct {
+	Header http.Header
+	Remove map[string]struct{} // entries are to be removed before sending the HTTP request
+}
 
 func (h Header) String() (s string) {
-	for k, v := range h {
+	for k, v := range h.Header {
 		s += fmt.Sprintf(`"%v: %v", `, k, strings.Join(v, ","))
 	}
 
@@ -36,11 +39,11 @@ func (h Header) String() (s string) {
 func (h Header) Set(s string) error {
 	// get name and value from s
 	data := strings.SplitN(s, ":", 2)
-	name := data[0]
+	name := textproto.CanonicalMIMEHeaderKey(data[0])
 
 	if len(data) == 1 {
 		// no value specified, this means the header is to be removed
-		http.Header(h).Del(name)
+		h.Remove[name] = struct{}{}
 		return nil
 	}
 
@@ -49,7 +52,7 @@ func (h Header) Set(s string) error {
 
 	// if the header is still at the default value, remove the default value first
 	if headerDefaultValue(h, name) {
-		http.Header(h).Del(name)
+		h.Header.Del(name)
 	}
 
 	// strip the leading space if necessary
@@ -57,7 +60,7 @@ func (h Header) Set(s string) error {
 		val = val[1:]
 	}
 
-	http.Header(h).Add(name, val)
+	h.Header.Add(name, val)
 	return nil
 }
 
@@ -66,10 +69,47 @@ func (h Header) Type() string {
 	return "name: value"
 }
 
+// NewHeader initializes a Header.
+func NewHeader(defaults http.Header) *Header {
+	hdr := make(http.Header)
+	for k, vs := range defaults {
+		hdr[k] = vs
+	}
+	return &Header{
+		Header: hdr,
+		Remove: make(map[string]struct{}),
+	}
+}
+
+// Apply applies the values in h to the target http.Header. The function
+// insertValue is called for all names and values before adding them.
+func (h Header) Apply(hdr http.Header, insertValue func(string) string) {
+	for k, vs := range h.Header {
+		// don't set the header if it is already set in the request and the
+		// value is the default one.
+		if _, ok := hdr[k]; ok && headerDefaultValue(h, k) {
+			continue
+		}
+
+		// remove value if present
+		hdr.Del(k)
+
+		// add values
+		k = insertValue(k)
+		for _, v := range vs {
+			hdr.Add(k, insertValue(v))
+		}
+	}
+
+	for k := range h.Remove {
+		hdr.Del(k)
+	}
+}
+
 func headerDefaultValue(h Header, name string) bool {
 	key := textproto.CanonicalMIMEHeaderKey(name)
 
-	v, ok := h[key]
+	v, ok := h.Header[key]
 	if !ok {
 		return false
 	}
@@ -104,7 +144,7 @@ func headerDefaultValue(h Header, name string) bool {
 
 // DefaultHeader contains all HTTP header values that are added by default. If
 // the header is already present, it is not added.
-var DefaultHeader = Header{
+var DefaultHeader = http.Header{
 	"Accept":     []string{"*/*"},
 	"User-Agent": []string{"monsoon"},
 }
@@ -113,7 +153,7 @@ var DefaultHeader = Header{
 type Request struct {
 	URL    string
 	Method string
-	Header Header
+	Header *Header
 	Body   string
 
 	TemplateFile string
@@ -123,13 +163,8 @@ type Request struct {
 
 // New returns a new request.
 func New() *Request {
-	hdr := make(http.Header)
-	for k, v := range DefaultHeader {
-		hdr[k] = v
-	}
-
 	return &Request{
-		Header: Header(hdr),
+		Header: NewHeader(DefaultHeader),
 	}
 }
 
@@ -268,29 +303,27 @@ func (r *Request) Apply(template, value string) (*http.Request, error) {
 	}
 
 	// apply template headers
-	for k, vs := range r.Header {
-		// don't set the header if it is already set in the request (e.g. when
-		// reading the request from a template file) and the value is the
-		// default one
-		if _, ok := req.Header[k]; ok && headerDefaultValue(r.Header, k) {
-			continue
-		}
-
-		// remove value if present
-		req.Header.Del(k)
-
-		// add values
-		k = insertValue(k)
-		for _, v := range vs {
-			req.Header.Add(k, insertValue(v))
-		}
-	}
+	r.Header.Apply(req.Header, insertValue)
 
 	// special handling for sending a request without any user-agent header:
 	// it must be set to the empty string in the http.Request.Header to prevent
 	// Go stdlib from setting the default user agent
-	if _, ok := r.Header["User-Agent"]; !ok {
+	if _, ok := r.Header.Remove["User-Agent"]; ok {
 		req.Header.Set("User-Agent", "")
+	}
+
+	// special handling for the Host header, which needs to be set on the
+	// request field Host
+	if v, ok := r.Header.Header["Host"]; ok {
+		if len(v) < 1 {
+			return nil, errors.New("Host header is empty")
+		}
+		req.Host = v[0]
+	}
+
+	// special handling if the Host header is to be removed
+	if _, ok := r.Header.Remove["Host"]; ok {
+		return nil, errors.New("request without Host header is not supported")
 	}
 
 	// known limitation: due to the way the Go stdlib handles setting the
