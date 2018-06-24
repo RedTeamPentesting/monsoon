@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/exec"
@@ -140,15 +141,14 @@ func (r *Response) ExtractBody(targets []*regexp.Regexp, cmds [][]string) (err e
 
 // ExtractHeader extracts data from an HTTP header. This fills r.Header.
 func (r *Response) ExtractHeader(res *http.Response, targets []*regexp.Regexp) error {
-	buf := bytes.NewBuffer(nil)
-	err := res.Header.Write(buf)
+	buf, err := httputil.DumpResponse(res, false)
 	if err != nil {
 		return err
 	}
 
-	r.RawHeader = buf.Bytes()
-	r.Header, err = Count(bytes.NewReader(buf.Bytes()))
-	r.Extract = append(r.Extract, extractRegexp(buf.Bytes(), targets)...)
+	r.RawHeader = buf
+	r.Header, err = Count(bytes.NewReader(buf))
+	r.Extract = append(r.Extract, extractRegexp(buf, targets)...)
 
 	return err
 }
