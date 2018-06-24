@@ -310,7 +310,7 @@ func (r *Request) Apply(template, value string) (*http.Request, error) {
 	// request field Host
 	for k, v := range r.Header.Header {
 		if textproto.CanonicalMIMEHeaderKey(k) == "Host" {
-			req.Host = v[0]
+			req.Host = insertValue(v[0])
 		}
 	}
 

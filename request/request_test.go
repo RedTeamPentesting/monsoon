@@ -701,6 +701,16 @@ Host: server:1234
 			},
 		},
 		{
+			URL: "http://www.example.com",
+			Header: []string{
+				"Host: foo-FUZZ",
+			},
+			Value: "xxxx",
+			Checks: []CheckFunc{
+				checkHost("foo-xxxx"),
+			},
+		},
+		{
 			// replace strings in header names
 			URL:    "http://www.example.com",
 			Header: []string{"X-FUZZ: fooboar"},
