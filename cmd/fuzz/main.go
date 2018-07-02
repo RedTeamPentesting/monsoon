@@ -312,7 +312,7 @@ func run(opts *Options, args []string) error {
 	limitedChan := outputChan
 	if opts.RequestsPerSecond > 0 {
 		limitedChan = make(chan string)
-		fillInterval := time.Duration(float64(time.Second)/float64(opts.RequestsPerSecond))
+		fillInterval := time.Duration(float64(time.Second) / float64(opts.RequestsPerSecond))
 		limiter := NewLimiter(fillInterval, 1)
 		limiter.Start(prodTomb, outputChan, limitedChan)
 	}
