@@ -31,7 +31,7 @@ type Options struct {
 	Logdir      string
 	Threads     int
 
-	RequestsPerMinute int
+	RequestsPerSecond float64
 
 	BufferSize int
 	Skip       int
@@ -147,7 +147,7 @@ func AddCommand(c *cobra.Command) {
 	fs.IntVar(&opts.BufferSize, "buffer-size", 100000, "set number of buffered items to `n`")
 	fs.IntVar(&opts.Skip, "skip", 0, "skip the first `n` requests")
 	fs.IntVar(&opts.Limit, "limit", 0, "only run `n` requests, then exit")
-	fs.IntVar(&opts.RequestsPerMinute, "requests-per-minute", 0, "do at most `n` requests per minute")
+	fs.Float64Var(&opts.RequestsPerSecond, "requests-per-second", 0, "do at most `n` requests per minute (e.g. 0.5)")
 
 	// add all options to define a request
 	opts.Request = request.New()
@@ -310,10 +310,10 @@ func run(opts *Options, args []string) error {
 	responseChannel := make(chan response.Response)
 
 	limitedChan := outputChan
-	if opts.RequestsPerMinute > 0 {
-		fmt.Printf("enabling %v requests per minute\n", opts.RequestsPerMinute)
+	if opts.RequestsPerSecond > 0 {
 		limitedChan = make(chan string)
-		limiter := NewLimiter(time.Minute, opts.RequestsPerMinute, 1)
+		fillInterval := time.Duration(float64(time.Second)/float64(opts.RequestsPerSecond))
+		limiter := NewLimiter(fillInterval, 1)
 		limiter.Start(prodTomb, outputChan, limitedChan)
 	}
 

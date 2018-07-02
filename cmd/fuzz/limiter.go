@@ -13,9 +13,9 @@ type Limiter struct {
 }
 
 // NewLimiter initializes a limiter with the given refill time and capacity.
-func NewLimiter(fillInterval time.Duration, requestsPerInterval, capacity int) *Limiter {
+func NewLimiter(fillInterval time.Duration, capacity int64) *Limiter {
 	return &Limiter{
-		Bucket: ratelimit.NewBucket(fillInterval/time.Duration(requestsPerInterval), int64(capacity)),
+		Bucket: ratelimit.NewBucket(fillInterval, capacity),
 	}
 }
 
