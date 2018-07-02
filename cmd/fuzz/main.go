@@ -31,6 +31,8 @@ type Options struct {
 	Logdir      string
 	Threads     int
 
+	RequestsPerMinute int
+
 	BufferSize int
 	Skip       int
 	Limit      int
@@ -145,6 +147,7 @@ func AddCommand(c *cobra.Command) {
 	fs.IntVar(&opts.BufferSize, "buffer-size", 100000, "set number of buffered items to `n`")
 	fs.IntVar(&opts.Skip, "skip", 0, "skip the first `n` requests")
 	fs.IntVar(&opts.Limit, "limit", 0, "only run `n` requests, then exit")
+	fs.IntVar(&opts.RequestsPerMinute, "requests-per-minute", 0, "do at most `n` requests per minute")
 
 	// add all options to define a request
 	opts.Request = request.New()
@@ -306,9 +309,17 @@ func run(opts *Options, args []string) error {
 
 	responseChannel := make(chan response.Response)
 
+	limitedChan := outputChan
+	if opts.RequestsPerMinute > 0 {
+		fmt.Printf("enabling %v requests per minute\n", opts.RequestsPerMinute)
+		limitedChan = make(chan string)
+		limiter := NewLimiter(time.Minute, opts.RequestsPerMinute, 1)
+		limiter.Start(prodTomb, outputChan, limitedChan)
+	}
+
 	runnerTomb, _ := tomb.WithContext(ctx)
 	for i := 0; i < opts.Threads; i++ {
-		runner := response.NewRunner(runnerTomb, opts.Request, outputChan, responseChannel)
+		runner := response.NewRunner(runnerTomb, opts.Request, limitedChan, responseChannel)
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
 		runner.Extract = opts.extract
 		runner.ExtractPipe = opts.extractPipe
