@@ -20,6 +20,12 @@
   version = "v1.0"
 
 [[projects]]
+  name = "github.com/juju/ratelimit"
+  packages = ["."]
+  revision = "59fac5042749a5afb9af70e813da1dd5474f0167"
+  version = "1.0.1"
+
+[[projects]]
   name = "github.com/mattn/go-isatty"
   packages = ["."]
   revision = "0360b2af4f38e8d38c7fce2a9f4e702702d73a39"
@@ -46,7 +52,7 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = ["unix","windows"]
   revision = "63fc586f45fe72d95d5240a5d5eb95e6503907d3"
 
 [[projects]]
@@ -58,6 +64,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e04322f400805e31bff4b92701355173716fad06c4cf3e56dafde9980202a332"
+  inputs-digest = "7459dbdfec1bf8e030ca61f23bfdd0a3802e6f3a16fc31a9ba7dadfcd1404830"
   solver-name = "gps-cdcl"
   solver-version = 1
