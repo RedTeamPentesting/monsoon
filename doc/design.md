@@ -9,6 +9,9 @@ The program creates a processing pipeline consisting of the following items:
    used to skip the first n items (`--skip`) and limit the number of items
    processed (`--limit`).
 
+ * Limiter: optional, limits the throughput of items to the runners, can be
+   used to only process a number of items per second.
+
  * Runners: take the items, builds HTTP requests and sends them to the server.
    Emit a sequence of responses. Multiple Runners are working in parallel, so
    the sequence of responses is not deterministic any more and highly depends
@@ -24,13 +27,13 @@ The program creates a processing pipeline consisting of the following items:
 This is a rough diagram of how it all fits together:
 
 ```
-                                     +--------+
-                                  +->| Runner |-+
-                                  |  +--------+ |   +----------+
-+----------+   +--------------+   |             |   | Reporter |
-| Producer +-->|  ValueFilter +---+->  ...      +-->| +Filter  |
-+----------+   +--------------+   |             |   +----------+
-                                  |  +--------+ |
-                                  +->| Runner |-+
-                                     +--------+
+                                                  +--------+
+                                               +->| Runner |-+
+                                               |  +--------+ |   +----------+
++----------+   +-------------+   +---------+   |             |   | Reporter |
+| Producer +-->| ValueFilter +-->| Limiter +---+->  ...      +-->| +Filter  |
++----------+   +-------------+   +---------+   |             |   +----------+
+                                               |  +--------+ |
+                                               +->| Runner |-+
+                                                  +--------+
 ```
