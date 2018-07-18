@@ -18,7 +18,7 @@ type FileProducer struct {
 	t     *tomb.Tomb
 }
 
-// Start runs a goroutine which will send all values [first, last] to the channel.
+// Start runs a goroutine which will send all strings from the file to the channel.
 func (p *FileProducer) Start(t *tomb.Tomb, ch chan<- string, count chan<- int) (err error) {
 	if p.Filename == "-" {
 		// use stdin

@@ -202,45 +202,17 @@ func setupProducer(opts *Options) (Producer, error) {
 	}
 }
 
-func run(opts *Options, args []string) error {
-	if len(args) == 0 {
-		return errors.New("last argument needs to be the URL")
-	}
-
-	if len(args) > 1 {
-		return errors.New("more than one target URL specified")
-	}
-
-	err := opts.valid()
-	if err != nil {
-		return err
-	}
-
-	rootCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	inputURL := args[0]
-	opts.Request.URL = inputURL
-
-	producer, err := setupProducer(opts)
-	if err != nil {
-		return err
-	}
-
+func setupTerminal(ctx context.Context, logfilePrefix string) (Terminal, *tomb.Tomb, error) {
 	var term Terminal
-	logfilePrefix, err := logfilePath(opts, inputURL)
-	if err != nil {
-		return err
-	}
 
-	termTomb, _ := tomb.WithContext(rootCtx)
+	termTomb, _ := tomb.WithContext(ctx)
 
-	if opts.Logfile != "" {
+	if logfilePrefix != "" {
 		fmt.Printf("logfile is %s.log\n", logfilePrefix)
 
 		logfile, err := os.Create(logfilePrefix + ".log")
 		if err != nil {
-			return err
+			return nil, nil, err
 		}
 
 		fmt.Fprintln(logfile, recreateCommandline(os.Args))
@@ -255,7 +227,7 @@ func run(opts *Options, args []string) error {
 	}
 
 	termTomb.Go(func() error {
-		term.Run(termTomb.Context(rootCtx))
+		term.Run(termTomb.Context(ctx))
 		return nil
 	})
 
@@ -263,18 +235,10 @@ func run(opts *Options, args []string) error {
 	w := NewStdioWrapper(term)
 	log.SetOutput(w.Stderr())
 
-	ctx, cancel := context.WithCancel(rootCtx)
-	defer cancel()
+	return term, termTomb, nil
+}
 
-	signalCh := make(chan os.Signal, 1)
-	signal.Notify(signalCh, syscall.SIGINT)
-	go func() {
-		for sig := range signalCh {
-			term.Printf("received signal %v\n", sig)
-			cancel()
-		}
-	}()
-
+func setupResponseFilters(opts *Options) ([]response.Filter, error) {
 	filters := []response.Filter{
 		response.NewFilterStatusCode(opts.HideStatusCodes),
 	}
@@ -282,7 +246,7 @@ func run(opts *Options, args []string) error {
 	if len(opts.HideHeaderSize) > 0 || len(opts.HideBodySize) > 0 {
 		f, err := response.NewFilterSize(opts.HideHeaderSize, opts.HideBodySize)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		filters = append(filters, f)
 	}
@@ -295,36 +259,105 @@ func run(opts *Options, args []string) error {
 		filters = append(filters, response.FilterAcceptPattern{Pattern: opts.showPattern})
 	}
 
+	return filters, nil
+}
+
+func setupValueFilters(opts *Options) []ValueFilter {
+	var filters []ValueFilter
+
+	if opts.Skip > 0 {
+		filters = append(filters, &ValueFilterSkip{Skip: opts.Skip})
+	}
+
+	if opts.Limit > 0 {
+		filters = append(filters, &ValueFilterLimit{Max: opts.Limit})
+	}
+
+	return filters
+}
+
+func run(opts *Options, args []string) error {
+	// make sure the options and arguments are valid
+	if len(args) == 0 {
+		return errors.New("last argument needs to be the URL")
+	}
+
+	if len(args) > 1 {
+		return errors.New("more than one target URL specified")
+	}
+
+	err := opts.valid()
+	if err != nil {
+		return err
+	}
+
+	inputURL := args[0]
+	opts.Request.URL = inputURL
+
+	// create a root context to use for all derived contexts
+	rootCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// create a producer from the options
+	producer, err := setupProducer(opts)
+	if err != nil {
+		return err
+	}
+
+	// setup logging and the terminal
+	logfilePrefix, err := logfilePath(opts, inputURL)
+	if err != nil {
+		return err
+	}
+
+	term, termTomb, err := setupTerminal(rootCtx, logfilePrefix)
+	if err != nil {
+		return err
+	}
+
+	// create a new context for all processing steps in the pipline (producer, filter, ...)
+	ctx, cancel := context.WithCancel(rootCtx)
+	defer cancel()
+
+	// make sure the context is cancelled when SIGINT is received
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGINT)
+	go func() {
+		for sig := range signalCh {
+			term.Printf("received signal %v\n", sig)
+			cancel()
+		}
+	}()
+
+	// collect the filters for the responses
+	responseFilters, err := setupResponseFilters(opts)
+	if err != nil {
+		return err
+	}
+
 	term.Printf("input URL %v\n\n", inputURL)
 
+	// setup the pipeline for the values
 	outputChan := make(chan string, opts.BufferSize)
 	inputChan := outputChan
 	outputCountChan := make(chan int, 1)
 	inputCountChan := outputCountChan
 
-	var valueFilters []ValueFilter
-
-	if opts.Skip > 0 {
-		valueFilters = append(valueFilters, &ValueFilterSkip{Skip: opts.Skip})
-	}
-
-	if opts.Limit > 0 {
-		valueFilters = append(valueFilters, &ValueFilterLimit{Max: opts.Limit})
-	}
-
-	for _, f := range valueFilters {
+	for _, f := range setupValueFilters(opts) {
 		outputChan, outputCountChan, err = RunValueFilter(ctx, f, outputChan, outputCountChan)
 		if err != nil {
 			return err
 		}
 	}
 
+	// start the producer
 	prodTomb, _ := tomb.WithContext(ctx)
 	err = producer.Start(prodTomb, inputChan, inputCountChan)
 	if err != nil {
 		return fmt.Errorf("unable to start: %v", err)
 	}
 
+	// setup the pipline for the responses
 	responseChannel := make(chan response.Response)
 
 	limitedChan := outputChan
@@ -335,6 +368,7 @@ func run(opts *Options, args []string) error {
 		limiter.Start(prodTomb, outputChan, limitedChan)
 	}
 
+	// start the runners
 	runnerTomb, _ := tomb.WithContext(ctx)
 	for i := 0; i < opts.Threads; i++ {
 		runner := response.NewRunner(runnerTomb, opts.Request, limitedChan, responseChannel)
@@ -360,8 +394,10 @@ func run(opts *Options, args []string) error {
 		close(responseChannel)
 	}()
 
-	ch := FilterResponses(responseChannel, filters)
+	// filter the responses
+	ch := FilterResponses(responseChannel, responseFilters)
 
+	// run the reporter
 	reporter := NewReporter(term)
 	displayTomb, _ := tomb.WithContext(ctx)
 	displayTomb.Go(reporter.Display(ch, outputCountChan))
