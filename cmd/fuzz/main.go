@@ -186,6 +186,22 @@ func logfilePath(opts *Options, inputURL string) (prefix string, err error) {
 	return opts.Logfile, nil
 }
 
+func setupProducer(opts *Options) (Producer, error) {
+	switch {
+	case opts.Range != "":
+		rp := &RangeProducer{Format: opts.RangeFormat}
+		_, err := fmt.Sscanf(opts.Range, "%d-%d", &rp.First, &rp.Last)
+		if err != nil {
+			return nil, errors.New("wrong format for range, expected: first-last")
+		}
+		return rp, nil
+	case opts.Filename != "":
+		return &FileProducer{Filename: opts.Filename}, nil
+	default:
+		return nil, errors.New("neither file nor range specified, nothing to do")
+	}
+}
+
 func run(opts *Options, args []string) error {
 	if len(args) == 0 {
 		return errors.New("last argument needs to be the URL")
@@ -206,19 +222,9 @@ func run(opts *Options, args []string) error {
 	inputURL := args[0]
 	opts.Request.URL = inputURL
 
-	var producer Producer
-	switch {
-	case opts.Range != "":
-		rp := &RangeProducer{Format: opts.RangeFormat}
-		_, err := fmt.Sscanf(opts.Range, "%d-%d", &rp.First, &rp.Last)
-		if err != nil {
-			return errors.New("wrong format for range, expected: first-last")
-		}
-		producer = rp
-	case opts.Filename != "":
-		producer = &FileProducer{Filename: opts.Filename}
-	default:
-		return errors.New("neither file nor range specified, nothing to do")
+	producer, err := setupProducer(opts)
+	if err != nil {
+		return err
 	}
 
 	var term Terminal
