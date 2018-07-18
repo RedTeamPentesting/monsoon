@@ -140,7 +140,7 @@ func AddCommand(c *cobra.Command) {
 	fs.StringVar(&opts.RangeFormat, "range-format", "%d", "set `format` for range")
 
 	fs.StringVarP(&opts.Filename, "file", "f", "", "read values from `filename`")
-	fs.StringVar(&opts.Logfile, "logfile", "", "write copy of printed messages to `filename`")
+	fs.StringVar(&opts.Logfile, "logfile", "", "write copy of printed messages to `filename`.log")
 	fs.StringVar(&opts.Logdir, "logdir", os.Getenv("MONSOON_LOG_DIR"), "automatically log all output to files in `dir`")
 
 	fs.IntVarP(&opts.Threads, "threads", "t", 5, "make as many as `n` parallel requests")
@@ -166,6 +166,24 @@ func AddCommand(c *cobra.Command) {
 	fs.IntVar(&opts.BodyBufferSize, "body-buffer-size", 5, "use `n` MiB as the buffer size for extracting strings from a response body")
 
 	fs.BoolVarP(&opts.Insecure, "insecure", "k", false, "disable TLS certificate verification")
+}
+
+// logfilePath returns the prefix for the logfiles, if any.
+func logfilePath(opts *Options, inputURL string) (prefix string, err error) {
+	if opts.Logdir != "" && opts.Logfile == "" {
+		url, err := url.Parse(inputURL)
+		if err != nil {
+			return "", err
+		}
+
+		ts := time.Now().Format("20060102_150405")
+		fn := fmt.Sprintf("monsoon_%s_%s", url.Host, ts)
+		p := filepath.Join(opts.Logdir, fn)
+		fmt.Printf("logfile prefix %v\n", p)
+		return p, nil
+	}
+
+	return opts.Logfile, nil
 }
 
 func run(opts *Options, args []string) error {
@@ -204,23 +222,17 @@ func run(opts *Options, args []string) error {
 	}
 
 	var term Terminal
-	if opts.Logdir != "" && opts.Logfile == "" {
-		url, err := url.Parse(inputURL)
-		if err != nil {
-			return err
-		}
-
-		ts := time.Now().Format("20060102_150405")
-		fn := fmt.Sprintf("monsoon_%s_%s.log", url.Host, ts)
-		opts.Logfile = filepath.Join(opts.Logdir, fn)
+	logfilePrefix, err := logfilePath(opts, inputURL)
+	if err != nil {
+		return err
 	}
 
 	termTomb, _ := tomb.WithContext(rootCtx)
 
 	if opts.Logfile != "" {
-		fmt.Printf("logfile is %s\n", opts.Logfile)
+		fmt.Printf("logfile is %s.log\n", logfilePrefix)
 
-		logfile, err := os.Create(opts.Logfile)
+		logfile, err := os.Create(logfilePrefix + ".log")
 		if err != nil {
 			return err
 		}
