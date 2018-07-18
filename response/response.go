@@ -29,6 +29,8 @@ type Response struct {
 	HTTPResponse *http.Response
 	RawBody      []byte
 	RawHeader    []byte
+
+	Hide bool // can be set by a filter, response should not be displayed
 }
 
 func quote(strs []string) []string {

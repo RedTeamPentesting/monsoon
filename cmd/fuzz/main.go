@@ -354,9 +354,11 @@ func run(opts *Options, args []string) error {
 		close(responseChannel)
 	}()
 
-	reporter := NewReporter(term, filters)
+	ch := FilterResponses(responseChannel, filters)
+
+	reporter := NewReporter(term)
 	displayTomb, _ := tomb.WithContext(ctx)
-	displayTomb.Go(reporter.Display(responseChannel, outputCountChan))
+	displayTomb.Go(reporter.Display(ch, outputCountChan))
 	<-displayTomb.Dead()
 
 	termTomb.Kill(nil)

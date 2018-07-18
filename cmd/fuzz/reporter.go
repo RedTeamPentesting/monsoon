@@ -42,13 +42,12 @@ func (lt *LogTerminal) Print(msg string) {
 
 // Reporter prints the Responses to stdout.
 type Reporter struct {
-	term    Terminal
-	filters []response.Filter
+	term Terminal
 }
 
 // NewReporter returns a new reporter.
-func NewReporter(term Terminal, filters []response.Filter) *Reporter {
-	return &Reporter{term: term, filters: filters}
+func NewReporter(term Terminal) *Reporter {
+	return &Reporter{term: term}
 }
 
 // HTTPStats collects statistics about several HTTP responses.
@@ -137,15 +136,7 @@ func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int)
 				stats.StatusCodes[response.HTTPResponse.StatusCode]++
 			}
 
-			print := true
-			for _, f := range r.filters {
-				if f.Reject(response) {
-					print = false
-					break
-				}
-			}
-
-			if print {
+			if !response.Hide {
 				r.term.Printf("%v\n", response)
 			}
 
