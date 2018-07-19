@@ -50,7 +50,7 @@ func (h Header) Set(s string) error {
 
 	// if the header is still at the default value, remove the default value first
 	if headerDefaultValue(h, name) {
-		delete(h.Header, name)
+		delete(h.Header, textproto.CanonicalMIMEHeaderKey(name))
 	}
 
 	// strip the leading space if necessary

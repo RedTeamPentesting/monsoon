@@ -70,6 +70,24 @@ func TestHeaderSet(t *testing.T) {
 				"X-Testing":  []string{"foobar"},
 			},
 		},
+		{
+			// overwrite Accept header
+			start:  DefaultHeader,
+			values: []string{"accept: foo"},
+			want: http.Header{
+				"User-Agent": []string{"monsoon"},
+				"Accept":     []string{"foo"},
+			},
+		},
+		{
+			// set two values for the Accept header
+			start:  DefaultHeader,
+			values: []string{"accept: foo", "accept: bar"},
+			want: http.Header{
+				"User-Agent": []string{"monsoon"},
+				"Accept":     []string{"foo", "bar"},
+			},
+		},
 	}
 
 	for _, test := range tests {
