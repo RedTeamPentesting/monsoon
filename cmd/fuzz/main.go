@@ -227,7 +227,7 @@ func setupProducer(ctx context.Context, g *errgroup.Group, opts *Options, ch cha
 	}
 }
 
-func setupTerminal(ctx context.Context, g *errgroup.Group, logfilePrefix string) (term Terminal, cleanup func(), err error) {
+func setupTerminal(ctx context.Context, g *errgroup.Group, logfilePrefix string) (term cli.Terminal, cleanup func(), err error) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	if logfilePrefix != "" {
@@ -250,7 +250,7 @@ func setupTerminal(ctx context.Context, g *errgroup.Group, logfilePrefix string)
 	}
 
 	// make sure error messages logged via the log package are printed nicely
-	w := NewStdioWrapper(term)
+	w := cli.NewStdioWrapper(term)
 	log.SetOutput(w.Stderr())
 
 	g.Go(func() error {

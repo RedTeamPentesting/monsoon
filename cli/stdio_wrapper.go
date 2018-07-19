@@ -1,9 +1,18 @@
-package fuzz
+package cli
 
 import (
 	"bytes"
+	"context"
 	"io"
 )
+
+// Terminal prints data with intermediate status.
+type Terminal interface {
+	Printf(msg string, data ...interface{})
+	Print(msg string)
+	SetStatus([]string)
+	Run(context.Context)
+}
 
 // StdioWrapper provides stdout and stderr integration with termstatus.
 type StdioWrapper struct {

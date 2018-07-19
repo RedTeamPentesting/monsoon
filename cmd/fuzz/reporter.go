@@ -1,7 +1,6 @@
 package fuzz
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"sort"
@@ -9,16 +8,9 @@ import (
 	"time"
 
 	"github.com/fd0/termstatus"
+	"github.com/happal/monsoon/cli"
 	"github.com/happal/monsoon/response"
 )
-
-// Terminal prints data with intermediate status.
-type Terminal interface {
-	Printf(msg string, data ...interface{})
-	Print(msg string)
-	SetStatus([]string)
-	Run(context.Context)
-}
 
 // LogTerminal writes data to a second writer in addition to the terminal.
 type LogTerminal struct {
@@ -42,11 +34,11 @@ func (lt *LogTerminal) Print(msg string) {
 
 // Reporter prints the Responses to stdout.
 type Reporter struct {
-	term Terminal
+	term cli.Terminal
 }
 
 // NewReporter returns a new reporter.
-func NewReporter(term Terminal) *Reporter {
+func NewReporter(term cli.Terminal) *Reporter {
 	return &Reporter{term: term}
 }
 
