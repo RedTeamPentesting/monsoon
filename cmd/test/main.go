@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"net/http/httputil"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
+	"golang.org/x/sync/errgroup"
+
+	"github.com/happal/monsoon/cli"
 	"github.com/happal/monsoon/request"
 	"github.com/happal/monsoon/response"
 	"github.com/spf13/cobra"
@@ -60,98 +61,92 @@ var cmd = &cobra.Command{
 	Example: helpExamples,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if len(args) == 0 {
-			return errors.New("last argument needs to be the URL")
-		}
+		return cli.WithContext(func(ctx context.Context, g *errgroup.Group) error {
+			return run(ctx, g, &opts, args)
+		})
+	},
+}
 
-		if len(args) > 1 {
-			return errors.New("more than one target URL specified")
-		}
+func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) error {
+	if len(args) == 0 {
+		return errors.New("last argument needs to be the URL")
+	}
 
-		opts.Request.URL = args[0]
+	if len(args) > 1 {
+		return errors.New("more than one target URL specified")
+	}
 
-		req, err := opts.Request.Apply("FUZZ", opts.Value)
-		if err != nil {
-			return err
-		}
+	opts.Request.URL = args[0]
 
-		host, port, err := request.Target(req)
-		if err != nil {
-			return err
-		}
+	req, err := opts.Request.Apply("FUZZ", opts.Value)
+	if err != nil {
+		return err
+	}
 
-		// remote server
-		fmt.Printf("remote %v, port %v\n\n", host, port)
+	host, port, err := request.Target(req)
+	if err != nil {
+		return err
+	}
 
-		if opts.ShowRequest {
-			fmt.Println(header("request"))
-			// print request with body
-			buf, err := httputil.DumpRequestOut(req, true)
-			if err != nil {
-				return err
-			}
+	// remote server
+	fmt.Printf("remote %v, port %v\n\n", host, port)
 
-			// be nice to the CLI user and append a newline if there isn't one yet
-			if !bytes.HasSuffix(buf, []byte("\n")) {
-				buf = append(buf, '\n')
-			}
-
-			_, err = os.Stdout.Write(buf)
-			if err != nil {
-				return err
-			}
-		}
-
-		input := make(chan string, 1)
-		input <- opts.Value
-
-		output := make(chan response.Response)
-
-		// create a new errGroup and context for all processing steps in the pipline (producer, filter, ...)
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		// make sure the the workers are cancelled when SIGINT is received
-		signalCh := make(chan os.Signal, 1)
-		signal.Notify(signalCh, syscall.SIGINT)
-		go func() {
-			for sig := range signalCh {
-				fmt.Printf("received signal %v\n", sig)
-				cancel()
-			}
-		}()
-
-		runner := response.NewRunner(opts.Request, input, output)
-		runner.Run(ctx)
-
-		res := <-output
-
-		if opts.ShowRequest {
-			// we only need the separator when request and response are both shown
-			fmt.Println(header("response"))
-		}
-
-		if res.Error != nil {
-			fmt.Printf("error: %v\n", res.Error)
-			return nil
-		}
-
-		// print response
-		_, err = os.Stdout.Write(res.RawHeader)
-		if err != nil {
-			return err
-		}
-
-		_, err = os.Stdout.Write(res.RawBody)
+	if opts.ShowRequest {
+		fmt.Println(header("request"))
+		// print request with body
+		buf, err := httputil.DumpRequestOut(req, true)
 		if err != nil {
 			return err
 		}
 
 		// be nice to the CLI user and append a newline if there isn't one yet
-		if !bytes.HasSuffix(res.RawBody, []byte("\n")) {
-			fmt.Println()
+		if !bytes.HasSuffix(buf, []byte("\n")) {
+			buf = append(buf, '\n')
 		}
 
+		_, err = os.Stdout.Write(buf)
+		if err != nil {
+			return err
+		}
+	}
+
+	input := make(chan string, 1)
+	input <- opts.Value
+	close(input)
+
+	output := make(chan response.Response, 1)
+
+	runner := response.NewRunner(opts.Request, input, output)
+	runner.Run(ctx)
+	close(output)
+
+	res := <-output
+
+	if opts.ShowRequest {
+		// we only need the separator when request and response are both shown
+		fmt.Println(header("response"))
+	}
+
+	if res.Error != nil {
+		fmt.Printf("error: %v\n", res.Error)
 		return nil
-	},
+	}
+
+	// print response
+	_, err = os.Stdout.Write(res.RawHeader)
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Stdout.Write(res.RawBody)
+	if err != nil {
+		return err
+	}
+
+	// be nice to the CLI user and append a newline if there isn't one yet
+	if !bytes.HasSuffix(res.RawBody, []byte("\n")) {
+		fmt.Println()
+	}
+
+	return nil
 }
