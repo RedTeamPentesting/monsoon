@@ -389,7 +389,7 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	// limit the throughput (if requested)
 	if opts.RequestsPerSecond > 0 {
-		valueCh = Limit(ctx, opts.RequestsPerSecond, valueCh)
+		valueCh = producer.Limit(ctx, opts.RequestsPerSecond, valueCh)
 	}
 
 	// start the runners
