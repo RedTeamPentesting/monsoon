@@ -241,9 +241,9 @@ func setupTerminal(ctx context.Context, g *errgroup.Group, logfilePrefix string)
 		fmt.Fprintln(logfile, shell.Join(os.Args))
 
 		// write copies of messages to logfile
-		term = &LogTerminal{
+		term = &cli.LogTerminal{
 			Terminal: termstatus.New(os.Stdout, os.Stderr, false),
-			w:        logfile,
+			Writer:   logfile,
 		}
 	} else {
 		term = termstatus.New(os.Stdout, os.Stderr, false)

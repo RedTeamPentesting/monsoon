@@ -2,35 +2,12 @@ package fuzz
 
 import (
 	"fmt"
-	"io"
 	"sort"
-	"strings"
 	"time"
 
-	"github.com/fd0/termstatus"
 	"github.com/happal/monsoon/cli"
 	"github.com/happal/monsoon/response"
 )
-
-// LogTerminal writes data to a second writer in addition to the terminal.
-type LogTerminal struct {
-	*termstatus.Terminal
-	w io.WriteCloser
-}
-
-// Printf prints a messsage with formatting.
-func (lt *LogTerminal) Printf(msg string, data ...interface{}) {
-	lt.Print(fmt.Sprintf(msg, data...))
-}
-
-// Print prints a message.
-func (lt *LogTerminal) Print(msg string) {
-	if !strings.HasSuffix(msg, "\n") {
-		msg += "\n"
-	}
-	lt.Terminal.Print(msg)
-	fmt.Fprintf(lt.w, msg)
-}
 
 // Reporter prints the Responses to stdout.
 type Reporter struct {
