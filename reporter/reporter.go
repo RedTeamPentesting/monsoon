@@ -1,4 +1,4 @@
-package fuzz
+package reporter
 
 import (
 	"fmt"
@@ -9,13 +9,13 @@ import (
 	"github.com/happal/monsoon/response"
 )
 
-// Reporter prints the Responses to stdout.
+// Reporter prints the Responses to a terminal.
 type Reporter struct {
 	term cli.Terminal
 }
 
-// NewReporter returns a new reporter.
-func NewReporter(term cli.Terminal) *Reporter {
+// New returns a new reporter.
+func New(term cli.Terminal) *Reporter {
 	return &Reporter{term: term}
 }
 

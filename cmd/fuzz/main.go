@@ -19,6 +19,7 @@ import (
 	"github.com/fd0/termstatus"
 	"github.com/happal/monsoon/cli"
 	"github.com/happal/monsoon/producer"
+	"github.com/happal/monsoon/reporter"
 	"github.com/happal/monsoon/request"
 	"github.com/happal/monsoon/response"
 	"github.com/happal/monsoon/shell"
@@ -400,6 +401,6 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	// run the reporter
 	term.Printf("input URL %v\n\n", inputURL)
-	reporter := NewReporter(term)
+	reporter := reporter.New(term)
 	return reporter.Display(responseCh, countCh)
 }
