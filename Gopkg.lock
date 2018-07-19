@@ -9,7 +9,12 @@
 
 [[projects]]
   name = "github.com/google/go-cmp"
-  packages = ["cmp","cmp/internal/diff","cmp/internal/function","cmp/internal/value"]
+  packages = [
+    "cmp",
+    "cmp/internal/diff",
+    "cmp/internal/function",
+    "cmp/internal/value"
+  ]
   revision = "3af367b6b30c263d47e8895973edcca9a49cf029"
   version = "v0.2.0"
 
@@ -51,19 +56,22 @@
 
 [[projects]]
   branch = "master"
-  name = "golang.org/x/sys"
-  packages = ["unix","windows"]
-  revision = "63fc586f45fe72d95d5240a5d5eb95e6503907d3"
+  name = "golang.org/x/sync"
+  packages = ["errgroup"]
+  revision = "1d60e4601c6fd243af51cc01ddf169918a5407ca"
 
 [[projects]]
-  branch = "v2"
-  name = "gopkg.in/tomb.v2"
-  packages = ["."]
-  revision = "d5d1b5820637886def9eef33e03a27a9f166942c"
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = [
+    "unix",
+    "windows"
+  ]
+  revision = "63fc586f45fe72d95d5240a5d5eb95e6503907d3"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "7459dbdfec1bf8e030ca61f23bfdd0a3802e6f3a16fc31a9ba7dadfcd1404830"
+  inputs-digest = "ab76063ad917542a645fd764a84570cc5be60f86157620d8a83f53367d5c203a"
   solver-name = "gps-cdcl"
   solver-version = 1

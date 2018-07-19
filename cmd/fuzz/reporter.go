@@ -113,42 +113,40 @@ func (h *HTTPStats) Report(current string) (res []string) {
 }
 
 // Display shows incoming Responses.
-func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int) func() error {
-	return func() error {
-		r.term.Printf("%7s %8s %8s   %-8s %s\n", "status", "header", "body", "value", "extract")
+func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int) error {
+	r.term.Printf("%7s %8s %8s   %-8s %s\n", "status", "header", "body", "value", "extract")
 
-		stats := &HTTPStats{
-			Start:       time.Now(),
-			StatusCodes: make(map[int]int),
-		}
-
-		for response := range ch {
-			select {
-			case c := <-countChannel:
-				stats.Count = c
-			default:
-			}
-
-			stats.Responses++
-			if response.Error != nil {
-				stats.Errors++
-			} else {
-				stats.StatusCodes[response.HTTPResponse.StatusCode]++
-			}
-
-			if !response.Hide {
-				r.term.Printf("%v\n", response)
-			}
-
-			r.term.SetStatus(stats.Report(response.Item))
-		}
-
-		r.term.Print("\n")
-		r.term.Printf("processed %d HTTP requests in %v\n", stats.Responses, formatSeconds(time.Since(stats.Start).Seconds()))
-		for _, line := range stats.Report("")[1:] {
-			r.term.Print(line)
-		}
-
-		return nil
+	stats := &HTTPStats{
+		Start:       time.Now(),
+		StatusCodes: make(map[int]int),
 	}
+
+	for response := range ch {
+		select {
+		case c := <-countChannel:
+			stats.Count = c
+		default:
+		}
+
+		stats.Responses++
+		if response.Error != nil {
+			stats.Errors++
+		} else {
+			stats.StatusCodes[response.HTTPResponse.StatusCode]++
+		}
+
+		if !response.Hide {
+			r.term.Printf("%v\n", response)
+		}
+
+		r.term.SetStatus(stats.Report(response.Item))
+	}
+
+	r.term.Print("\n")
+	r.term.Printf("processed %d HTTP requests in %v\n", stats.Responses, formatSeconds(time.Since(stats.Start).Seconds()))
+	for _, line := range stats.Report("")[1:] {
+		r.term.Print(line)
+	}
+
+	return nil
 }

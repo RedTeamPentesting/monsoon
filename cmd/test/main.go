@@ -2,16 +2,18 @@ package test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net/http/httputil"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"github.com/happal/monsoon/request"
 	"github.com/happal/monsoon/response"
 	"github.com/spf13/cobra"
-	tomb "gopkg.in/tomb.v2"
 )
 
 // Options collect options for the command.
@@ -105,9 +107,22 @@ var cmd = &cobra.Command{
 
 		output := make(chan response.Response)
 
-		t := &tomb.Tomb{}
-		runner := response.NewRunner(t, opts.Request, input, output)
-		t.Go(runner.Run)
+		// create a new errGroup and context for all processing steps in the pipline (producer, filter, ...)
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+
+		// make sure the the workers are cancelled when SIGINT is received
+		signalCh := make(chan os.Signal, 1)
+		signal.Notify(signalCh, syscall.SIGINT)
+		go func() {
+			for sig := range signalCh {
+				fmt.Printf("received signal %v\n", sig)
+				cancel()
+			}
+		}()
+
+		runner := response.NewRunner(opts.Request, input, output)
+		runner.Run(ctx)
 
 		res := <-output
 

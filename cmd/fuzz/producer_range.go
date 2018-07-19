@@ -1,10 +1,9 @@
 package fuzz
 
 import (
+	"context"
 	"errors"
 	"fmt"
-
-	tomb "gopkg.in/tomb.v2"
 )
 
 // RangeProducer returns a range of integer values with a given format.
@@ -13,11 +12,10 @@ type RangeProducer struct {
 	Format      string
 
 	ch chan<- string
-	t  *tomb.Tomb
 }
 
-// Start runs a goroutine which will send all values [first, last] to the channel.
-func (p *RangeProducer) Start(t *tomb.Tomb, ch chan<- string, count chan<- int) error {
+// Start sends all values [first, last] to the channel ch, and the number of items to the channel count.
+func (p *RangeProducer) Start(ctx context.Context, ch chan<- string, count chan<- int) error {
 	if p.First > p.Last {
 		return errors.New("last value is smaller than first value")
 	}
@@ -27,21 +25,14 @@ func (p *RangeProducer) Start(t *tomb.Tomb, ch chan<- string, count chan<- int) 
 	}
 
 	p.ch = ch
-	p.t = t
 	count <- p.Last - p.First + 1
 
-	t.Go(p.run)
-	return nil
-}
-
-// run sends values to the channel.
-func (p *RangeProducer) run() error {
 	defer close(p.ch)
 	for i := p.First; i <= p.Last; i++ {
 		v := fmt.Sprintf(p.Format, i)
 		select {
 		case p.ch <- v:
-		case <-p.t.Dying():
+		case <-ctx.Done():
 			return nil
 		}
 	}

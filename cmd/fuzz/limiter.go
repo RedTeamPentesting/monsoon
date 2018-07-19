@@ -1,10 +1,10 @@
 package fuzz
 
 import (
+	"context"
 	"time"
 
 	"github.com/juju/ratelimit"
-	tomb "gopkg.in/tomb.v2"
 )
 
 // Limiter limits the number of input strings going through the channel.
@@ -19,24 +19,28 @@ func NewLimiter(fillInterval time.Duration, capacity int64) *Limiter {
 	}
 }
 
-// Start runs the Limiter.
-func (l *Limiter) Start(t *tomb.Tomb, inputCh <-chan string, outputCh chan<- string) {
-	t.Go(func() error {
-		defer close(outputCh)
-		for s := range inputCh {
+// Start runs the Limiter in a separate goroutine. It terminates when either
+// the input channel is closed or the context is cancelled.
+func (l *Limiter) Start(ctx context.Context, in <-chan string) <-chan string {
+	out := make(chan string)
+
+	go func() {
+		defer close(out)
+		for s := range in {
 			timeout := l.Bucket.Take(1)
 			select {
 			case <-time.After(timeout):
-			case <-t.Dying():
-				return nil
+			case <-ctx.Done():
+				return
 			}
 
 			select {
-			case outputCh <- s:
-			case <-t.Dying():
-				return nil
+			case out <- s:
+			case <-ctx.Done():
+				return
 			}
 		}
-		return nil
-	})
+	}()
+
+	return out
 }

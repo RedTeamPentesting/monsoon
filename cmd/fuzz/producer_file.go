@@ -2,10 +2,9 @@ package fuzz
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
-
-	tomb "gopkg.in/tomb.v2"
 )
 
 // FileProducer returns each line read from a file.
@@ -15,11 +14,10 @@ type FileProducer struct {
 	f     *os.File
 	count chan<- int
 	ch    chan<- string
-	t     *tomb.Tomb
 }
 
-// Start runs a goroutine which will send all strings from the file to the channel.
-func (p *FileProducer) Start(t *tomb.Tomb, ch chan<- string, count chan<- int) (err error) {
+// Start sends all strings from the file to the channel ch, and the number of items to the channel count.
+func (p *FileProducer) Start(ctx context.Context, ch chan<- string, count chan<- int) (err error) {
 	if p.Filename == "-" {
 		// use stdin
 		p.f = os.Stdin
@@ -32,14 +30,7 @@ func (p *FileProducer) Start(t *tomb.Tomb, ch chan<- string, count chan<- int) (
 	}
 	p.count = count
 	p.ch = ch
-	p.t = t
 
-	t.Go(p.run)
-	return nil
-}
-
-// run sends values to the channel.
-func (p *FileProducer) run() error {
 	defer close(p.ch)
 
 	sc := bufio.NewScanner(p.f)
@@ -54,7 +45,7 @@ func (p *FileProducer) run() error {
 
 		select {
 		case p.ch <- sc.Text():
-		case <-p.t.Dying():
+		case <-ctx.Done():
 			return nil
 		}
 	}

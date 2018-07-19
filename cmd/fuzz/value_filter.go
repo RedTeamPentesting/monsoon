@@ -1,31 +1,14 @@
 package fuzz
 
-import (
-	"context"
-
-	tomb "gopkg.in/tomb.v2"
-)
+import "context"
 
 // ValueFilter selects/rejects items received from a producer.
 type ValueFilter interface {
-	Filter(t *tomb.Tomb, inValue <-chan string, inCount <-chan int, outValue chan<- string, outCount chan<- int) error
-}
+	// Count corrects the number of total items to test
+	Count(ctx context.Context, in <-chan int) <-chan int
 
-// RunValueFilter starts a value filter in a Goroutine which filters values
-// (and count) received in the channels and sends them on to the returned
-// output channels.
-func RunValueFilter(ctx context.Context, f ValueFilter, val chan string, count chan int) (chan string, chan int, error) {
-	outVal := make(chan string)
-	outCount := make(chan int, 1)
-
-	t, _ := tomb.WithContext(ctx)
-
-	err := f.Filter(t, val, count, outVal, outCount)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return outVal, outCount, nil
+	// Select filters the items
+	Select(ctx context.Context, in <-chan string) <-chan string
 }
 
 // ValueFilterSkip skips the first n values sent over the channel.
@@ -33,35 +16,51 @@ type ValueFilterSkip struct {
 	Skip int
 }
 
-// Filter filters values sent over ch.
-func (f *ValueFilterSkip) Filter(t *tomb.Tomb, inValue <-chan string, inCount <-chan int, outValue chan<- string, outCount chan<- int) error {
-	t.Go(func() error {
-		c := <-inCount
+// Count filters the number of values.
+func (f *ValueFilterSkip) Count(ctx context.Context, in <-chan int) <-chan int {
+	out := make(chan int, 1)
 
-		// calculate the correct total count
-		if c < f.Skip {
-			c = 0
-		} else {
-			c -= f.Skip
+	go func() {
+		defer close(out)
+		var total int
+		select {
+		case total = <-in:
+		case <-ctx.Done():
 		}
 
-		outCount <- c
-		return nil
-	})
+		// calculate the correct total count
+		if total < f.Skip {
+			total = 0
+		} else {
+			total -= f.Skip
+		}
 
-	t.Go(func() error {
-		defer close(outValue)
+		select {
+		case out <- total:
+		case <-ctx.Done():
+		}
+	}()
+
+	return out
+}
+
+// Select filters values sent over ch.
+func (f *ValueFilterSkip) Select(ctx context.Context, in <-chan string) <-chan string {
+	out := make(chan string)
+
+	go func() {
+		defer close(out)
 		var cur int
 		for {
 			var v string
 			var ok bool
 			select {
-			case <-t.Dying():
-				return nil
-			case v, ok = <-inValue:
+			case <-ctx.Done():
+				return
+			case v, ok = <-in:
 				// when the input channel is closed we're done
 				if !ok {
-					return nil
+					return
 				}
 			}
 
@@ -72,14 +71,14 @@ func (f *ValueFilterSkip) Filter(t *tomb.Tomb, inValue <-chan string, inCount <-
 			}
 
 			select {
-			case <-t.Dying():
-				return nil
-			case outValue <- v:
+			case <-ctx.Done():
+				return
+			case out <- v:
 			}
 		}
-	})
+	}()
 
-	return nil
+	return out
 }
 
 // ValueFilterLimit passes through at most Max values.
@@ -87,33 +86,49 @@ type ValueFilterLimit struct {
 	Max int
 }
 
-// Filter filters values sent over ch.
-func (f *ValueFilterLimit) Filter(t *tomb.Tomb, inValue <-chan string, inCount <-chan int, outValue chan<- string, outCount chan<- int) error {
-	t.Go(func() error {
-		c := <-inCount
+// Count filters the number of values.
+func (f *ValueFilterLimit) Count(ctx context.Context, in <-chan int) <-chan int {
+	out := make(chan int, 1)
 
-		// calculate the correct total count
-		if c > f.Max {
-			c = f.Max
+	go func() {
+		defer close(out)
+		var total int
+		select {
+		case total = <-in:
+		case <-ctx.Done():
 		}
 
-		outCount <- c
-		return nil
-	})
+		// calculate the correct total count
+		if total > f.Max {
+			total = f.Max
+		}
 
-	t.Go(func() error {
-		defer close(outValue)
+		select {
+		case out <- total:
+		case <-ctx.Done():
+		}
+	}()
+
+	return out
+}
+
+// Select filters values sent over ch.
+func (f *ValueFilterLimit) Select(ctx context.Context, in <-chan string) <-chan string {
+	out := make(chan string)
+
+	go func() {
+		defer close(out)
 		var cur int
 		for {
 			var v string
 			var ok bool
 			select {
-			case <-t.Dying():
-				return nil
-			case v, ok = <-inValue:
+			case <-ctx.Done():
+				return
+			case v, ok = <-in:
 				// when the input channel is closed we're done
 				if !ok {
-					return nil
+					return
 				}
 			}
 
@@ -124,12 +139,12 @@ func (f *ValueFilterLimit) Filter(t *tomb.Tomb, inValue <-chan string, inCount <
 			cur++
 
 			select {
-			case <-t.Dying():
-				return nil
-			case outValue <- v:
+			case <-ctx.Done():
+				return
+			case out <- v:
 			}
 		}
-	})
+	}()
 
-	return nil
+	return out
 }

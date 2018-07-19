@@ -9,17 +9,18 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"os/signal"
 	"path/filepath"
 	"regexp"
-	"syscall"
+	"sync"
 	"time"
 
+	"golang.org/x/sync/errgroup"
+
 	"github.com/fd0/termstatus"
+	"github.com/happal/monsoon/cli"
 	"github.com/happal/monsoon/request"
 	"github.com/happal/monsoon/response"
 	"github.com/spf13/cobra"
-	tomb "gopkg.in/tomb.v2"
 )
 
 // Options collect options for a run.
@@ -125,7 +126,9 @@ var cmd = &cobra.Command{
 	Example: helpExamples,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return run(&opts, args)
+		return cli.WithContext(func(ctx context.Context, g *errgroup.Group) error {
+			return run(ctx, g, &opts, args)
+		})
 	},
 }
 
@@ -202,17 +205,15 @@ func setupProducer(opts *Options) (Producer, error) {
 	}
 }
 
-func setupTerminal(ctx context.Context, logfilePrefix string) (Terminal, *tomb.Tomb, error) {
-	var term Terminal
-
-	termTomb, _ := tomb.WithContext(ctx)
+func setupTerminal(ctx context.Context, g *errgroup.Group, logfilePrefix string) (term Terminal, cleanup func(), err error) {
+	ctx, cancel := context.WithCancel(ctx)
 
 	if logfilePrefix != "" {
 		fmt.Printf("logfile is %s.log\n", logfilePrefix)
 
 		logfile, err := os.Create(logfilePrefix + ".log")
 		if err != nil {
-			return nil, nil, err
+			return nil, cancel, err
 		}
 
 		fmt.Fprintln(logfile, recreateCommandline(os.Args))
@@ -226,16 +227,16 @@ func setupTerminal(ctx context.Context, logfilePrefix string) (Terminal, *tomb.T
 		term = termstatus.New(os.Stdout, os.Stderr, false)
 	}
 
-	termTomb.Go(func() error {
-		term.Run(termTomb.Context(ctx))
-		return nil
-	})
-
 	// make sure error messages logged via the log package are printed nicely
 	w := NewStdioWrapper(term)
 	log.SetOutput(w.Stderr())
 
-	return term, termTomb, nil
+	g.Go(func() error {
+		term.Run(ctx)
+		return nil
+	})
+
+	return term, cancel, nil
 }
 
 func setupResponseFilters(opts *Options) ([]response.Filter, error) {
@@ -262,21 +263,54 @@ func setupResponseFilters(opts *Options) ([]response.Filter, error) {
 	return filters, nil
 }
 
-func setupValueFilters(opts *Options) []ValueFilter {
-	var filters []ValueFilter
-
+func setupValueFilters(ctx context.Context, opts *Options, valueCh <-chan string, countCh <-chan int) (<-chan string, <-chan int) {
 	if opts.Skip > 0 {
-		filters = append(filters, &ValueFilterSkip{Skip: opts.Skip})
+		f := &ValueFilterSkip{Skip: opts.Skip}
+		countCh = f.Count(ctx, countCh)
+		valueCh = f.Select(ctx, valueCh)
 	}
 
 	if opts.Limit > 0 {
-		filters = append(filters, &ValueFilterLimit{Max: opts.Limit})
+		f := &ValueFilterLimit{Max: opts.Limit}
+		countCh = f.Count(ctx, countCh)
+		valueCh = f.Select(ctx, valueCh)
 	}
 
-	return filters
+	return valueCh, countCh
 }
 
-func run(opts *Options, args []string) error {
+func startRunners(ctx context.Context, opts *Options, inputCh <-chan string, outputCh chan<- response.Response) {
+	var wg sync.WaitGroup
+	for i := 0; i < opts.Threads; i++ {
+		runner := response.NewRunner(opts.Request, inputCh, outputCh)
+		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
+		runner.Extract = opts.extract
+		runner.ExtractPipe = opts.extractPipe
+
+		runner.Client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			if len(via) <= opts.FollowRedirect {
+				return nil
+			}
+			return http.ErrUseLastResponse
+		}
+		if opts.Insecure {
+			runner.Transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+		}
+		wg.Add(1)
+		go func() {
+			runner.Run(ctx)
+			wg.Done()
+		}()
+	}
+
+	go func() {
+		// wait until the runners are done, then close the output channel
+		wg.Wait()
+		close(outputCh)
+	}()
+}
+
+func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) error {
 	// make sure the options and arguments are valid
 	if len(args) == 0 {
 		return errors.New("last argument needs to be the URL")
@@ -294,10 +328,6 @@ func run(opts *Options, args []string) error {
 	inputURL := args[0]
 	opts.Request.URL = inputURL
 
-	// create a root context to use for all derived contexts
-	rootCtx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	// create a producer from the options
 	producer, err := setupProducer(opts)
 	if err != nil {
@@ -310,24 +340,11 @@ func run(opts *Options, args []string) error {
 		return err
 	}
 
-	term, termTomb, err := setupTerminal(rootCtx, logfilePrefix)
+	term, cleanup, err := setupTerminal(ctx, g, logfilePrefix)
+	defer cleanup()
 	if err != nil {
 		return err
 	}
-
-	// create a new context for all processing steps in the pipline (producer, filter, ...)
-	ctx, cancel := context.WithCancel(rootCtx)
-	defer cancel()
-
-	// make sure the context is cancelled when SIGINT is received
-	signalCh := make(chan os.Signal, 1)
-	signal.Notify(signalCh, syscall.SIGINT)
-	go func() {
-		for sig := range signalCh {
-			term.Printf("received signal %v\n", sig)
-			cancel()
-		}
-	}()
 
 	// collect the filters for the responses
 	responseFilters, err := setupResponseFilters(opts)
@@ -338,71 +355,32 @@ func run(opts *Options, args []string) error {
 	term.Printf("input URL %v\n\n", inputURL)
 
 	// setup the pipeline for the values
-	outputChan := make(chan string, opts.BufferSize)
-	inputChan := outputChan
-	outputCountChan := make(chan int, 1)
-	inputCountChan := outputCountChan
+	vch := make(chan string, opts.BufferSize)
+	var valueCh <-chan string = vch
+	cch := make(chan int, 1)
+	var countCh <-chan int = cch
 
-	for _, f := range setupValueFilters(opts) {
-		outputChan, outputCountChan, err = RunValueFilter(ctx, f, outputChan, outputCountChan)
-		if err != nil {
-			return err
-		}
-	}
+	valueCh, countCh = setupValueFilters(ctx, opts, valueCh, countCh)
 
 	// start the producer
-	prodTomb, _ := tomb.WithContext(ctx)
-	err = producer.Start(prodTomb, inputChan, inputCountChan)
-	if err != nil {
-		return fmt.Errorf("unable to start: %v", err)
+	g.Go(func() error { return producer.Start(ctx, vch, cch) })
+
+	// limit the throughput (if requested)
+	if opts.RequestsPerSecond > 0 {
+		fillInterval := time.Duration(float64(time.Second) / float64(opts.RequestsPerSecond))
+		valueCh = NewLimiter(fillInterval, 1).Start(ctx, valueCh)
 	}
 
 	// setup the pipline for the responses
 	responseChannel := make(chan response.Response)
 
-	limitedChan := outputChan
-	if opts.RequestsPerSecond > 0 {
-		limitedChan = make(chan string)
-		fillInterval := time.Duration(float64(time.Second) / float64(opts.RequestsPerSecond))
-		limiter := NewLimiter(fillInterval, 1)
-		limiter.Start(prodTomb, outputChan, limitedChan)
-	}
-
 	// start the runners
-	runnerTomb, _ := tomb.WithContext(ctx)
-	for i := 0; i < opts.Threads; i++ {
-		runner := response.NewRunner(runnerTomb, opts.Request, limitedChan, responseChannel)
-		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
-		runner.Extract = opts.extract
-		runner.ExtractPipe = opts.extractPipe
-
-		runner.Client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
-			if len(via) <= opts.FollowRedirect {
-				return nil
-			}
-			return http.ErrUseLastResponse
-		}
-		if opts.Insecure {
-			runner.Transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
-		}
-		runnerTomb.Go(runner.Run)
-	}
-
-	go func() {
-		// wait until the runners are done, then close the output channel
-		<-runnerTomb.Dead()
-		close(responseChannel)
-	}()
+	startRunners(ctx, opts, valueCh, responseChannel)
 
 	// filter the responses
 	ch := FilterResponses(responseChannel, responseFilters)
 
 	// run the reporter
 	reporter := NewReporter(term)
-	displayTomb, _ := tomb.WithContext(ctx)
-	displayTomb.Go(reporter.Display(ch, outputCountChan))
-	<-displayTomb.Dead()
-
-	termTomb.Kill(nil)
-	return termTomb.Wait()
+	return reporter.Display(ch, countCh)
 }

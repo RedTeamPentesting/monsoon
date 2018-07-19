@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/happal/monsoon/request"
-	tomb "gopkg.in/tomb.v2"
 )
 
 // Runner executes HTTP requests.
@@ -22,7 +21,6 @@ type Runner struct {
 	Client    *http.Client
 	Transport *http.Transport
 
-	t      *tomb.Tomb
 	input  <-chan string
 	output chan<- Response
 }
@@ -31,7 +29,7 @@ type Runner struct {
 const DefaultBodyBufferSize = 5 * 1024 * 1024
 
 // NewRunner returns a new runner to execute HTTP requests.
-func NewRunner(t *tomb.Tomb, template *request.Request, input <-chan string, output chan<- Response) *Runner {
+func NewRunner(template *request.Request, input <-chan string, output chan<- Response) *Runner {
 	// for timeouts, see
 	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
 	tr := &http.Transport{
@@ -55,7 +53,6 @@ func NewRunner(t *tomb.Tomb, template *request.Request, input <-chan string, out
 		Template:       template,
 		Client:         c,
 		Transport:      tr,
-		t:              t,
 		input:          input,
 		output:         output,
 		BodyBufferSize: DefaultBodyBufferSize,
@@ -108,16 +105,14 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 }
 
 // Run processes items read from ch and executes HTTP requests.
-func (r *Runner) Run() error {
+func (r *Runner) Run(ctx context.Context) {
 	for item := range r.input {
-		res := r.request(r.t.Context(context.Background()), item)
+		res := r.request(ctx, item)
 
 		select {
-		case <-r.t.Dying():
-			return nil
+		case <-ctx.Done():
+			return
 		case r.output <- res:
 		}
 	}
-
-	return nil
 }
