@@ -155,16 +155,22 @@ type Request struct {
 	Header *Header
 	Body   string
 
-	TemplateFile string
+	TemplateFile string // used to read the request from a file
+
+	Replace string // this string is being replaced by a value in a specific http request
 
 	Insecure             bool
 	ForceChunkedEncoding bool
 }
 
-// New returns a new request.
-func New() *Request {
+// New returns a new request. If replace is the empty string, "FUZZ" is used.
+func New(replace string) *Request {
+	if replace == "" {
+		replace = "FUZZ"
+	}
 	return &Request{
-		Header: NewHeader(DefaultHeader),
+		Header:  NewHeader(DefaultHeader),
+		Replace: replace,
 	}
 }
 
@@ -241,9 +247,9 @@ func readRequestFromFile(filename string, target *url.URL, replace func([]byte) 
 
 // Apply replaces the template with value in all fields of the request and
 // returns a new http.Request.
-func (r *Request) Apply(template, value string) (*http.Request, error) {
+func (r *Request) Apply(value string) (*http.Request, error) {
 	insertValue := func(s string) string {
-		return replaceTemplate(s, template, value)
+		return replaceTemplate(s, r.Replace, value)
 	}
 
 	targetURL := insertValue(r.URL)
@@ -259,7 +265,7 @@ func (r *Request) Apply(template, value string) (*http.Request, error) {
 		}
 
 		req, err = readRequestFromFile(r.TemplateFile, target, func(buf []byte) []byte {
-			return bytes.Replace(buf, []byte(template), []byte(value), -1)
+			return bytes.Replace(buf, []byte(r.Replace), []byte(value), -1)
 		})
 		if err != nil {
 			return nil, err

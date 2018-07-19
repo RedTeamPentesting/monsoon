@@ -153,7 +153,7 @@ func AddCommand(c *cobra.Command) {
 	fs.Float64Var(&opts.RequestsPerSecond, "requests-per-second", 0, "do at most `n` requests per minute (e.g. 0.5)")
 
 	// add all options to define a request
-	opts.Request = request.New()
+	opts.Request = request.New("")
 	request.AddFlags(opts.Request, fs)
 
 	fs.IntVar(&opts.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")

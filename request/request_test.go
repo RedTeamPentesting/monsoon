@@ -762,7 +762,7 @@ Host: server:1234
 				}()
 			}
 
-			req := New()
+			req := New(test.Template)
 			req.URL = test.URL
 			if test.File != "" {
 				req.TemplateFile = filename
@@ -777,12 +777,7 @@ Host: server:1234
 				}
 			}
 
-			template := "FUZZ"
-			if test.Template != "" {
-				template = test.Template
-			}
-
-			genReq, err := req.Apply(template, test.Value)
+			genReq, err := req.Apply(test.Value)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -26,7 +26,7 @@ func AddCommand(c *cobra.Command) {
 	fs := cmd.Flags()
 	fs.SortFlags = false
 
-	opts.Request = request.New()
+	opts.Request = request.New("")
 	request.AddFlags(opts.Request, fs)
 
 	fs.StringVarP(&opts.Value, "value", "v", "FUZZ", "use `string` instead for the placeholder")
@@ -51,7 +51,7 @@ var cmd = &cobra.Command{
 
 		opts.Request.URL = args[0]
 
-		req, err := opts.Request.Apply("FUZZ", opts.Value)
+		req, err := opts.Request.Apply(opts.Value)
 		if err != nil {
 			return err
 		}

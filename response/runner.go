@@ -66,7 +66,7 @@ func NewRunner(template *request.Request, input <-chan string, output chan<- Res
 }
 
 func (r *Runner) request(ctx context.Context, item string) (response Response) {
-	req, err := r.Template.Apply("FUZZ", item)
+	req, err := r.Template.Apply(item)
 	if err != nil {
 		response.Error = err
 		return
