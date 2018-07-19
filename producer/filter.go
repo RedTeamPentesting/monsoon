@@ -1,9 +1,9 @@
-package fuzz
+package producer
 
 import "context"
 
-// ValueFilter selects/rejects items received from a producer.
-type ValueFilter interface {
+// Filter selects/rejects items received from a producer.
+type Filter interface {
 	// Count corrects the number of total items to test
 	Count(ctx context.Context, in <-chan int) <-chan int
 
@@ -11,13 +11,13 @@ type ValueFilter interface {
 	Select(ctx context.Context, in <-chan string) <-chan string
 }
 
-// ValueFilterSkip skips the first n values sent over the channel.
-type ValueFilterSkip struct {
+// FilterSkip skips the first n values sent over the channel.
+type FilterSkip struct {
 	Skip int
 }
 
 // Count filters the number of values.
-func (f *ValueFilterSkip) Count(ctx context.Context, in <-chan int) <-chan int {
+func (f *FilterSkip) Count(ctx context.Context, in <-chan int) <-chan int {
 	out := make(chan int, 1)
 
 	go func() {
@@ -45,7 +45,7 @@ func (f *ValueFilterSkip) Count(ctx context.Context, in <-chan int) <-chan int {
 }
 
 // Select filters values sent over ch.
-func (f *ValueFilterSkip) Select(ctx context.Context, in <-chan string) <-chan string {
+func (f *FilterSkip) Select(ctx context.Context, in <-chan string) <-chan string {
 	out := make(chan string)
 
 	go func() {
@@ -81,13 +81,13 @@ func (f *ValueFilterSkip) Select(ctx context.Context, in <-chan string) <-chan s
 	return out
 }
 
-// ValueFilterLimit passes through at most Max values.
-type ValueFilterLimit struct {
+// FilterLimit passes through at most Max values.
+type FilterLimit struct {
 	Max int
 }
 
 // Count filters the number of values.
-func (f *ValueFilterLimit) Count(ctx context.Context, in <-chan int) <-chan int {
+func (f *FilterLimit) Count(ctx context.Context, in <-chan int) <-chan int {
 	out := make(chan int, 1)
 
 	go func() {
@@ -113,7 +113,7 @@ func (f *ValueFilterLimit) Count(ctx context.Context, in <-chan int) <-chan int 
 }
 
 // Select filters values sent over ch.
-func (f *ValueFilterLimit) Select(ctx context.Context, in <-chan string) <-chan string {
+func (f *FilterLimit) Select(ctx context.Context, in <-chan string) <-chan string {
 	out := make(chan string)
 
 	go func() {

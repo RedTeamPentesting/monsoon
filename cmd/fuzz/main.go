@@ -287,13 +287,13 @@ func setupResponseFilters(opts *Options) ([]response.Filter, error) {
 
 func setupValueFilters(ctx context.Context, opts *Options, valueCh <-chan string, countCh <-chan int) (<-chan string, <-chan int) {
 	if opts.Skip > 0 {
-		f := &ValueFilterSkip{Skip: opts.Skip}
+		f := &producer.FilterSkip{Skip: opts.Skip}
 		countCh = f.Count(ctx, countCh)
 		valueCh = f.Select(ctx, valueCh)
 	}
 
 	if opts.Limit > 0 {
-		f := &ValueFilterLimit{Max: opts.Limit}
+		f := &producer.FilterLimit{Max: opts.Limit}
 		countCh = f.Count(ctx, countCh)
 		valueCh = f.Select(ctx, valueCh)
 	}
