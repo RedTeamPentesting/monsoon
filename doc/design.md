@@ -17,8 +17,8 @@ The program creates a processing pipeline consisting of the following items:
    the sequence of responses is not deterministic any more and highly depends
    on the server.
 
- * Filter: decides for each HTTP response if it should be rejected according to
-   the current configuration.
+ * ResponseFilter: decides for each HTTP response if it should be rejected
+   according to the current configuration.
 
  * Reporter: takes the HTTP responses from the Runners, runs the filters on
    each one and displays the responses not rejected by the filter to the user,
@@ -29,10 +29,10 @@ This is a rough diagram of how it all fits together:
 ```
                                                   +--------+
                                                +->| Runner |-+
-                                               |  +--------+ |   +----------+
-+----------+   +-------------+   +---------+   |             |   | Reporter |
-| Producer +-->| ValueFilter +-->| Limiter +---+->  ...      +-->| +Filter  |
-+----------+   +-------------+   +---------+   |             |   +----------+
+                                               |  +--------+ |   
++----------+   +-------------+   +---------+   |             |   +----------------+   +----------+
+| Producer +-->| ValueFilter +-->| Limiter +---+->  ...      +-->| ResponseFilter +-->| Reporter |
++----------+   +-------------+   +---------+   |             |   +----------------+   +----------+
                                                |  +--------+ |
                                                +->| Runner |-+
                                                   +--------+
