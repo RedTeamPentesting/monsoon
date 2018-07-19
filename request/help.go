@@ -27,4 +27,7 @@ func AddFlags(r *Request, fs *pflag.FlagSet) {
 
 	// configure request
 	fs.BoolVar(&r.ForceChunkedEncoding, "force-chunked-encoding", false, `do not set the Content-Length HTTP header and use chunked encoding`)
+
+	// Transport
+	fs.BoolVarP(&r.Insecure, "insecure", "k", false, "disable TLS certificate verification")
 }

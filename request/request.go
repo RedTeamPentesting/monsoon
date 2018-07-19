@@ -157,6 +157,7 @@ type Request struct {
 
 	TemplateFile string
 
+	Insecure             bool
 	ForceChunkedEncoding bool
 }
 

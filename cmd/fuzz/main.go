@@ -2,7 +2,6 @@ package fuzz
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
 	"log"
@@ -57,8 +56,6 @@ type Options struct {
 	ExtractPipe    []string
 	extractPipe    [][]string
 	BodyBufferSize int
-
-	Insecure bool
 }
 
 var opts Options
@@ -170,8 +167,6 @@ func AddCommand(c *cobra.Command) {
 	fs.StringArrayVar(&opts.Extract, "extract", nil, "extract `regex` from response body (can be specified multiple times)")
 	fs.StringArrayVar(&opts.ExtractPipe, "extract-pipe", nil, "pipe response body to `cmd` to extract data (can be specified multiple times)")
 	fs.IntVar(&opts.BodyBufferSize, "body-buffer-size", 5, "use `n` MiB as the buffer size for extracting strings from a response body")
-
-	fs.BoolVarP(&opts.Insecure, "insecure", "k", false, "disable TLS certificate verification")
 }
 
 // logfilePath returns the prefix for the logfiles, if any.
@@ -317,9 +312,6 @@ func startRunners(ctx context.Context, opts *Options, in <-chan string) <-chan r
 				return nil
 			}
 			return http.ErrUseLastResponse
-		}
-		if opts.Insecure {
-			runner.Transport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 		}
 		wg.Add(1)
 		go func() {

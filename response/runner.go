@@ -2,6 +2,7 @@ package response
 
 import (
 	"context"
+	"crypto/tls"
 	"net"
 	"net/http"
 	"regexp"
@@ -42,6 +43,11 @@ func NewRunner(template *request.Request, input <-chan string, output chan<- Res
 		ExpectContinueTimeout: 1 * time.Second,
 		IdleConnTimeout:       15 * time.Second,
 	}
+
+	if template.Insecure {
+		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+
 	c := &http.Client{
 		Transport: tr,
 		CheckRedirect: func(*http.Request, []*http.Request) error {
