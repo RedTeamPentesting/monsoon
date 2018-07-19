@@ -367,8 +367,7 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	// limit the throughput (if requested)
 	if opts.RequestsPerSecond > 0 {
-		fillInterval := time.Duration(float64(time.Second) / float64(opts.RequestsPerSecond))
-		valueCh = NewLimiter(fillInterval, 1).Start(ctx, valueCh)
+		valueCh = Limit(ctx, opts.RequestsPerSecond, valueCh)
 	}
 
 	// setup the pipline for the responses
