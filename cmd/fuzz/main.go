@@ -279,10 +279,12 @@ func setupValueFilters(ctx context.Context, opts *Options, valueCh <-chan string
 	return valueCh, countCh
 }
 
-func startRunners(ctx context.Context, opts *Options, inputCh <-chan string, outputCh chan<- response.Response) {
+func startRunners(ctx context.Context, opts *Options, in <-chan string) <-chan response.Response {
+	out := make(chan response.Response)
+
 	var wg sync.WaitGroup
 	for i := 0; i < opts.Threads; i++ {
-		runner := response.NewRunner(opts.Request, inputCh, outputCh)
+		runner := response.NewRunner(opts.Request, in, out)
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
 		runner.Extract = opts.extract
 		runner.ExtractPipe = opts.extractPipe
@@ -306,8 +308,10 @@ func startRunners(ctx context.Context, opts *Options, inputCh <-chan string, out
 	go func() {
 		// wait until the runners are done, then close the output channel
 		wg.Wait()
-		close(outputCh)
+		close(out)
 	}()
+
+	return out
 }
 
 func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) error {
@@ -370,16 +374,13 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 		valueCh = Limit(ctx, opts.RequestsPerSecond, valueCh)
 	}
 
-	// setup the pipline for the responses
-	responseChannel := make(chan response.Response)
-
 	// start the runners
-	startRunners(ctx, opts, valueCh, responseChannel)
+	responseCh := startRunners(ctx, opts, valueCh)
 
 	// filter the responses
-	ch := FilterResponses(responseChannel, responseFilters)
+	responseCh = FilterResponses(responseCh, responseFilters)
 
 	// run the reporter
 	reporter := NewReporter(term)
-	return reporter.Display(ch, countCh)
+	return reporter.Display(responseCh, countCh)
 }
