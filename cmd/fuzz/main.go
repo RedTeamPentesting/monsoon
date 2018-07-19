@@ -18,6 +18,7 @@ import (
 
 	"github.com/fd0/termstatus"
 	"github.com/happal/monsoon/cli"
+	"github.com/happal/monsoon/producer"
 	"github.com/happal/monsoon/request"
 	"github.com/happal/monsoon/response"
 	"github.com/spf13/cobra"
@@ -189,19 +190,39 @@ func logfilePath(opts *Options, inputURL string) (prefix string, err error) {
 	return opts.Logfile, nil
 }
 
-func setupProducer(opts *Options) (Producer, error) {
+func setupProducer(ctx context.Context, g *errgroup.Group, opts *Options, ch chan<- string, count chan<- int) error {
 	switch {
 	case opts.Range != "":
-		rp := &RangeProducer{Format: opts.RangeFormat}
-		_, err := fmt.Sscanf(opts.Range, "%d-%d", &rp.First, &rp.Last)
+		var first, last int
+		_, err := fmt.Sscanf(opts.Range, "%d-%d", &first, &last)
 		if err != nil {
-			return nil, errors.New("wrong format for range, expected: first-last")
+			return errors.New("wrong format for range, expected: first-last")
 		}
-		return rp, nil
+
+		g.Go(func() error {
+			return producer.Range(ctx, first, last, opts.RangeFormat, ch, count)
+		})
+		return nil
+
+	case opts.Filename == "-":
+		g.Go(func() error {
+			return producer.Reader(ctx, os.Stdin, ch, count)
+		})
+		return nil
+
 	case opts.Filename != "":
-		return &FileProducer{Filename: opts.Filename}, nil
+		file, err := os.Open(opts.Filename)
+		if err != nil {
+			return err
+		}
+
+		g.Go(func() error {
+			return producer.Reader(ctx, file, ch, count)
+		})
+		return nil
+
 	default:
-		return nil, errors.New("neither file nor range specified, nothing to do")
+		return errors.New("neither file nor range specified, nothing to do")
 	}
 }
 
@@ -332,12 +353,6 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	inputURL := args[0]
 	opts.Request.URL = inputURL
 
-	// create a producer from the options
-	producer, err := setupProducer(opts)
-	if err != nil {
-		return err
-	}
-
 	// setup logging and the terminal
 	logfilePrefix, err := logfilePath(opts, inputURL)
 	if err != nil {
@@ -356,18 +371,20 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 		return err
 	}
 
-	term.Printf("input URL %v\n\n", inputURL)
-
 	// setup the pipeline for the values
 	vch := make(chan string, opts.BufferSize)
 	var valueCh <-chan string = vch
 	cch := make(chan int, 1)
 	var countCh <-chan int = cch
 
-	valueCh, countCh = setupValueFilters(ctx, opts, valueCh, countCh)
+	// start a producer from the options
+	err = setupProducer(ctx, g, opts, vch, cch)
+	if err != nil {
+		return err
+	}
 
-	// start the producer
-	g.Go(func() error { return producer.Start(ctx, vch, cch) })
+	// filter values (skip, limit)
+	valueCh, countCh = setupValueFilters(ctx, opts, valueCh, countCh)
 
 	// limit the throughput (if requested)
 	if opts.RequestsPerSecond > 0 {
@@ -381,6 +398,7 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	responseCh = FilterResponses(responseCh, responseFilters)
 
 	// run the reporter
+	term.Printf("input URL %v\n\n", inputURL)
 	reporter := NewReporter(term)
 	return reporter.Display(responseCh, countCh)
 }
