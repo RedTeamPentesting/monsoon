@@ -395,7 +395,7 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	responseCh := startRunners(ctx, opts, valueCh)
 
 	// filter the responses
-	responseCh = FilterResponses(responseCh, responseFilters)
+	responseCh = response.Mark(responseCh, responseFilters)
 
 	// run the reporter
 	term.Printf("input URL %v\n\n", inputURL)
