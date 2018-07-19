@@ -1,11 +1,11 @@
-package fuzz
+package shell
 
 import (
 	"reflect"
 	"testing"
 )
 
-func TestShellSplitter(t *testing.T) {
+func TestSplit(t *testing.T) {
 	var tests = []struct {
 		data string
 		args []string
@@ -50,7 +50,7 @@ func TestShellSplitter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			args, err := SplitShellStrings(test.data)
+			args, err := Split(test.data)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -63,7 +63,7 @@ func TestShellSplitter(t *testing.T) {
 	}
 }
 
-func TestShellSplitterInvalid(t *testing.T) {
+func TestSplitInvalid(t *testing.T) {
 	var tests = []struct {
 		data string
 		err  string
@@ -88,7 +88,7 @@ func TestShellSplitterInvalid(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			args, err := SplitShellStrings(test.data)
+			args, err := Split(test.data)
 			if err == nil {
 				t.Fatalf("expected error not found: %v", test.err)
 			}

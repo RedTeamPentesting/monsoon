@@ -1,4 +1,4 @@
-package fuzz
+package shell
 
 import (
 	"strconv"
@@ -13,8 +13,8 @@ func escapeParam(s string) string {
 	return s
 }
 
-// recreateCommandline tries to reconstruct the command-line used to call the binary.
-func recreateCommandline(args []string) (s string) {
+// Join returns a shell command line to run the program.
+func Join(args []string) (s string) {
 	first := true
 	for _, arg := range args {
 		if !first {

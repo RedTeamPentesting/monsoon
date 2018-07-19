@@ -1,10 +1,10 @@
-package fuzz
+package shell
 
 import (
 	"testing"
 )
 
-func TestPrintParams(t *testing.T) {
+func TestJoin(t *testing.T) {
 	var tests = []struct {
 		args []string
 		res  string
@@ -25,7 +25,7 @@ func TestPrintParams(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			res := recreateCommandline(test.args)
+			res := Join(test.args)
 			if res != test.res {
 				t.Fatalf("wrong result, want\n  %s\ngot:\n  %s", test.res, res)
 			}

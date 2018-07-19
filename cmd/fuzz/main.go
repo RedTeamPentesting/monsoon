@@ -21,6 +21,7 @@ import (
 	"github.com/happal/monsoon/producer"
 	"github.com/happal/monsoon/request"
 	"github.com/happal/monsoon/response"
+	"github.com/happal/monsoon/shell"
 	"github.com/spf13/cobra"
 )
 
@@ -77,7 +78,7 @@ func compileRegexps(pattern []string) (res []*regexp.Regexp, err error) {
 func splitShell(cmds []string) ([][]string, error) {
 	var data [][]string
 	for _, cmd := range cmds {
-		args, err := SplitShellStrings(cmd)
+		args, err := shell.Split(cmd)
 		if err != nil {
 			return nil, err
 		}
@@ -237,7 +238,7 @@ func setupTerminal(ctx context.Context, g *errgroup.Group, logfilePrefix string)
 			return nil, cancel, err
 		}
 
-		fmt.Fprintln(logfile, recreateCommandline(os.Args))
+		fmt.Fprintln(logfile, shell.Join(os.Args))
 
 		// write copies of messages to logfile
 		term = &LogTerminal{

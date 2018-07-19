@@ -1,4 +1,4 @@
-package fuzz
+package shell
 
 import (
 	"errors"
@@ -40,8 +40,8 @@ func (s *shellSplitter) isSplitChar(c rune) bool {
 	return c == '\\' || unicode.IsSpace(c)
 }
 
-// SplitShellStrings returns the list of shell strings from a shell command string.
-func SplitShellStrings(data string) (strs []string, err error) {
+// Split returns the list of shell strings from a shell command string.
+func Split(data string) (strs []string, err error) {
 	s := &shellSplitter{}
 
 	// derived from strings.SplitFunc
