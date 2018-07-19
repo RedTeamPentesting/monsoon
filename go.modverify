@@ -1,6 +1,0 @@
-github.com/fd0/termstatus v1.0.0 h1:/eMTuQIZxmF+En23pN6ehbW1Y1Qfy8CtpmYozJVK/uo=
-github.com/mattn/go-isatty v0.0.3 h1:ns/ykhmWi7G9O+8a448SecJU3nSMBXJfqQkl0upE1jI=
-github.com/spf13/cobra v0.0.3 h1:ZlrZ4XsMRm04Fr5pSFxBgfND2EBVa1nLpiy1stUsX/8=
-github.com/spf13/pflag v1.0.1 h1:aCvUg6QPl3ibpQUxyLkrEkCHtPqYJL4x9AuhqVqFis4=
-golang.org/x/sys v0.0.0-20180622082034-63fc586f45fe h1:ay7inWg28/GEO1erz2KR0ywSgsw4yPHUw1egz2vGcN0=
-gopkg.in/tomb.v2 v2.0.0-20161208151619-d5d1b5820637 h1:yiW+nvdHb9LVqSHQBXfZCieqV4fzYhNBql77zY0ykqs=
