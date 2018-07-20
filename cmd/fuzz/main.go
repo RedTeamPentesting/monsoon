@@ -18,6 +18,7 @@ import (
 	"github.com/fd0/termstatus"
 	"github.com/happal/monsoon/cli"
 	"github.com/happal/monsoon/producer"
+	"github.com/happal/monsoon/recorder"
 	"github.com/happal/monsoon/reporter"
 	"github.com/happal/monsoon/request"
 	"github.com/happal/monsoon/response"
@@ -180,7 +181,6 @@ func logfilePath(opts *Options, inputURL string) (prefix string, err error) {
 		ts := time.Now().Format("20060102_150405")
 		fn := fmt.Sprintf("monsoon_%s_%s", url.Host, ts)
 		p := filepath.Join(opts.Logdir, fn)
-		fmt.Printf("logfile prefix %v\n", p)
 		return p, nil
 	}
 
@@ -390,6 +390,25 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	// filter the responses
 	responseCh = response.Mark(responseCh, responseFilters)
+
+	if logfilePrefix != "" {
+		rec, err := recorder.New(logfilePrefix+".json", opts.Request, opts.Extract, opts.ExtractPipe)
+		if err != nil {
+			return err
+		}
+
+		out := make(chan response.Response)
+		in := responseCh
+		responseCh = out
+
+		outCount := make(chan int)
+		inCount := countCh
+		countCh = outCount
+
+		g.Go(func() error {
+			return rec.Run(ctx, in, out, inCount, outCount)
+		})
+	}
 
 	// run the reporter
 	term.Printf("input URL %v\n\n", inputURL)

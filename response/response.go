@@ -157,7 +157,9 @@ func (r *Response) ExtractHeader(res *http.Response, targets []*regexp.Regexp) e
 
 // TextStats reports statistics about some text.
 type TextStats struct {
-	Bytes, Words, Lines int
+	Bytes int `json:"bytes"`
+	Words int `json:"words"`
+	Lines int `json:"lines"`
 }
 
 // Count counts the bytes, words and lines in the body.
