@@ -119,7 +119,7 @@ func (opts *Options) valid() (err error) {
 }
 
 var cmd = &cobra.Command{
-	Use: "fuzz [options] URL",
+	Use:                   "fuzz [options] URL",
 	DisableFlagsInUseLine: true,
 
 	Short:   helpShort,
@@ -301,8 +301,9 @@ func startRunners(ctx context.Context, opts *Options, in <-chan string) <-chan r
 	out := make(chan response.Response)
 
 	var wg sync.WaitGroup
+	transport := response.NewTransport(opts.Request.Insecure)
 	for i := 0; i < opts.Threads; i++ {
-		runner := response.NewRunner(opts.Request, in, out)
+		runner := response.NewRunner(transport, opts.Request, in, out)
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
 		runner.Extract = opts.extract
 		runner.ExtractPipe = opts.extractPipe

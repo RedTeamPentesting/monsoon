@@ -29,8 +29,8 @@ type Runner struct {
 // DefaultBodyBufferSize is the default size for peeking at the body to extract strings via regexp.
 const DefaultBodyBufferSize = 5 * 1024 * 1024
 
-// NewRunner returns a new runner to execute HTTP requests.
-func NewRunner(template *request.Request, input <-chan string, output chan<- Response) *Runner {
+// NewTransport creates a new shared transport for clients to use.
+func NewTransport(insecure bool) *http.Transport {
 	// for timeouts, see
 	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
 	tr := &http.Transport{
@@ -44,10 +44,14 @@ func NewRunner(template *request.Request, input <-chan string, output chan<- Res
 		IdleConnTimeout:       15 * time.Second,
 	}
 
-	if template.Insecure {
+	if insecure {
 		tr.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
 	}
+	return tr
+}
 
+// NewRunner returns a new runner to execute HTTP requests.
+func NewRunner(tr *http.Transport, template *request.Request, input <-chan string, output chan<- Response) *Runner {
 	c := &http.Client{
 		Transport: tr,
 		CheckRedirect: func(*http.Request, []*http.Request) error {

@@ -53,7 +53,7 @@ func header(name string) string {
 }
 
 var cmd = &cobra.Command{
-	Use: "test [options] URL",
+	Use:                   "test [options] URL",
 	DisableFlagsInUseLine: true,
 
 	Short:   helpShort,
@@ -116,7 +116,8 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	output := make(chan response.Response, 1)
 
-	runner := response.NewRunner(opts.Request, input, output)
+	tr := response.NewTransport(opts.Request.Insecure)
+	runner := response.NewRunner(tr, opts.Request, input, output)
 	runner.Run(ctx)
 	close(output)
 
