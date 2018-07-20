@@ -6,6 +6,7 @@ import (
 	"runtime"
 
 	"github.com/happal/monsoon/cmd/fuzz"
+	"github.com/happal/monsoon/cmd/list"
 	"github.com/happal/monsoon/cmd/show"
 	"github.com/happal/monsoon/cmd/test"
 	"github.com/spf13/cobra"
@@ -38,6 +39,7 @@ func init() {
 	fuzz.AddCommand(cmdRoot)
 	show.AddCommand(cmdRoot)
 	test.AddCommand(cmdRoot)
+	list.AddCommand(cmdRoot)
 }
 
 func injectDefaultCommand(args []string) []string {
