@@ -58,6 +58,13 @@ Request 500 session IDs and extract the cookie values (matching case insensitive
       --extract '(?i)Set-Cookie: (.*)' \
       https://example.com/login
 
+Extract the title from the resulting pages (which may span several lines,
+matching case insensitive):
+
+    monsoon fuzz --file filenames.txt \
+	  --extract '(?is)<title>(.*)</title>' \
+      https://example.com/FUZZ
+
 Hide responses which contain a Date header with an uneven number of seconds:
 
     monsoon fuzz --range 1-500 \
