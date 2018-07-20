@@ -81,7 +81,9 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 		Item: item,
 	}
 
+	start := time.Now()
 	res, err := r.Client.Do(req.WithContext(ctx))
+	response.Duration = time.Since(start)
 	if err != nil {
 		response.Error = err
 		return

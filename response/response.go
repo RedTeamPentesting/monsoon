@@ -14,14 +14,16 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 	"unicode"
 )
 
 // Response is an HTTP response.
 type Response struct {
-	Item  string
-	URL   string
-	Error error
+	Item     string
+	URL      string
+	Error    error
+	Duration time.Duration
 
 	Header, Body TextStats
 	Extract      []string

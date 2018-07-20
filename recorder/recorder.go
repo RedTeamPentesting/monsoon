@@ -37,8 +37,9 @@ type Data struct {
 
 // Response is the result of a request sent to the target.
 type Response struct {
-	Item  string `json:"item"`
-	Error string `json:"error,omitempty"`
+	Item     string  `json:"item"`
+	Error    string  `json:"error,omitempty"`
+	Duration float64 `json:"duration"`
 
 	StatusCode    int                `json:"status_code"`
 	StatusText    string             `json:"status_text"`
@@ -159,6 +160,9 @@ func (r *Recorder) dump(data Data) error {
 // NewResponse builds a Response struct for serialization with JSON.
 func NewResponse(r response.Response) (res Response) {
 	res.Item = r.Item
+	if r.Duration != 0 {
+		res.Duration = float64(r.Duration) / float64(time.Second)
+	}
 	if r.Error != nil {
 		res.Error = r.Error.Error()
 	}
