@@ -224,7 +224,7 @@ func setupProducer(ctx context.Context, g *errgroup.Group, opts *Options, ch cha
 }
 
 func setupTerminal(ctx context.Context, g *errgroup.Group, logfilePrefix string) (term cli.Terminal, cleanup func(), err error) {
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancel(context.Background())
 
 	if logfilePrefix != "" {
 		fmt.Printf("logfile is %s.log\n", logfilePrefix)
