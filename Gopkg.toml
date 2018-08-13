@@ -28,3 +28,7 @@
 [[constraint]]
   branch = "master"
   name = "golang.org/x/sync"
+
+[prune]
+  unused-packages = true
+  go-tests = true
