@@ -110,7 +110,9 @@ func (t *Terminal) run(ctx context.Context) {
 				// ignore all messages, do nothing, we are in the background process group
 				continue
 			}
-			t.clearCurrentLine(t.wr, t.fd)
+			// we need to clear the status lines in case this line wraps to the
+			// next (and only overwrites it partially)
+			t.undoStatus(len(status))
 
 			var dst io.Writer
 			if msg.err {
@@ -262,6 +264,9 @@ func (t *Terminal) Print(line string) {
 	select {
 	case t.msg <- message{line: line}:
 	case <-t.closed:
+		// write directly
+		fmt.Fprint(t.wr, line)
+		t.wr.Flush()
 	}
 }
 
@@ -281,6 +286,8 @@ func (t *Terminal) Error(line string) {
 	select {
 	case t.msg <- message{line: line, err: true}:
 	case <-t.closed:
+		// write directly
+		fmt.Fprint(t.errWriter, line)
 	}
 }
 
