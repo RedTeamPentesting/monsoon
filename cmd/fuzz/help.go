@@ -85,6 +85,12 @@ and replacing the string FUZZ from the file:
       --header 'user-agent: foobar' \
       https://example.com
 
+Try different passwords for the user admin with HTTP Basic authentication:
+
+	monsoon fuzz --file passwords.txt \
+	  --hide-status 403 \
+	  http://admin:FUZZ@example.com
+
 
 Filter Evaluation Order
 #######################
