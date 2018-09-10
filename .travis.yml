@@ -18,7 +18,7 @@ script:
   - go run build.go --goos windows
   - go run build.go --goos darwin
   - go test $(go list ./... | grep -v /vendor/)
-  - diff <(goimports -d *.go */*.go */*/*.go) <(printf "")
+  - if go version | grep -q "go1.11"; then diff <(goimports -d *.go */*.go */*/*.go) <(printf ""); fi
   - diff <(golint *.go */*.go */*/*.go) <(printf "")
 
 after_success:

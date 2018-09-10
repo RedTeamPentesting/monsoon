@@ -53,7 +53,7 @@ func header(name string) string {
 }
 
 var cmd = &cobra.Command{
-	Use: "test [options] URL",
+	Use:                   "test [options] URL",
 	DisableFlagsInUseLine: true,
 
 	Short:   helpShort,

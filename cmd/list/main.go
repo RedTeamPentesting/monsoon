@@ -155,7 +155,7 @@ func filterRuns(list []Run, opts Options) (res []Run) {
 }
 
 var cmd = &cobra.Command{
-	Use: "list [options] URL",
+	Use:                   "list [options] URL",
 	DisableFlagsInUseLine: true,
 
 	Short:   helpShort,

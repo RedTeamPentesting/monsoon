@@ -119,7 +119,7 @@ func (opts *Options) valid() (err error) {
 }
 
 var cmd = &cobra.Command{
-	Use: "fuzz [options] URL",
+	Use:                   "fuzz [options] URL",
 	DisableFlagsInUseLine: true,
 
 	Short:   helpShort,

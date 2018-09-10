@@ -33,7 +33,7 @@ func AddCommand(c *cobra.Command) {
 }
 
 var cmd = &cobra.Command{
-	Use: "show [options] URL",
+	Use:                   "show [options] URL",
 	DisableFlagsInUseLine: true,
 
 	Short:   helpShort,
