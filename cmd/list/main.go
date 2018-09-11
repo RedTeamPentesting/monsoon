@@ -19,7 +19,9 @@ type Options struct {
 	Host string
 	Port string
 
-	Incomplete bool
+	ShowIncomplete bool
+	ShowLogfile    bool
+	ShowResponses  bool
 }
 
 var opts Options
@@ -35,12 +37,14 @@ func AddCommand(c *cobra.Command) {
 
 	fs.StringVar(&opts.Host, "host", "", "only display runs for hosts containing the string `str`")
 	fs.StringVar(&opts.Port, "port", "", "only display runs for `port`")
-	fs.BoolVar(&opts.Incomplete, "incomplete", false, "show incomplete runs")
+	fs.BoolVar(&opts.ShowIncomplete, "incomplete", false, "show incomplete runs")
+	fs.BoolVar(&opts.ShowLogfile, "logfile", false, "show log file name")
+	fs.BoolVar(&opts.ShowResponses, "responses", false, "show responses")
 }
 
 func filterRuns(list []recorder.Run, opts Options) (res []recorder.Run) {
 	for _, run := range list {
-		if run.Data.Cancelled && !opts.Incomplete {
+		if run.Data.Cancelled && !opts.ShowIncomplete {
 			continue
 		}
 
@@ -71,9 +75,13 @@ var cmd = &cobra.Command{
 }
 
 const HostTemplate = `{{ .Hostport }}
+{{- $opt := .Options }}
 {{ range .Runs }}
   {{ .PathQuery }}
     Time:      {{ .Start.Format "2006-01-02 15:04:05" }}
+{{- if $opt.ShowLogfile }}
+    Log:       {{ .Logfile -}}
+{{ end }}
     Duration:  {{ duration .Start .End }}
     Requests:  {{ .SentRequests }}
     Responses: {{ len .Responses }}
@@ -89,6 +97,11 @@ const HostTemplate = `{{ .Hostport }}
 {{- if ne .Template.Body "" }}
     Body:      {{ .Template.Body -}}
 {{ end }}
+{{- if $opt.ShowResponses -}}
+{{ range .Responses }}
+      {{ .StatusCode }} {{ .Item }}
+{{- end }}
+{{- end }}
 {{ end }}
 `
 
@@ -111,6 +124,7 @@ var FuncMap = map[string]interface{}{
 }
 
 type Host struct {
+	Options
 	Hostport string
 	Runs     []recorder.Run
 }
@@ -136,6 +150,7 @@ func runList(opts Options) error {
 	hostports, runs := recorder.HostPorts(list)
 	for _, hostport := range hostports {
 		err := tmpl.Execute(os.Stdout, Host{
+			Options:  opts,
 			Hostport: hostport,
 			Runs:     runs[hostport],
 		})
