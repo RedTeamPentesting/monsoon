@@ -397,10 +397,17 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	responseCh = response.Mark(responseCh, responseFilters)
 
 	if logfilePrefix != "" {
-		rec, err := recorder.New(logfilePrefix+".json", opts.Request, opts.Extract, opts.ExtractPipe)
+		rec, err := recorder.New(logfilePrefix+".json", opts.Request)
 		if err != nil {
 			return err
 		}
+
+		// fill in information for generating the request
+		rec.Data.InputFile = opts.Filename
+		rec.Data.Range = opts.Range
+		rec.Data.RangeFormat = opts.RangeFormat
+		rec.Data.Extract = opts.Extract
+		rec.Data.ExtractPipe = opts.ExtractPipe
 
 		out := make(chan response.Response)
 		in := responseCh

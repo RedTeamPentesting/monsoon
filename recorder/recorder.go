@@ -14,9 +14,7 @@ import (
 type Recorder struct {
 	filename string
 	*request.Request
-	Template
-	Extract     []string
-	ExtractPipe []string
+	Data
 }
 
 // Data is the data structure written to the file by a Recorder.
@@ -30,6 +28,9 @@ type Data struct {
 	Cancelled      bool      `json:"cancelled"`
 
 	Template    Template   `json:"template"`
+	InputFile   string     `json:"input_file,omitempty"`
+	Range       string     `json:"range,omitempty"`
+	RangeFormat string     `json:"range_format,omitempty"`
 	Responses   []Response `json:"responses"`
 	Extract     []string   `json:"extract,omitempty"`
 	ExtractPipe []string   `json:"extract_pipe,omitempty"`
@@ -49,18 +50,18 @@ type Response struct {
 }
 
 // New creates a new  recorder.
-func New(filename string, request *request.Request, extract, extractPipe []string) (*Recorder, error) {
+func New(filename string, request *request.Request) (*Recorder, error) {
 	t, err := NewTemplate(request)
 	if err != nil {
 		return nil, err
 	}
 
 	rec := &Recorder{
-		filename:    filename,
-		Request:     request,
-		Template:    t,
-		Extract:     extract,
-		ExtractPipe: extractPipe,
+		filename: filename,
+		Request:  request,
+		Data: Data{
+			Template: t,
+		},
 	}
 	return rec, nil
 }
@@ -74,12 +75,13 @@ const statusInterval = time.Second
 func (r *Recorder) Run(ctx context.Context, in <-chan response.Response, out chan<- response.Response, inCount <-chan int, outCount chan<- int) error {
 	defer close(out)
 
-	data := Data{
-		Start:       time.Now(),
-		End:         time.Now(),
-		Template:    r.Template,
-		Extract:     r.Extract,
-		ExtractPipe: r.ExtractPipe,
+	data := r.Data
+	data.Start = time.Now()
+	data.End = time.Now()
+
+	// omit range_format if range is unset
+	if data.Range == "" {
+		data.RangeFormat = ""
 	}
 
 	lastStatus := time.Now()
