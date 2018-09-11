@@ -21,6 +21,10 @@ func TestJoin(t *testing.T) {
 			args: []string{"monsoon", "--header", `x-foo: "bar"`, "http://localhost/FUZZ"},
 			res:  `monsoon --header "x-foo: \"bar\"" http://localhost/FUZZ`,
 		},
+		{
+			args: []string{"monsoon", "http://localhost/FUZZ?x1=1&x2=2"},
+			res:  `monsoon "http://localhost/FUZZ?x1=1&x2=2"`,
+		},
 	}
 
 	for _, test := range tests {

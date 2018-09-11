@@ -6,7 +6,7 @@ import (
 )
 
 func escapeParam(s string) string {
-	if strings.ContainsAny(s, " ") {
+	if strings.ContainsAny(s, "$& ") {
 		return strconv.Quote(s)
 	}
 
