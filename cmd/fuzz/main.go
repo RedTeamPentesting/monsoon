@@ -95,6 +95,10 @@ func (opts *Options) valid() (err error) {
 		return errors.New("only one source allowed but both range and filename specified")
 	}
 
+	if opts.Range == "" && opts.Filename == "" {
+		return errors.New("neither file nor range specified, nothing to do")
+	}
+
 	opts.extract, err = compileRegexps(opts.Extract)
 	if err != nil {
 		return err
