@@ -170,44 +170,48 @@ var cmd = &cobra.Command{
 	Example: helpExamples,
 
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if opts.Logdir == "" {
-			return errors.New("no log directory specified")
-		}
-
-		runs, err := readJSONFiles(opts.Logdir)
-		if err != nil {
-			return err
-		}
-
-		sortRuns(runs)
-		runs = filterRuns(runs, opts)
-
-		var hostport string
-		first := true
-		for _, run := range runs {
-			if hostport != run.Hostport {
-				if !first {
-					fmt.Printf("-------------------------------------\n")
-				}
-				first = false
-				fmt.Printf("%v, port %v:\n\n", run.Host, run.Port)
-				hostport = run.Hostport
-			}
-
-			fmt.Printf("  %v\n", run.Logfile)
-			fmt.Printf("  %s", run.URL)
-			if run.Data.Cancelled {
-				var complete float64
-				if run.Data.TotalRequests > 0 {
-					complete = float64(run.Data.SentRequests) / float64(run.Data.TotalRequests)
-					fmt.Printf(" (incomplete, %.0f%%)", complete*100)
-				} else {
-					fmt.Printf(" (incomplete)")
-				}
-			}
-			fmt.Printf("\n\n")
-		}
-
-		return nil
+		return runList(opts)
 	},
+}
+
+func runList(opts Options) error {
+	if opts.Logdir == "" {
+		return errors.New("no log directory specified")
+	}
+
+	runs, err := readJSONFiles(opts.Logdir)
+	if err != nil {
+		return err
+	}
+
+	sortRuns(runs)
+	runs = filterRuns(runs, opts)
+
+	var hostport string
+	first := true
+	for _, run := range runs {
+		if hostport != run.Hostport {
+			if !first {
+				fmt.Printf("-------------------------------------\n")
+			}
+			first = false
+			fmt.Printf("%v, port %v:\n\n", run.Host, run.Port)
+			hostport = run.Hostport
+		}
+
+		fmt.Printf("  %v\n", run.Logfile)
+		fmt.Printf("  %s", run.URL)
+		if run.Data.Cancelled {
+			var complete float64
+			if run.Data.TotalRequests > 0 {
+				complete = float64(run.Data.SentRequests) / float64(run.Data.TotalRequests)
+				fmt.Printf(" (incomplete, %.0f%%)", complete*100)
+			} else {
+				fmt.Printf(" (incomplete)")
+			}
+		}
+		fmt.Printf("\n\n")
+	}
+
+	return nil
 }
