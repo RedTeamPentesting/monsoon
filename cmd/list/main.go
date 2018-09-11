@@ -21,6 +21,8 @@ type Options struct {
 
 	Host string
 	Port string
+
+	Incomplete bool
 }
 
 var opts Options
@@ -36,6 +38,7 @@ func AddCommand(c *cobra.Command) {
 
 	fs.StringVar(&opts.Host, "host", "", "only display runs for `host`")
 	fs.StringVar(&opts.Port, "port", "", "only display runs for `port`")
+	fs.BoolVar(&opts.Incomplete, "incomplete", false, "show incomplete runs")
 }
 
 func findJSONFiles(dir string) (files []string, err error) {
@@ -141,6 +144,10 @@ func sortRuns(list []Run) {
 
 func filterRuns(list []Run, opts Options) (res []Run) {
 	for _, run := range list {
+		if run.Data.Cancelled && !opts.Incomplete {
+			continue
+		}
+
 		if opts.Host != "" && opts.Host != run.Host {
 			continue
 		}
