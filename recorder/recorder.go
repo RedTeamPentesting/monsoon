@@ -19,13 +19,13 @@ type Recorder struct {
 
 // Data is the data structure written to the file by a Recorder.
 type Data struct {
-	Start          time.Time `json:"start"`
-	End            time.Time `json:"end"`
-	TotalRequests  int       `json:"total_requests"`
-	SentRequests   int       `json:"sent_requests"`
-	HiddenRequests int       `json:"hidden_requests"`
-	ShownRequests  int       `json:"shown_requests"`
-	Cancelled      bool      `json:"cancelled"`
+	Start           time.Time `json:"start"`
+	End             time.Time `json:"end"`
+	TotalRequests   int       `json:"total_requests"`
+	SentRequests    int       `json:"sent_requests"`
+	HiddenResponses int       `json:"hidden_responses"`
+	ShownResponses  int       `json:"shown_responses"`
+	Cancelled       bool      `json:"cancelled"`
 
 	Template    Template   `json:"template"`
 	InputFile   string     `json:"input_file,omitempty"`
@@ -120,10 +120,10 @@ loop:
 
 		data.SentRequests++
 		if !res.Hide {
-			data.ShownRequests++
+			data.ShownResponses++
 			data.Responses = append(data.Responses, NewResponse(res))
 		} else {
-			data.HiddenRequests++
+			data.HiddenResponses++
 		}
 		data.End = time.Now()
 
