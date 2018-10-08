@@ -301,11 +301,15 @@ func setupValueFilters(ctx context.Context, opts *Options, valueCh <-chan string
 	return valueCh, countCh
 }
 
-func startRunners(ctx context.Context, opts *Options, in <-chan string) <-chan response.Response {
+func startRunners(ctx context.Context, opts *Options, in <-chan string) (<-chan response.Response, error) {
 	out := make(chan response.Response)
 
 	var wg sync.WaitGroup
-	transport := response.NewTransport(opts.Request.Insecure)
+	transport, err := response.NewTransport(opts.Request.Insecure, opts.Request.TLSClientKeyCertFile)
+	if err != nil {
+		return nil, err
+	}
+
 	for i := 0; i < opts.Threads; i++ {
 		runner := response.NewRunner(transport, opts.Request, in, out)
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
@@ -331,7 +335,7 @@ func startRunners(ctx context.Context, opts *Options, in <-chan string) <-chan r
 		close(out)
 	}()
 
-	return out
+	return out, nil
 }
 
 func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) error {
@@ -391,7 +395,10 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	}
 
 	// start the runners
-	responseCh := startRunners(ctx, opts, valueCh)
+	responseCh, err := startRunners(ctx, opts, valueCh)
+	if err != nil {
+		return err
+	}
 
 	// filter the responses
 	responseCh = response.Mark(responseCh, responseFilters)

@@ -116,7 +116,11 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	output := make(chan response.Response, 1)
 
-	tr := response.NewTransport(opts.Request.Insecure)
+	tr, err := response.NewTransport(opts.Request.Insecure, opts.Request.TLSClientKeyCertFile)
+	if err != nil {
+		return err
+	}
+
 	runner := response.NewRunner(tr, opts.Request, input, output)
 	runner.Run(ctx)
 	close(output)
