@@ -34,6 +34,7 @@ func NewTransport(insecure bool) *http.Transport {
 	// for timeouts, see
 	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
 	tr := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
 		Dial: (&net.Dialer{
 			Timeout:   30 * time.Second,
 			KeepAlive: 30 * time.Second,
