@@ -13,8 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/fd0/termstatus"
 	"github.com/happal/monsoon/cli"
 	"github.com/happal/monsoon/producer"
@@ -24,6 +22,7 @@ import (
 	"github.com/happal/monsoon/response"
 	"github.com/happal/monsoon/shell"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 )
 
 // Options collect options for a run.

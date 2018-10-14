@@ -9,12 +9,11 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/sync/errgroup"
-
 	"github.com/happal/monsoon/cli"
 	"github.com/happal/monsoon/request"
 	"github.com/happal/monsoon/response"
 	"github.com/spf13/cobra"
+	"golang.org/x/sync/errgroup"
 )
 
 // Options collect options for the command.
