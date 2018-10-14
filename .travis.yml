@@ -10,7 +10,7 @@ go:
 install:
   - go version
   - export PATH="$PATH:$GOPATH/bin"
-  - go get -u github.com/golang/lint/golint
+  - go get -u golang.org/x/lint/golint
   - go get golang.org/x/tools/cmd/goimports
 
 script:
