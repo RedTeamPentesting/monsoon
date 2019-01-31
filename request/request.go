@@ -161,6 +161,7 @@ type Request struct {
 
 	Insecure             bool
 	TLSClientKeyCertFile string
+	DisableHTTP2         bool
 	ForceChunkedEncoding bool
 }
 

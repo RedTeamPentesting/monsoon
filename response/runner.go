@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/happal/monsoon/request"
+	"golang.org/x/net/http2"
 )
 
 // Runner executes HTTP requests.
@@ -34,7 +35,7 @@ type Runner struct {
 const DefaultBodyBufferSize = 5 * 1024 * 1024
 
 // NewTransport creates a new shared transport for clients to use.
-func NewTransport(insecure bool, TLSClientCertKeyFilename string) (*http.Transport, error) {
+func NewTransport(insecure bool, TLSClientCertKeyFilename string, disableHTTP2 bool) (*http.Transport, error) {
 	// for timeouts, see
 	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
 	tr := &http.Transport{
@@ -52,6 +53,14 @@ func NewTransport(insecure bool, TLSClientCertKeyFilename string) (*http.Transpo
 
 	if insecure {
 		tr.TLSClientConfig.InsecureSkipVerify = true
+	}
+
+	if !disableHTTP2 {
+		// enable http2
+		err := http2.ConfigureTransport(tr)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if TLSClientCertKeyFilename != "" {

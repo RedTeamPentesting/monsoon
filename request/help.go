@@ -31,4 +31,5 @@ func AddFlags(r *Request, fs *pflag.FlagSet) {
 	// Transport
 	fs.BoolVarP(&r.Insecure, "insecure", "k", false, "disable TLS certificate verification")
 	fs.StringVar(&r.TLSClientKeyCertFile, "client-cert", "", "read TLS client key and cert from `file`")
+	fs.BoolVar(&r.DisableHTTP2, "disable-http2", false, "do not try to negotiate an HTTP2 connection")
 }
