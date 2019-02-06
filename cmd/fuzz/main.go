@@ -90,6 +90,10 @@ func splitShell(cmds []string) ([][]string, error) {
 
 // valid validates the options and returns an error if something is invalid.
 func (opts *Options) valid() (err error) {
+	if opts.Threads <= 0 {
+		return errors.New("invalid number of threads")
+	}
+
 	if opts.Range != "" && opts.Filename != "" {
 		return errors.New("only one source allowed but both range and filename specified")
 	}
