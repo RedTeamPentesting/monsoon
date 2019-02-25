@@ -63,7 +63,7 @@ func (r Response) String() string {
 	if res.StatusCode >= 300 && res.StatusCode < 400 {
 		loc, ok := res.Header["Location"]
 		if ok {
-			status += fmt.Sprintf(", Location: %v", loc[0])
+			status += ", Location: " + loc[0]
 		}
 	}
 	if len(r.Extract) > 0 {
