@@ -25,5 +25,5 @@ func (lt *LogTerminal) Print(msg string) {
 		msg += "\n"
 	}
 	lt.Terminal.Print(msg)
-	fmt.Fprintf(lt.Writer, msg)
+	lt.Writer.Write([]byte(msg))
 }
