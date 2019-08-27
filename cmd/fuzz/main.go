@@ -405,7 +405,14 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	responseCh = response.Mark(responseCh, responseFilters)
 
 	// extract data from all interesting (non-hidden) responses
-	responseCh = response.Extract(responseCh, opts.extract, opts.extractPipe)
+	extracter := &response.Extracter{
+		Pattern:  opts.extract,
+		Commands: opts.extractPipe,
+		Error: func(err error) {
+			term.Printf("%v", err)
+		},
+	}
+	responseCh = extracter.Run(responseCh)
 
 	if logfilePrefix != "" {
 		rec, err := recorder.New(logfilePrefix+".json", opts.Request)

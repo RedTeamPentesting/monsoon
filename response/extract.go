@@ -2,10 +2,17 @@ package response
 
 import "regexp"
 
-// Extract extracts data from interesting (non-hidden) responses. Extraction is
+// Extracter collects data from interesting (non-hidden) responses.
+type Extracter struct {
+	Pattern  []*regexp.Regexp
+	Commands [][]string
+	Error    func(error)
+}
+
+// Run extracts data from interesting (non-hidden) responses. Extraction is
 // done in a separate goroutine, which terminates when the input channel is
 // closed.
-func Extract(in <-chan Response, pattern []*regexp.Regexp, cmds [][]string) <-chan Response {
+func (e *Extracter) Run(in <-chan Response) <-chan Response {
 	ch := make(chan Response)
 
 	go func() {
@@ -19,15 +26,15 @@ func Extract(in <-chan Response, pattern []*regexp.Regexp, cmds [][]string) <-ch
 				continue
 			}
 
-			err := res.ExtractBody(pattern, cmds)
-			if err != nil {
-				res.Error = err
+			err := res.ExtractBody(e.Pattern, e.Commands)
+			if err != nil && e.Error != nil {
+				e.Error(err)
 			}
 
-			if res.Error == nil {
-				err = res.ExtractHeader(res.HTTPResponse, pattern)
-				if err != nil {
-					res.Error = err
+			err = res.ExtractHeader(res.HTTPResponse, e.Pattern)
+			if err != nil {
+				if err != nil && e.Error != nil {
+					e.Error(err)
 				}
 			}
 
