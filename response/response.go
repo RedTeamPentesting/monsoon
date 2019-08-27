@@ -128,6 +128,11 @@ func (r *Response) ReadBody(body io.Reader, maxBodySize int) error {
 		err = nil
 	}
 
+	if err != nil {
+		return err
+	}
+
+	r.Body, err = Count(bytes.NewReader(r.RawBody))
 	return err
 }
 
@@ -139,7 +144,6 @@ func (r *Response) ExtractBody(targets []*regexp.Regexp, cmds [][]string) (err e
 		return err
 	}
 	r.Extract = append(r.Extract, data...)
-	r.Body, err = Count(bytes.NewReader(r.RawBody))
 	return err
 }
 
