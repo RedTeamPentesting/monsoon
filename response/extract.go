@@ -18,11 +18,9 @@ func (e *Extracter) Run(in <-chan Response) <-chan Response {
 	go func() {
 		defer close(ch)
 		for res := range in {
-			if res.Hide {
-				continue
-			}
-
-			if res.Error != nil {
+			if res.Hide || res.Error != nil {
+				// forward response to next in chain
+				ch <- res
 				continue
 			}
 
