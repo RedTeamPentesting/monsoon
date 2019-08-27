@@ -106,7 +106,7 @@ func extractCommand(buf []byte, cmds [][]string) (data []string, err error) {
 
 		buf, err := cmd.Output()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("command %s failed: %v", command, err)
 		}
 		data = append(data, string(buf))
 	}
