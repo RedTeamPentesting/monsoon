@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
@@ -21,8 +20,6 @@ type Runner struct {
 	Template *request.Request
 
 	BodyBufferSize int
-	Extract        []*regexp.Regexp
-	ExtractPipe    [][]string
 
 	Client    *http.Client
 	Transport *http.Transport
@@ -158,12 +155,6 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 		return
 	}
 
-	err = response.ExtractBody(r.Extract, r.ExtractPipe)
-	if err != nil {
-		response.Error = err
-		return
-	}
-
 	err = res.Body.Close()
 	if err != nil {
 		response.Error = err
@@ -171,10 +162,6 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 	}
 
 	response.HTTPResponse = res
-
-	if err == nil {
-		_ = response.ExtractHeader(res, r.Extract)
-	}
 
 	return
 }

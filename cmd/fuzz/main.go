@@ -316,8 +316,6 @@ func startRunners(ctx context.Context, opts *Options, in <-chan string) (<-chan 
 	for i := 0; i < opts.Threads; i++ {
 		runner := response.NewRunner(transport, opts.Request, in, out)
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
-		runner.Extract = opts.extract
-		runner.ExtractPipe = opts.extractPipe
 
 		runner.Client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			if len(via) <= opts.FollowRedirect {
@@ -405,6 +403,9 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	// filter the responses
 	responseCh = response.Mark(responseCh, responseFilters)
+
+	// extract data from all interesting (non-hidden) responses
+	responseCh = response.Extract(responseCh, opts.extract, opts.extractPipe)
 
 	if logfilePrefix != "" {
 		rec, err := recorder.New(logfilePrefix+".json", opts.Request)
