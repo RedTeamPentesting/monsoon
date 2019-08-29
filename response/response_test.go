@@ -115,10 +115,7 @@ func TestExtractBody(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			err = r.ExtractBody(test.targets, nil)
-			if err != nil {
-				t.Fatal(err)
-			}
+			r.ExtractBody(test.targets)
 
 			if !reflect.DeepEqual(test.data, r.Extract) {
 				t.Fatalf("wrong data, want %q, got %q", test.data, r.Extract)

@@ -316,6 +316,7 @@ func startRunners(ctx context.Context, opts *Options, in <-chan string) (<-chan 
 	for i := 0; i < opts.Threads; i++ {
 		runner := response.NewRunner(transport, opts.Request, in, out)
 		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
+		runner.Extract = opts.extract
 
 		runner.Client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			if len(via) <= opts.FollowRedirect {

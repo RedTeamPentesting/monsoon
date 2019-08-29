@@ -137,8 +137,12 @@ func (r *Response) ReadBody(body io.Reader, maxBodySize int) error {
 }
 
 // ExtractBody extracts data from the HTTP response body.
-func (r *Response) ExtractBody(targets []*regexp.Regexp, cmds [][]string) (err error) {
+func (r *Response) ExtractBody(targets []*regexp.Regexp) {
 	r.Extract = append(r.Extract, extractRegexp(r.RawBody, targets)...)
+}
+
+// ExtractBodyCommand extracts data from the HTTP response body by running an external command.
+func (r *Response) ExtractBodyCommand(cmds [][]string) (err error) {
 	data, err := extractCommand(r.RawBody, cmds)
 	if err != nil {
 		return err
