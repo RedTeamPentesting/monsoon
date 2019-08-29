@@ -20,6 +20,9 @@ The program creates a processing pipeline consisting of the following items:
  * ResponseFilter: decides for each HTTP response if it should be rejected
    according to the current configuration.
 
+ * Extracter: runs external commands to extract data. Since this is rather
+   expensive, we only do it for non-hidden responses.
+
  * Reporter: takes the HTTP responses from the Runners, runs the filters on
    each one and displays the responses not rejected by the filter to the user,
    in addition to statistics and runtime information.
@@ -30,9 +33,9 @@ This is a rough diagram of how it all fits together:
                                                   +--------+
                                                +->| Runner |-+
                                                |  +--------+ |   
-+----------+   +-------------+   +---------+   |             |   +----------------+   +----------+
-| Producer +-->| ValueFilter +-->| Limiter +---+->  ...      +-->| ResponseFilter +-->| Reporter |
-+----------+   +-------------+   +---------+   |             |   +----------------+   +----------+
++----------+   +-------------+   +---------+   |             |   +----------------+   +------------+   +----------+
+| Producer +-->| ValueFilter +-->| Limiter +---+->  ...      +-->| ResponseFilter +-->|  Extracter +-->| Reporter |
++----------+   +-------------+   +---------+   |             |   +----------------+   +------------+   +----------+
                                                |  +--------+ |
                                                +->| Runner |-+
                                                   +--------+
