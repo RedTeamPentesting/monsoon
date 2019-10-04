@@ -58,8 +58,8 @@ func (h *HTTPStats) Report(current string) (res []string) {
 		status += fmt.Sprintf(", %.0f req/s", h.rps)
 	}
 
-	if h.Count > 0 {
-		todo := h.Count - h.Responses
+	todo := h.Count - h.Responses
+	if todo > 0 {
 		status += fmt.Sprintf(", %d todo", todo)
 
 		if h.rps > 0 {
