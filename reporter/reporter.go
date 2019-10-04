@@ -21,11 +21,12 @@ func New(term cli.Terminal) *Reporter {
 
 // HTTPStats collects statistics about several HTTP responses.
 type HTTPStats struct {
-	Start       time.Time
-	StatusCodes map[int]int
-	Errors      int
-	Responses   int
-	Count       int
+	Start          time.Time
+	StatusCodes    map[int]int
+	Errors         int
+	Responses      int
+	ShownResponses int
+	Count          int
 
 	lastRPS time.Time
 	rps     float64
@@ -47,7 +48,7 @@ func formatSeconds(secs float64) string {
 // Report returns a report about the received HTTP status codes.
 func (h *HTTPStats) Report(current string) (res []string) {
 	res = append(res, "")
-	status := fmt.Sprintf("%v requests", h.Responses)
+	status := fmt.Sprintf("%v of %v requests shown", h.ShownResponses, h.Responses)
 	dur := time.Since(h.Start) / time.Second
 	if dur > 0 && time.Since(h.lastRPS) > time.Second {
 		h.rps = float64(h.Responses) / float64(dur)
@@ -106,6 +107,7 @@ func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int)
 
 		if !response.Hide {
 			r.term.Printf("%v\n", response)
+			stats.ShownResponses++
 		}
 
 		r.term.SetStatus(stats.Report(response.Item))
