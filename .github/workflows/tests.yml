@@ -20,6 +20,8 @@ jobs:
 
       - name: Get programs
         run: |
+          export GOBIN=$HOME/bin
+          export PATH=$PATH:$HOME/bin
           go get golang.org/x/lint/golint
           go get golang.org/x/tools/cmd/goimports
 
