@@ -1,4 +1,4 @@
-name: Run unit tests
+name: Build and tests
 on: [push]
 jobs:
   build:
@@ -10,8 +10,6 @@ jobs:
           - 1.12.x
           - 1.13.x
     runs-on: ubuntu-latest
-    env:
-      GOBIN: $HOME/bin
     steps:
 
       - name: Set up Go ${{ matrix.go-version }}
@@ -23,8 +21,7 @@ jobs:
       - name: Get programs
         run: |
           export GOBIN=$HOME/bin
-          go get golang.org/x/lint/golint
-          go get golang.org/x/tools/cmd/goimports
+          curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $HOME/bin v1.19.1
 
       - name: Check out code
         uses: actions/checkout@v1
@@ -39,5 +36,3 @@ jobs:
         run: |
           export PATH=$HOME/bin:$PATH
           go test -mod=vendor ./...
-          diff <(goimports -d *.go */*.go */*/*.go) <(printf "")
-          diff <(golint *.go */*.go */*/*.go) <(printf "")
