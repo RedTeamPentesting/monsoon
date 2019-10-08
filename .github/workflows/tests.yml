@@ -29,5 +29,5 @@ jobs:
       - name: Run tests
         run: |
           go test ./...
-          diff <(goimports -d *.go */*.go */*/*.go) <(printf ""); fi
+          diff <(goimports -d *.go */*.go */*/*.go) <(printf "")
           diff <(golint *.go */*.go */*/*.go) <(printf "")
