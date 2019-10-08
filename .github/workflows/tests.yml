@@ -22,9 +22,9 @@ jobs:
 
       - name: Build
         run: |
-          go run build.go --goos linux
-          go run build.go --goos windows
-          go run build.go --goos darwin
+          go run -mod=vendor build.go --goos linux
+          go run -mod=vendor build.go --goos windows
+          go run -mod=vendor build.go --goos darwin
 
       - name: Run tests
         run: |
