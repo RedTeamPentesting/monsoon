@@ -28,6 +28,6 @@ jobs:
 
       - name: Run tests
         run: |
-          go test ./...
+          go test -mod=vendor ./...
           diff <(goimports -d *.go */*.go */*/*.go) <(printf "")
           diff <(golint *.go */*.go */*/*.go) <(printf "")
