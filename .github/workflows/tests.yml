@@ -22,6 +22,7 @@ jobs:
 
       - name: Get programs
         run: |
+          export GOBIN=$HOME/bin
           go get golang.org/x/lint/golint
           go get golang.org/x/tools/cmd/goimports
 
@@ -36,8 +37,7 @@ jobs:
 
       - name: Run tests
         run: |
-          go env
-          echo $PATH
+          export PATH=$HOME/bin:$PATH
           go test -mod=vendor ./...
           diff <(goimports -d *.go */*.go */*/*.go) <(printf "")
           diff <(golint *.go */*.go */*/*.go) <(printf "")
