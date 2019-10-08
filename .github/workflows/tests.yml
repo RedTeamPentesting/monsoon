@@ -10,6 +10,8 @@ jobs:
           - 1.12.x
           - 1.13.x
     runs-on: ubuntu-latest
+    env:
+      GOBIN: $HOME/bin
     steps:
 
       - name: Set up Go ${{ matrix.go-version }}
@@ -20,8 +22,6 @@ jobs:
 
       - name: Get programs
         run: |
-          export GOBIN=$HOME/bin
-          export PATH=$PATH:$HOME/bin
           go get golang.org/x/lint/golint
           go get golang.org/x/tools/cmd/goimports
 
