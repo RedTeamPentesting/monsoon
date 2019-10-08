@@ -94,7 +94,7 @@ func TestHeaderSet(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			hdr := NewHeader(test.start)
 			for _, v := range test.values {
-				hdr.Set(v)
+				_ = hdr.Set(v)
 			}
 
 			insertValue := func(s string) string {
@@ -831,8 +831,8 @@ Host: server:1234
 							panic("unknown scheme " + srvURL.Scheme)
 						}
 					}
-					addr = fmt.Sprintf("%v:%v", srvURL.Hostname(), port)
-					return net.Dial("tcp", addr)
+					testServerAddr := fmt.Sprintf("%v:%v", srvURL.Hostname(), port)
+					return net.Dial("tcp", testServerAddr)
 				},
 			}
 

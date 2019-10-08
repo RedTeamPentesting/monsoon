@@ -47,9 +47,9 @@ func TestTemplate(t *testing.T) {
 				req.URL = "https://localhost:8443/?bar"
 				req.Method = "xFUZZ"
 				req.Body = "testbody"
-				req.Header.Set("x-foo: bar")
-				req.Header.Set("accept: application/json")
-				req.Header.Set("accept: image/jpeg")
+				_ = req.Header.Set("x-foo: bar")
+				_ = req.Header.Set("accept: application/json")
+				_ = req.Header.Set("accept: image/jpeg")
 				return req
 			},
 			want: Template{

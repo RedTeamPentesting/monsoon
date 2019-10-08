@@ -38,6 +38,7 @@ func formatSeconds(secs float64) string {
 	sec -= hours * 3600
 	min := sec / 60
 	sec -= min * 60
+
 	if hours > 0 {
 		return fmt.Sprintf("%dh%02dm%02ds", hours, min, sec)
 	}
@@ -50,10 +51,12 @@ func (h *HTTPStats) Report(current string) (res []string) {
 	res = append(res, "")
 	status := fmt.Sprintf("%v of %v requests shown", h.ShownResponses, h.Responses)
 	dur := time.Since(h.Start) / time.Second
+
 	if dur > 0 && time.Since(h.lastRPS) > time.Second {
 		h.rps = float64(h.Responses) / float64(dur)
 		h.lastRPS = time.Now()
 	}
+
 	if h.rps > 0 {
 		status += fmt.Sprintf(", %.0f req/s", h.rps)
 	}
@@ -77,7 +80,8 @@ func (h *HTTPStats) Report(current string) (res []string) {
 	for code, count := range h.StatusCodes {
 		res = append(res, fmt.Sprintf("%v: %v", code, count))
 	}
-	sort.Sort(sort.StringSlice(res[2:]))
+
+	sort.Strings(res[2:])
 
 	return res
 }
@@ -99,6 +103,7 @@ func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int)
 		}
 
 		stats.Responses++
+
 		if response.Error != nil {
 			stats.Errors++
 		} else {
@@ -115,6 +120,7 @@ func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int)
 
 	r.term.Print("\n")
 	r.term.Printf("processed %d HTTP requests in %v\n", stats.Responses, formatSeconds(time.Since(stats.Start).Seconds()))
+
 	for _, line := range stats.Report("")[1:] {
 		r.term.Print(line)
 	}

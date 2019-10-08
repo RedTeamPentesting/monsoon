@@ -24,6 +24,7 @@ func (lt *LogTerminal) Print(msg string) {
 	if !strings.HasSuffix(msg, "\n") {
 		msg += "\n"
 	}
+
 	lt.Terminal.Print(msg)
-	lt.Writer.Write([]byte(msg))
+	_, _ = lt.Writer.Write([]byte(msg))
 }

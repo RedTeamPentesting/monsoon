@@ -30,6 +30,7 @@ func (h Header) String() (s string) {
 	if len(s) > 0 {
 		s = strings.TrimSuffix(s, ", ")
 	}
+
 	return s
 }
 
@@ -60,6 +61,7 @@ func (h Header) Set(s string) error {
 
 	// use original name in case there's a string we need to replace later
 	h.Header[name] = append(h.Header[name], val)
+
 	return nil
 }
 
@@ -74,6 +76,7 @@ func NewHeader(defaults http.Header) *Header {
 	for k, vs := range defaults {
 		hdr[k] = vs
 	}
+
 	return &Header{
 		Header: hdr,
 		Remove: make(map[string]struct{}),
@@ -95,6 +98,7 @@ func (h Header) Apply(hdr http.Header, insertValue func(string) string) {
 
 		// add values
 		k = insertValue(k)
+
 		for _, v := range vs {
 			hdr.Add(k, insertValue(v))
 		}

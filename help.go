@@ -20,13 +20,13 @@ func setupHelp(cmd *cobra.Command) {
 			cmd, _, e := c.Root().Find(args)
 			if cmd == nil || e != nil {
 				c.Printf("Unknown help topic %q\n", args)
-				c.Root().Usage()
+				_ = c.Root().Usage()
 				return
 			}
 
 			cmd.InitDefaultHelpFlag() // make possible 'help' flag to be shown
 			cmd.SetUsageTemplate(usageTemplateHelpCommand)
-			cmd.Help()
+			_ = cmd.Help()
 		},
 	})
 }
