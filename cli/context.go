@@ -21,9 +21,19 @@ func WithContext(f func(context.Context, *errgroup.Group) error) error {
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT)
 	go func() {
+		// track the number of events we receive
+		received := 0
 		for sig := range signalCh {
-			fmt.Printf("received signal %v\n", sig)
-			cancel()
+			if received == 0 {
+				// if this is the first signal, try to exit gracefully
+				fmt.Printf("received signal %v, finishing gracefully\n", sig)
+				cancel()
+			} else {
+				// else just exit
+				fmt.Printf("received signal %v again, exiting\n", sig)
+				os.Exit(1)
+			}
+			received++
 		}
 	}()
 
