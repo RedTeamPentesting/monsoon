@@ -158,7 +158,7 @@ func AddCommand(c *cobra.Command) {
 	fs.IntVar(&opts.BufferSize, "buffer-size", 100000, "set number of buffered items to `n`")
 	fs.IntVar(&opts.Skip, "skip", 0, "skip the first `n` requests")
 	fs.IntVar(&opts.Limit, "limit", 0, "only run `n` requests, then exit")
-	fs.Float64Var(&opts.RequestsPerSecond, "requests-per-second", 0, "do at most `n` requests per minute (e.g. 0.5)")
+	fs.Float64Var(&opts.RequestsPerSecond, "requests-per-second", 0, "do at most `n` requests per second (e.g. 0.5)")
 
 	// add all options to define a request
 	opts.Request = request.New("")
