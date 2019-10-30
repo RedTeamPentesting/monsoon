@@ -7,23 +7,22 @@ These instructions will get you a compiled version of the code in the master bra
 
 ## Prerequisites
 
-You'll need a recent version of the [Go compiler](https://golang.org/dl). For
-Debian, install the package `golang-go`
+You'll need a recent version of the [Go compiler](https://golang.org/dl), at
+least version 1.11. For Debian, install the package `golang-go`.
 
 ## Installing
 
 Clone the repository, then from within the checkout run the following command:
 
 ```
-$ go run build.go
+$ go build
 ```
 
-Afterwards you'll find a `monsoon` binary in the current directory. You can test it by running `./monsoon version`, which will print the version:
+Afterwards you'll find a `monsoon` binary in the current directory. It can be
+for other operating systems as follows:
 
 ```
-$ ./monsoon version
-monsoon v0.1.0-3-g4a39f0e
-compiled with go1.9.2 on linux
+$ GOOS=windows GOARCH=amd64 go build -o monsoon.exe
 ```
 
 ## Getting Help

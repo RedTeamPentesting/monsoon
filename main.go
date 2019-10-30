@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"runtime"
 
 	"github.com/happal/monsoon/cmd/fuzz"
 	"github.com/happal/monsoon/cmd/list"
@@ -21,21 +20,6 @@ var cmdRoot = &cobra.Command{
 func init() {
 	// configure cobra help texts
 	setupHelp(cmdRoot)
-}
-
-var version = "compiled manually"
-
-var cmdVersion = &cobra.Command{
-	Use:   "version",
-	Short: "Display version information",
-	Run: func(*cobra.Command, []string) {
-		fmt.Printf("monsoon %s\ncompiled with %v on %v\n",
-			version, runtime.Version(), runtime.GOOS)
-	},
-}
-
-func init() {
-	cmdRoot.AddCommand(cmdVersion)
 	fuzz.AddCommand(cmdRoot)
 	show.AddCommand(cmdRoot)
 	test.AddCommand(cmdRoot)
