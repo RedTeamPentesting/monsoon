@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.org/happal/monsoon.svg?branch=master)](https://travis-ci.org/happal/monsoon)
-
 # monsoon
 
 A fast HTTP enumerator that allows you to execute a large number of HTTP
