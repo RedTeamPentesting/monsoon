@@ -22,4 +22,4 @@ jobs:
       - name: Run golang-ci
         run: |
           export PATH=$HOME/bin:$PATH
-          golangci-lint run
+          golangci-lint run --enable goimports,govet,misspell,stylecheck
