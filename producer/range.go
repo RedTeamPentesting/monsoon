@@ -3,6 +3,7 @@ package producer
 import (
 	"context"
 	"fmt"
+	"strconv"
 )
 
 // Range defines a range of values which should be tested.
@@ -10,8 +11,15 @@ type Range struct {
 	First, Last int
 }
 
-// ParseRange parses a range from the string s.
+// ParseRange parses a range from the string s. Valid formats are `n` and `n-m`.
 func ParseRange(s string) (r Range, err error) {
+	// test if it's a number only
+	n, err := strconv.Atoi(s)
+	if err == nil {
+		return Range{First: n, Last: n}, nil
+	}
+
+	// otherwise assume it's a range
 	_, err = fmt.Sscanf(s, "%d-%d", &r.First, &r.Last)
 	if err != nil {
 		return Range{}, fmt.Errorf("wrong format for range, expected: first-last, got: %q", s)
