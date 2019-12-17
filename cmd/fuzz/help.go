@@ -52,6 +52,12 @@ the cookie "sessionid":
       --header 'Cookie: sessionid=FUZZ' \
       --hide-status 500 https://example.com/login/session
 
+You can also request multiple ranges:
+
+    monsoon fuzz --range 100-500,999-2000 \
+      --header 'Cookie: sessionid=FUZZ' \
+      --hide-status 500 https://example.com/login/session
+
 Request 500 session IDs and extract the cookie values (matching case insensitive):
 
     monsoon fuzz --range 1-500 \

@@ -2,32 +2,59 @@ package producer
 
 import (
 	"context"
-	"errors"
 	"fmt"
 )
 
-// Range sends all values [first, last] to the channel ch, and the number of
-// items to the channel count. Sending stops and ch and count are closed when
-// an error occurs or the context is cancelled. When format is the empty
-// string, "%d% is used.
-func Range(ctx context.Context, first, last int, format string, ch chan<- string, count chan<- int) error {
-	if first > last {
-		return errors.New("last value is smaller than first value")
+// Range defines a range of values which should be tested.
+type Range struct {
+	First, Last int
+}
+
+// ParseRange parses a range from the string s.
+func ParseRange(s string) (r Range, err error) {
+	_, err = fmt.Sscanf(s, "%d-%d", &r.First, &r.Last)
+	if err != nil {
+		return Range{}, fmt.Errorf("wrong format for range, expected: first-last, got: %q", s)
 	}
 
+	if r.First > r.Last {
+		return Range{}, fmt.Errorf("last value is smaller than first value for range %q", s)
+	}
+
+	return r, nil
+}
+
+// Count returns the number of items in the range.
+func (r Range) Count() int {
+	return r.Last - r.First + 1
+}
+
+// Ranges sends all range values to the channel ch, and the number of items to
+// the channel count. Sending stops and ch and count are closed when an error
+// occurs or the context is cancelled. When format is the empty string, "%d% is
+// used.
+func Ranges(ctx context.Context, ranges []Range, format string, ch chan<- string, count chan<- int) error {
 	if format == "" {
 		format = "%d"
 	}
 
-	count <- last - first + 1
+	var fullcount int
+	for _, r := range ranges {
+		fullcount += r.Count()
+	}
+
+	count <- fullcount
 
 	defer close(ch)
-	for i := first; i <= last; i++ {
-		v := fmt.Sprintf(format, i)
-		select {
-		case ch <- v:
-		case <-ctx.Done():
-			return nil
+
+	for _, r := range ranges {
+		for i := r.First; i <= r.Last; i++ {
+			v := fmt.Sprintf(format, i)
+			select {
+			case ch <- v:
+			case <-ctx.Done():
+				return nil
+			}
 		}
 	}
 

@@ -27,7 +27,7 @@ import (
 
 // Options collect options for a run.
 type Options struct {
-	Range       string
+	Range       []string
 	RangeFormat string
 	Filename    string
 	Logfile     string
@@ -94,11 +94,11 @@ func (opts *Options) valid() (err error) {
 		return errors.New("invalid number of threads")
 	}
 
-	if opts.Range != "" && opts.Filename != "" {
+	if len(opts.Range) > 0 && opts.Filename != "" {
 		return errors.New("only one source allowed but both range and filename specified")
 	}
 
-	if opts.Range == "" && opts.Filename == "" {
+	if len(opts.Range) == 0 && opts.Filename == "" {
 		return errors.New("neither file nor range specified, nothing to do")
 	}
 
@@ -147,7 +147,7 @@ func AddCommand(c *cobra.Command) {
 	fs := cmd.Flags()
 	fs.SortFlags = false
 
-	fs.StringVarP(&opts.Range, "range", "r", "", "set range `from-to`")
+	fs.StringSliceVarP(&opts.Range, "range", "r", nil, "set range `from-to`")
 	fs.StringVar(&opts.RangeFormat, "range-format", "%d", "set `format` for range")
 
 	fs.StringVarP(&opts.Filename, "file", "f", "", "read values from `filename`")
@@ -196,15 +196,19 @@ func logfilePath(opts *Options, inputURL string) (prefix string, err error) {
 
 func setupProducer(ctx context.Context, g *errgroup.Group, opts *Options, ch chan<- string, count chan<- int) error {
 	switch {
-	case opts.Range != "":
-		var first, last int
-		_, err := fmt.Sscanf(opts.Range, "%d-%d", &first, &last)
-		if err != nil {
-			return errors.New("wrong format for range, expected: first-last")
+	case len(opts.Range) > 0:
+		var ranges []producer.Range
+		for _, r := range opts.Range {
+			rng, err := producer.ParseRange(r)
+			if err != nil {
+				return err
+			}
+
+			ranges = append(ranges, rng)
 		}
 
 		g.Go(func() error {
-			return producer.Range(ctx, first, last, opts.RangeFormat, ch, count)
+			return producer.Ranges(ctx, ranges, opts.RangeFormat, ch, count)
 		})
 		return nil
 
@@ -423,7 +427,7 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 		// fill in information for generating the request
 		rec.Data.InputFile = opts.Filename
-		rec.Data.Range = opts.Range
+		rec.Data.Ranges = opts.Range
 		rec.Data.RangeFormat = opts.RangeFormat
 		rec.Data.Extract = opts.Extract
 		rec.Data.ExtractPipe = opts.ExtractPipe

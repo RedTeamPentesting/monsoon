@@ -29,7 +29,7 @@ type Data struct {
 
 	Template    Template   `json:"template"`
 	InputFile   string     `json:"input_file,omitempty"`
-	Range       string     `json:"range,omitempty"`
+	Ranges      []string   `json:"ranges,omitempty"`
 	RangeFormat string     `json:"range_format,omitempty"`
 	Responses   []Response `json:"responses"`
 	Extract     []string   `json:"extract,omitempty"`
@@ -80,7 +80,7 @@ func (r *Recorder) Run(ctx context.Context, in <-chan response.Response, out cha
 	data.End = time.Now()
 
 	// omit range_format if range is unset
-	if data.Range == "" {
+	if len(data.Ranges) == 0 {
 		data.RangeFormat = ""
 	}
 
