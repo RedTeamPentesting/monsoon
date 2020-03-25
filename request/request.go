@@ -159,6 +159,8 @@ type Request struct {
 	Header *Header
 	Body   string
 
+	UserPass string // user:password for HTTP basic auth
+
 	TemplateFile string // used to read the request from a file
 
 	Replace string // this string is being replaced by a value in a specific http request
@@ -301,9 +303,22 @@ func (r *Request) Apply(value string) (*http.Request, error) {
 		req.ContentLength = -1
 	}
 
+	// if the URL has user and password, use that
 	if req.URL.User != nil {
 		u := req.URL.User.Username()
 		p, _ := req.URL.User.Password()
+		req.SetBasicAuth(u, p)
+	}
+
+	// but if an explicit user and pass is specified, override them again
+	if r.UserPass != "" {
+		data := strings.SplitN(strings.Replace(r.UserPass, r.Replace, value, -1), ":", 2)
+		u := data[0]
+		p := ""
+		if len(data) > 1 {
+			p = data[1]
+		}
+
 		req.SetBasicAuth(u, p)
 	}
 

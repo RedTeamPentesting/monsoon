@@ -95,7 +95,8 @@ Try different passwords for the user admin with HTTP Basic authentication:
 
     monsoon fuzz --file passwords.txt \
       --hide-status 403 \
-      http://admin:FUZZ@example.com
+	  --user admin:FUZZ \
+      http://example.com
 
 
 Filter Evaluation Order

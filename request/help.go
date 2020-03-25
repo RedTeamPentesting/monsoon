@@ -22,6 +22,7 @@ func AddFlags(r *Request, fs *pflag.FlagSet) {
 	fs.StringVarP(&r.Method, "method", "X", "", "use HTTP request `method`")
 	fs.VarP(r.Header, "header", "H", "add `\"name: value\"` as an HTTP request header, delete the header if only \"name\" is passed")
 	fs.StringVarP(&r.Body, "data", "d", "", "transmit `data` in the HTTP request body")
+	fs.StringVarP(&r.UserPass, "user", "u", "", "use `user:password` for HTTP basic auth")
 
 	fs.StringVar(&r.TemplateFile, "template-file", "", "read HTTP request from `file`")
 
