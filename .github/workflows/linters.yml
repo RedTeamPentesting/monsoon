@@ -12,14 +12,10 @@ jobs:
           go-version: 1.14.x
         id: go
 
-      - name: Install golang-ci
-        run: |
-          curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $HOME/bin v1.19.1
-
       - name: Check out code
         uses: actions/checkout@v1
 
       - name: Run golang-ci
-        run: |
-          export PATH=$HOME/bin:$PATH
-          golangci-lint run --enable goimports,govet,misspell,stylecheck
+        uses: actions-contrib/golangci-lint@v1
+        with:
+          args: run --enable goimports,govet,misspell,stylecheck
