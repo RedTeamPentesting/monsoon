@@ -1,3 +1,6 @@
+![Status badge for tests](https://github.com/happal/monsoon/workflows/Build%20and%20tests/badge.svg)
+![Status badge for style checkers](https://github.com/happal/monsoon/workflows/Style%20Checkers/badge.svg)
+
 # monsoon
 
 A fast HTTP enumerator that allows you to execute a large number of HTTP
