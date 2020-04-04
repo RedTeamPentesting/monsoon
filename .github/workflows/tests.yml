@@ -11,6 +11,10 @@ jobs:
           - 1.13.x
           - 1.14.x
     runs-on: ubuntu-latest
+
+    env:
+      GOPROXY: https://proxy.golang.org
+
     steps:
 
       - name: Set up Go ${{ matrix.go-version }}
