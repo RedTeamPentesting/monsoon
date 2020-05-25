@@ -62,8 +62,8 @@ const HostTemplate = `{{ .Hostport }}
 {{- if ne .InputFile "" }}
     Inputfile: {{ .InputFile }}
 {{ end -}}
-{{- if ne .Range "" }}
-    Range:     {{ .Range }}
+{{- if .Ranges }}
+    Range:     {{ join .Ranges "," }}
 {{ end -}}
 {{- if ne .Template.Method "GET" }}
     Method:    {{ .Template.Method -}}
@@ -95,6 +95,7 @@ var FuncMap = map[string]interface{}{
 		s += fmt.Sprintf("%ds", sec)
 		return s
 	},
+	"join": strings.Join,
 }
 
 type Host struct {
