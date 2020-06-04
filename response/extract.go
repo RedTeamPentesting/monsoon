@@ -37,6 +37,8 @@ func (e *Extracter) Run(in <-chan Response) <-chan Response {
 				}
 			}
 
+			res.ExtractBody(e.Pattern)
+
 			// forward response to next in chain
 			ch <- res
 		}

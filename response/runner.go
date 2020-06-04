@@ -157,14 +157,6 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 		return
 	}
 
-	err = response.ExtractHeader(res, r.Extract)
-	if err != nil {
-		response.Error = err
-		return
-	}
-
-	response.ExtractBody(r.Extract)
-
 	err = res.Body.Close()
 	if err != nil {
 		response.Error = err
