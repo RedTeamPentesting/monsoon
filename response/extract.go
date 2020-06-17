@@ -9,10 +9,10 @@ type Extracter struct {
 	Error    func(error)
 }
 
-// Run extracts data for responses by running external commands and feeding
-// them the response body. Since this is expensive, it is only executed for
-// non-hidden responses. Extraction is done in a separate goroutine, which
-// terminates when the input channel is closed.
+// Run extracts data from the body of a response by running external commands
+// and feeding them the response body. Commands used to extract data are only
+// run for non-hidden responses, since this is expensive. Extraction is done in
+// a separate goroutine, which terminates when the input channel is closed.
 func (e *Extracter) Run(in <-chan Response) <-chan Response {
 	ch := make(chan Response)
 
@@ -28,13 +28,6 @@ func (e *Extracter) Run(in <-chan Response) <-chan Response {
 			err := res.ExtractBodyCommand(e.Commands)
 			if err != nil && e.Error != nil {
 				e.Error(err)
-			}
-
-			err = res.ExtractHeader(res.HTTPResponse, e.Pattern)
-			if err != nil {
-				if err != nil && e.Error != nil {
-					e.Error(err)
-				}
 			}
 
 			res.ExtractBody(e.Pattern)

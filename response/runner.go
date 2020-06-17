@@ -157,6 +157,15 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 		return
 	}
 
+	// dump the header and extract data now so the stats about the header are
+	// present when the filter runs in the next step. We need to dump the header
+	// for that, so we can easily run data extraction in the same step.
+	err = response.ExtractHeader(res, r.Extract)
+	if err != nil {
+		response.Error = err
+		return
+	}
+
 	err = res.Body.Close()
 	if err != nil {
 		response.Error = err
