@@ -43,8 +43,8 @@ type Options struct {
 	Request        *request.Request // the template for the HTTP request
 	FollowRedirect int
 
-	HideStatusCodes []int
-	ShowStatusCodes []int
+	HideStatusCodes []string
+	ShowStatusCodes []string
 	HideHeaderSize  []string
 	HideBodySize    []string
 	HidePattern     []string
@@ -167,8 +167,8 @@ func AddCommand(c *cobra.Command) {
 
 	fs.IntVar(&opts.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
 
-	fs.IntSliceVar(&opts.HideStatusCodes, "hide-status", nil, "hide responses with this status `code,[code],[...]`")
-	fs.IntSliceVar(&opts.ShowStatusCodes, "show-status", nil, "show only responses with this status `code,[code],[...]`")
+	fs.StringSliceVar(&opts.HideStatusCodes, "hide-status", nil, "hide responses with this status `code,[code],[...]`")
+	fs.StringSliceVar(&opts.ShowStatusCodes, "show-status", nil, "show only responses with this status `code,[code],[...]`")
 	fs.StringSliceVar(&opts.HideHeaderSize, "hide-header-size", nil, "hide responses with this header size (`size,from-to,from-,-to`)")
 	fs.StringSliceVar(&opts.HideBodySize, "hide-body-size", nil, "hide responses with this body size (`size,from-to,from-,-to`)")
 	fs.StringArrayVar(&opts.HidePattern, "hide-pattern", nil, "hide responses containing `regex` in response header or body (can be specified multiple times)")
@@ -272,13 +272,13 @@ func setupTerminal(ctx context.Context, g *errgroup.Group, logfilePrefix string)
 
 func setupResponseFilters(opts *Options) ([]response.Filter, error) {
 	var filters []response.Filter
-	if len(opts.HideStatusCodes) > 0 {
-		filters = append(filters, response.NewFilterRejectStatusCode(opts.HideStatusCodes))
+
+	filter, err := response.NewFilterStatusCode(opts.HideStatusCodes, opts.ShowStatusCodes)
+	if err != nil {
+		return nil, err
 	}
 
-	if len(opts.ShowStatusCodes) > 0 {
-		filters = append(filters, response.NewFilterAcceptStatusCode(opts.ShowStatusCodes))
-	}
+	filters = append(filters, filter)
 
 	if len(opts.HideHeaderSize) > 0 || len(opts.HideBodySize) > 0 {
 		f, err := response.NewFilterSize(opts.HideHeaderSize, opts.HideBodySize)
