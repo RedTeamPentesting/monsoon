@@ -44,6 +44,7 @@ type Options struct {
 	FollowRedirect int
 
 	HideStatusCodes []int
+	ShowStatusCodes []int
 	HideHeaderSize  []string
 	HideBodySize    []string
 	HidePattern     []string
@@ -167,6 +168,7 @@ func AddCommand(c *cobra.Command) {
 	fs.IntVar(&opts.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
 
 	fs.IntSliceVar(&opts.HideStatusCodes, "hide-status", nil, "hide responses with this status `code,[code],[...]`")
+	fs.IntSliceVar(&opts.ShowStatusCodes, "show-status", nil, "show only responses with this status `code,[code],[...]`")
 	fs.StringSliceVar(&opts.HideHeaderSize, "hide-header-size", nil, "hide responses with this header size (`size,from-to,from-,-to`)")
 	fs.StringSliceVar(&opts.HideBodySize, "hide-body-size", nil, "hide responses with this body size (`size,from-to,from-,-to`)")
 	fs.StringArrayVar(&opts.HidePattern, "hide-pattern", nil, "hide responses containing `regex` in response header or body (can be specified multiple times)")
@@ -269,8 +271,13 @@ func setupTerminal(ctx context.Context, g *errgroup.Group, logfilePrefix string)
 }
 
 func setupResponseFilters(opts *Options) ([]response.Filter, error) {
-	filters := []response.Filter{
-		response.NewFilterStatusCode(opts.HideStatusCodes),
+	var filters []response.Filter
+	if len(opts.HideStatusCodes) > 0 {
+		filters = append(filters, response.NewFilterRejectStatusCode(opts.HideStatusCodes))
+	}
+
+	if len(opts.ShowStatusCodes) > 0 {
+		filters = append(filters, response.NewFilterAcceptStatusCode(opts.ShowStatusCodes))
 	}
 
 	if len(opts.HideHeaderSize) > 0 || len(opts.HideBodySize) > 0 {

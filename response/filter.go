@@ -11,14 +11,14 @@ type Filter interface {
 	Reject(Response) bool
 }
 
-// FilterStatusCode hides responses based on the HTTP status code.
-type FilterStatusCode struct {
+// FilterRejectStatusCode hides responses based on the HTTP status code.
+type FilterRejectStatusCode struct {
 	status map[int]bool
 }
 
-// NewFilterStatusCode returns a filter based on HTTP status code.
-func NewFilterStatusCode(rejects []int) FilterStatusCode {
-	f := FilterStatusCode{
+// NewFilterRejectStatusCode returns a filter based on HTTP status code.
+func NewFilterRejectStatusCode(rejects []int) FilterRejectStatusCode {
+	f := FilterRejectStatusCode{
 		status: make(map[int]bool, len(rejects)),
 	}
 	for _, code := range rejects {
@@ -28,11 +28,40 @@ func NewFilterStatusCode(rejects []int) FilterStatusCode {
 }
 
 // Reject decides if r is to be printed.
-func (f FilterStatusCode) Reject(r Response) bool {
+func (f FilterRejectStatusCode) Reject(r Response) bool {
 	if r.HTTPResponse == nil {
 		return false
 	}
 	return f.status[r.HTTPResponse.StatusCode]
+}
+
+// FilterAcceptStatusCode hides responses based on the HTTP status code.
+type FilterAcceptStatusCode struct {
+	status map[int]bool
+}
+
+// NewFilterAcceptStatusCode returns a filter based on HTTP status code.
+func NewFilterAcceptStatusCode(accepts []int) FilterAcceptStatusCode {
+	f := FilterAcceptStatusCode{
+		status: make(map[int]bool, len(accepts)),
+	}
+	for _, code := range accepts {
+		f.status[code] = true
+	}
+	return f
+}
+
+// Reject decides if r is to be printed.
+func (f FilterAcceptStatusCode) Reject(r Response) bool {
+	if r.HTTPResponse == nil {
+		return false
+	}
+
+	if _, ok := f.status[r.HTTPResponse.StatusCode]; ok {
+		return false
+	}
+
+	return true
 }
 
 // parseSizeFilterSpec returns a function that returns true if the size matches with the spec.

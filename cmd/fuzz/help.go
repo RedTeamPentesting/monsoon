@@ -21,6 +21,12 @@ Use the file filenames.txt as input, hide all 200 and 404 responses:
       --hide-status 200,404 \
       https://example.com/FUZZ
 
+Only show redirect responses with status codes 301, 302 or 307:
+
+    monsoon fuzz --file filenames.txt \
+      --show-status 301,302,307 \
+      https://example.com/FUZZ
+
 Skip the first 23 entries in filenames.txt and send at most 2000 requests:
 
     monsoon fuzz --file filenames.txt \
@@ -105,6 +111,7 @@ Filter Evaluation Order
 The filters are evaluated in the following order. A response is displayed if:
 
  * The status code is not hidden (--hide-status)
+ * The status code is in the list of status codes to show (--show-status, if specified)
  * The header and body size are not hidden (--header-size, --body-size)
  * The header and body does not contain a hide pattern (--hide-pattern)
  * The header or body contain all show pattern (--show-pattern, if specified)
