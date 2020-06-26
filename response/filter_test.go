@@ -28,7 +28,7 @@ func TestFilterSize(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			f, err := parseSizeFilterSpec(test.spec)
+			f, err := parseRangeFilterSpec(test.spec)
 			if err != nil {
 				t.Fatal(err)
 			}
