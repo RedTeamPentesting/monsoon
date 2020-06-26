@@ -167,8 +167,8 @@ func AddCommand(c *cobra.Command) {
 
 	fs.IntVar(&opts.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
 
-	fs.StringSliceVar(&opts.HideStatusCodes, "hide-status", nil, "hide responses with this status `code,[code],[...]`")
-	fs.StringSliceVar(&opts.ShowStatusCodes, "show-status", nil, "show only responses with this status `code,[code],[...]`")
+	fs.StringSliceVar(&opts.HideStatusCodes, "hide-status", nil, "hide responses with this status `code,[code-code],[-code],[...]`")
+	fs.StringSliceVar(&opts.ShowStatusCodes, "show-status", nil, "show only responses with this status `code,[code-code],[code-],[...]`")
 	fs.StringSliceVar(&opts.HideHeaderSize, "hide-header-size", nil, "hide responses with this header size (`size,from-to,from-,-to`)")
 	fs.StringSliceVar(&opts.HideBodySize, "hide-body-size", nil, "hide responses with this body size (`size,from-to,from-,-to`)")
 	fs.StringArrayVar(&opts.HidePattern, "hide-pattern", nil, "hide responses containing `regex` in response header or body (can be specified multiple times)")

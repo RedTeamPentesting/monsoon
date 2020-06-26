@@ -21,10 +21,10 @@ Use the file filenames.txt as input, hide all 200 and 404 responses:
       --hide-status 200,404 \
       https://example.com/FUZZ
 
-Only show redirect responses with status codes 301, 302 or 307:
+Only show redirect responses with status codes between 300 and 399:
 
     monsoon fuzz --file filenames.txt \
-      --show-status 301,302,307 \
+      --show-status 300-399 \
       https://example.com/FUZZ
 
 Skip the first 23 entries in filenames.txt and send at most 2000 requests:
