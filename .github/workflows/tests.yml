@@ -43,4 +43,6 @@ jobs:
           go test ./...
 
       - name: Run linter
-        run: golangci-lint run
+        run: |
+          export PATH=$HOME/bin:$PATH
+          golangci-lint run
