@@ -23,11 +23,6 @@ jobs:
           go-version: ${{ matrix.go-version }}
         id: go
 
-      - name: Get programs
-        run: |
-          export GOBIN=$HOME/bin
-          curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $HOME/bin latest
-
       - name: Check out code
         uses: actions/checkout@v1
 
@@ -41,8 +36,3 @@ jobs:
         run: |
           export PATH=$HOME/bin:$PATH
           go test ./...
-
-      - name: Run linter
-        run: |
-          export PATH=$HOME/bin:$PATH
-          golangci-lint run
