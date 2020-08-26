@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/happal/monsoon/request"
+	"github.com/RedTeamPentesting/monsoon/request"
 )
 
 // Template is the template used to construct an HTTP request.

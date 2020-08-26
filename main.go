@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/happal/monsoon/cmd/fuzz"
-	"github.com/happal/monsoon/cmd/list"
-	"github.com/happal/monsoon/cmd/show"
-	"github.com/happal/monsoon/cmd/test"
+	"github.com/RedTeamPentesting/monsoon/cmd/fuzz"
+	"github.com/RedTeamPentesting/monsoon/cmd/list"
+	"github.com/RedTeamPentesting/monsoon/cmd/show"
+	"github.com/RedTeamPentesting/monsoon/cmd/test"
 	"github.com/spf13/cobra"
 )
 

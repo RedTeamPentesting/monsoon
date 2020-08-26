@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/happal/monsoon/recorder"
-	"github.com/happal/monsoon/request"
+	"github.com/RedTeamPentesting/monsoon/recorder"
+	"github.com/RedTeamPentesting/monsoon/request"
 	"github.com/spf13/cobra"
 )
 

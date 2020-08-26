@@ -3,7 +3,7 @@ package show
 import (
 	"strings"
 
-	"github.com/happal/monsoon/request"
+	"github.com/RedTeamPentesting/monsoon/request"
 )
 
 const helpShort = "Construct and display an HTTP request"

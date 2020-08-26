@@ -9,9 +9,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/happal/monsoon/cli"
-	"github.com/happal/monsoon/request"
-	"github.com/happal/monsoon/response"
+	"github.com/RedTeamPentesting/monsoon/cli"
+	"github.com/RedTeamPentesting/monsoon/request"
+	"github.com/RedTeamPentesting/monsoon/response"
 	"github.com/spf13/cobra"
 	"golang.org/x/sync/errgroup"
 )

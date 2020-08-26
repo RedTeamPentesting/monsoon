@@ -3,7 +3,7 @@ package fuzz
 import (
 	"strings"
 
-	"github.com/happal/monsoon/request"
+	"github.com/RedTeamPentesting/monsoon/request"
 )
 
 const helpShort = "Execute and filter HTTP requests"

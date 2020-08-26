@@ -3,7 +3,7 @@ package test
 import (
 	"strings"
 
-	"github.com/happal/monsoon/request"
+	"github.com/RedTeamPentesting/monsoon/request"
 )
 
 const helpShort = "Send an HTTP request to a server and show the result"

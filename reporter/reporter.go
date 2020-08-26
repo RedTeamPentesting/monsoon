@@ -5,8 +5,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/happal/monsoon/cli"
-	"github.com/happal/monsoon/response"
+	"github.com/RedTeamPentesting/monsoon/cli"
+	"github.com/RedTeamPentesting/monsoon/response"
 )
 
 // Reporter prints the Responses to a terminal.

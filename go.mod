@@ -1,4 +1,4 @@
-module github.com/happal/monsoon
+module github.com/RedTeamPentesting/monsoon
 
 require (
 	github.com/fd0/termstatus v1.0.1

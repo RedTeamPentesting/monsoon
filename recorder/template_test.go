@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/RedTeamPentesting/monsoon/request"
 	"github.com/google/go-cmp/cmp"
-	"github.com/happal/monsoon/request"
 )
 
 func TestTemplate(t *testing.T) {

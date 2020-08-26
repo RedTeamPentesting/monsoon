@@ -6,8 +6,8 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/happal/monsoon/request"
-	"github.com/happal/monsoon/response"
+	"github.com/RedTeamPentesting/monsoon/request"
+	"github.com/RedTeamPentesting/monsoon/response"
 )
 
 // Recorder records information about received responses in a file encoded as .

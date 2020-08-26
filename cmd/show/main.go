@@ -7,7 +7,7 @@ import (
 	"net/http/httputil"
 	"os"
 
-	"github.com/happal/monsoon/request"
+	"github.com/RedTeamPentesting/monsoon/request"
 	"github.com/spf13/cobra"
 )
 
