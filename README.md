@@ -6,14 +6,18 @@
 A fast HTTP enumerator that allows you to execute a large number of HTTP
 requests, filter the responses and display them in real-time.
 
-These instructions will get you a compiled version of the code in the master branch.
+## Example
 
-## Prerequisites
+Run an HTTP GET request for each entry in `filenames.txt`, hide all responses with the status code 403 or 404:
+
+![basic demo](demos/demo1.gif)
+
+# Installing
+
+These instructions will get you a compiled version of the code in the master branch.
 
 You'll need a recent version of the [Go compiler](https://golang.org/dl), at
 least version 1.11. For Debian, install the package `golang-go`.
-
-## Installing
 
 Clone the repository, then from within the checkout run the following command:
 
@@ -28,7 +32,7 @@ for other operating systems as follows:
 $ GOOS=windows GOARCH=amd64 go build -o monsoon.exe
 ```
 
-## Getting Help
+# Getting Help
 
 The program has several subcommands, the most important one is `fuzz` which
 contains the main functionality. You can display a list of commands as follows:
@@ -54,9 +58,3 @@ Use "monsoon [command] --help" for more information about a command.
 For each command, calling it with `--help` (e.g. `monsoon fuzz --help`) will
 display a description of all the options, and calling `monsoon help fuzz`
 also shows an extensive list of examples.
-
-## Example
-
-Run an HTTP GET request for each entry in `filenames.txt`, hide all responses with the status code 403 or 404:
-
-![basic demo](demos/demo1.gif)
