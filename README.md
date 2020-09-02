@@ -14,6 +14,14 @@ Run an HTTP GET request for each entry in `filenames.txt`, hide all responses wi
 
 # Installing
 
+For Arch Linux based distributions monsoon is available on the [AUR](https://aur.archlinux.org/packages/monsoon). Using your AUR helper of choice such as [yay](https://github.com/Jguer/yay).
+
+```bash
+yay -S monsoon
+```
+
+## Building from source
+
 These instructions will get you a compiled version of the code in the master branch.
 
 You'll need a recent version of the [Go compiler](https://golang.org/dl), at
