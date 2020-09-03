@@ -69,6 +69,6 @@ also shows an extensive list of examples.
 
 # Wordlists
 
-The [SecLists](https://github.com/danielmiessler/SecLists) collects wordlists
-that can be used with `monsoon`.
+The [SecLists Project](https://github.com/danielmiessler/SecLists) collects
+wordlists that can be used with `monsoon`.
 
