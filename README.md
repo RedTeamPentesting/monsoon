@@ -12,6 +12,8 @@ Run an HTTP GET request for each entry in `filenames.txt`, hide all responses wi
 
 ![basic demo](demos/demo1.gif)
 
+# Installation
+
 ## Building from source
 
 These instructions will get you a compiled version of the code in the master branch.
@@ -32,7 +34,7 @@ for other operating systems as follows:
 $ GOOS=windows GOARCH=amd64 go build -o monsoon.exe
 ```
 
-# Unofficial Packages
+## Unofficial Packages
 
 For Arch Linux based distributions `monsoon` is available as an unofficial
 package on the [AUR](https://aur.archlinux.org/packages/monsoon). Using your
