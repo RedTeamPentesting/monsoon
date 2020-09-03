@@ -66,3 +66,9 @@ Use "monsoon [command] --help" for more information about a command.
 For each command, calling it with `--help` (e.g. `monsoon fuzz --help`) will
 display a description of all the options, and calling `monsoon help fuzz`
 also shows an extensive list of examples.
+
+# Wordlists
+
+The [SecLists](https://github.com/danielmiessler/SecLists) collects wordlists
+that can be used with `monsoon`.
+
