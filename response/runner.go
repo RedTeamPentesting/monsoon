@@ -48,6 +48,8 @@ func NewTransport(insecure bool, TLSClientCertKeyFilename string, disableHTTP2 b
 		ExpectContinueTimeout: 1 * time.Second,
 		IdleConnTimeout:       15 * time.Second,
 		TLSClientConfig:       &tls.Config{},
+		MaxIdleConns:          100,
+		MaxIdleConnsPerHost:   100,
 	}
 
 	if insecure {
