@@ -22,4 +22,9 @@ server at example.com and display the result:
       --header "X-secret: FUZZ" \
       --value hunter2 \
       https://www.example.com
+
+A Proxy can be configured via the environment variables HTTP_PROXY, HTTPS_PROXY
+and SOCKS5_PROXY. Example:
+
+    SOCKS5_PROXY=user:pass@proxyhost:123 monsoon fuzz [...]
 `

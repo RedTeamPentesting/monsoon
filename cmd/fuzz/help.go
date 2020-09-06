@@ -117,6 +117,15 @@ The filters are evaluated in the following order. A response is displayed if:
  * The header or body contain all show pattern (--show-pattern, if specified)
 
 
+Proxy Configuration
+###################
+
+A Proxy can be configured via the environment variables HTTP_PROXY, HTTPS_PROXY
+and SOCKS5_PROXY. Example:
+
+    SOCKS5_PROXY=user:pass@proxyhost:123 monsoon fuzz [...]
+
+
 References
 ##########
 
