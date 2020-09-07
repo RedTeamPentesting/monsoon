@@ -56,10 +56,12 @@ func NewTransport(insecure bool, TLSClientCertKeyFilename string, disableHTTP2 b
 
 	noProxy := len(os.Getenv("NO_PROXY")) > 0 || len(os.Getenv("no_proxy")) > 0
 
-	socks5ProxyConfig := os.Getenv("SOCKS5_PROXY")
+	socks5ProxyConfig := os.Getenv("FORCE_SOCKS5_PROXY")
 	if socks5ProxyConfig == "" || noProxy {
 		tr.DialContext = dialer.DialContext
 	} else {
+		// configure a socks5 proxy that also forwards requests
+		// to loopback devices through the proxy connection
 		socks5Dialer, err := socks5ContextDialer(dialer, socks5ProxyConfig)
 		if err != nil {
 			return nil, fmt.Errorf("configure socks5 proxy: %v", err)
