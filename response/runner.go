@@ -8,12 +8,15 @@ import (
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/RedTeamPentesting/monsoon/request"
 	"golang.org/x/net/http2"
+	"golang.org/x/net/proxy"
 )
 
 // Runner executes HTTP requests.
@@ -39,11 +42,7 @@ func NewTransport(insecure bool, TLSClientCertKeyFilename string,
 	// for timeouts, see
 	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
 	tr := &http.Transport{
-		Proxy: http.ProxyFromEnvironment,
-		Dial: (&net.Dialer{
-			Timeout:   30 * time.Second,
-			KeepAlive: 30 * time.Second,
-		}).Dial,
+		Proxy:                 http.ProxyFromEnvironment,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ResponseHeaderTimeout: 10 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
@@ -51,6 +50,27 @@ func NewTransport(insecure bool, TLSClientCertKeyFilename string,
 		TLSClientConfig:       &tls.Config{},
 		MaxIdleConns:          concurrentRequests,
 		MaxIdleConnsPerHost:   concurrentRequests,
+	}
+
+	dialer := &net.Dialer{
+		Timeout:   30 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}
+
+	noProxy := len(os.Getenv("NO_PROXY")) > 0 || len(os.Getenv("no_proxy")) > 0
+
+	socks5ProxyConfig := os.Getenv("FORCE_SOCKS5_PROXY")
+	if socks5ProxyConfig == "" || noProxy {
+		tr.DialContext = dialer.DialContext
+	} else {
+		// configure a socks5 proxy that also forwards requests
+		// to loopback devices through the proxy connection
+		socks5Dialer, err := socks5ContextDialer(dialer, socks5ProxyConfig)
+		if err != nil {
+			return nil, fmt.Errorf("configure socks5 proxy: %v", err)
+		}
+
+		tr.DialContext = socks5Dialer.DialContext
 	}
 
 	if insecure {
@@ -79,6 +99,25 @@ func NewTransport(insecure bool, TLSClientCertKeyFilename string,
 	}
 
 	return tr, nil
+}
+
+func socks5ContextDialer(dialer proxy.Dialer, socks5Conf string) (proxy.ContextDialer, error) {
+	socks5URL, err := url.Parse("socks5://" + socks5Conf)
+	if err != nil {
+		return nil, fmt.Errorf("parse socks5 configuration: %v", err)
+	}
+
+	socks5Dialer, err := proxy.FromURL(socks5URL, dialer)
+	if err != nil {
+		return nil, err
+	}
+
+	contextDialer, ok := socks5Dialer.(proxy.ContextDialer)
+	if !ok {
+		return nil, fmt.Errorf("socks5 dialer does not support context")
+	}
+
+	return contextDialer, nil
 }
 
 // readPEMCertKey reads a file and returns the PEM encoded certificate and key
