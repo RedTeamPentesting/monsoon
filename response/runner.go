@@ -34,7 +34,8 @@ type Runner struct {
 const DefaultBodyBufferSize = 5 * 1024 * 1024
 
 // NewTransport creates a new shared transport for clients to use.
-func NewTransport(insecure bool, TLSClientCertKeyFilename string, disableHTTP2 bool) (*http.Transport, error) {
+func NewTransport(insecure bool, TLSClientCertKeyFilename string,
+	disableHTTP2 bool, concurrentRequests int) (*http.Transport, error) {
 	// for timeouts, see
 	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
 	tr := &http.Transport{
@@ -48,6 +49,8 @@ func NewTransport(insecure bool, TLSClientCertKeyFilename string, disableHTTP2 b
 		ExpectContinueTimeout: 1 * time.Second,
 		IdleConnTimeout:       15 * time.Second,
 		TLSClientConfig:       &tls.Config{},
+		MaxIdleConns:          concurrentRequests,
+		MaxIdleConnsPerHost:   concurrentRequests,
 	}
 
 	if insecure {
