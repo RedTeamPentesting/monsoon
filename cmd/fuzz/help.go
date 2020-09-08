@@ -120,7 +120,7 @@ The filters are evaluated in the following order. A response is displayed if:
 Proxy Configuration
 ###################
 
-A Proxy for HTTP and HTTPS requests can be configured serpartely via the environment
+A Proxy for HTTP and HTTPS requests can be configured separately via the environment
 variables HTTP_PROXY and HTTPS_PROXY. Both HTTP and socks5 proxies are supported:
 
     HTTP_PROXY=socks5://user:pass@proxyhost:123 monsoon fuzz [...]
