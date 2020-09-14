@@ -23,8 +23,8 @@ import (
 type Runner struct {
 	Template *request.Request
 
-	BodyBufferSize int
-	Extract        []*regexp.Regexp
+	MaxBodyBufferSize int
+	Extract           []*regexp.Regexp
 
 	Client    *http.Client
 	Transport *http.Transport
@@ -33,8 +33,9 @@ type Runner struct {
 	output chan<- Response
 }
 
-// DefaultBodyBufferSize is the default size for peeking at the body to extract strings via regexp.
-const DefaultBodyBufferSize = 5 * 1024 * 1024
+// DefaultMaxBodyBufferSize is the default maximum size for peeking at the body
+// to extract strings via regexp.
+const DefaultMaxBodyBufferSize = 5 * 1024 * 1024
 
 // NewTransport creates a new shared transport for clients to use.
 func NewTransport(insecure bool, TLSClientCertKeyFilename string,
@@ -164,12 +165,12 @@ func NewRunner(tr *http.Transport, template *request.Request, input <-chan strin
 	}
 
 	return &Runner{
-		Template:       template,
-		Client:         c,
-		Transport:      tr,
-		input:          input,
-		output:         output,
-		BodyBufferSize: DefaultBodyBufferSize,
+		Template:          template,
+		Client:            c,
+		Transport:         tr,
+		input:             input,
+		output:            output,
+		MaxBodyBufferSize: DefaultMaxBodyBufferSize,
 	}
 }
 
@@ -193,7 +194,7 @@ func (r *Runner) request(ctx context.Context, item string) (response Response) {
 		return
 	}
 
-	err = response.ReadBody(res.Body, r.BodyBufferSize)
+	err = response.ReadBody(res.Body, r.MaxBodyBufferSize)
 	if err != nil {
 		response.Error = err
 		return
