@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -115,19 +116,13 @@ func extractCommand(buf []byte, cmds [][]string) (data []string, err error) {
 
 // ReadBody reads at most maxBodySize bytes from the body and saves it to a buffer in the
 // Respons struct for later processing.
-func (r *Response) ReadBody(body io.Reader, maxBodySize int) error {
-	r.RawBody = make([]byte, maxBodySize)
-
-	n, err := io.ReadFull(body, r.RawBody)
-	if n == 0 && err == io.EOF {
-		err = nil
-	}
-
-	r.RawBody = r.RawBody[:n]
-	if err == io.ErrUnexpectedEOF {
-		err = nil
-	}
-
+func (r *Response) ReadBody(body io.Reader, maxBodySize int) (err error) {
+	// Read a limited amount of data from the response such that extraordinarily large
+	// responses don't slow down the scan. If the actual body is larger, it will be
+	// closes preemptively, closing the TCP connection. The reason is that opening a
+	// new connection likely has a much lower performance impact than tranferring large
+	// amounts of unwanted data over the network.
+	r.RawBody, err = ioutil.ReadAll(&io.LimitedReader{R: body, N: int64(maxBodySize)})
 	if err != nil {
 		return err
 	}
