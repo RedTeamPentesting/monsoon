@@ -52,11 +52,11 @@ type Options struct {
 	ShowPattern     []string
 	showPattern     []*regexp.Regexp
 
-	Extract        []string
-	extract        []*regexp.Regexp
-	ExtractPipe    []string
-	extractPipe    [][]string
-	BodyBufferSize int
+	Extract     []string
+	extract     []*regexp.Regexp
+	ExtractPipe []string
+	extractPipe [][]string
+	MaxBodySize int
 }
 
 var opts Options
@@ -176,7 +176,7 @@ func AddCommand(c *cobra.Command) {
 
 	fs.StringArrayVar(&opts.Extract, "extract", nil, "extract `regex` from response body (can be specified multiple times)")
 	fs.StringArrayVar(&opts.ExtractPipe, "extract-pipe", nil, "pipe response body to `cmd` to extract data (can be specified multiple times)")
-	fs.IntVar(&opts.BodyBufferSize, "body-buffer-size", 5, "use `n` MiB as the buffer size for extracting strings from a response body")
+	fs.IntVar(&opts.MaxBodySize, "max-body-size", 5, "read at most `n` MiB from a returned response body (used for extracting data from the body)")
 }
 
 // logfilePath returns the prefix for the logfiles, if any.
@@ -327,7 +327,7 @@ func startRunners(ctx context.Context, opts *Options, in <-chan string) (<-chan 
 
 	for i := 0; i < opts.Threads; i++ {
 		runner := response.NewRunner(transport, opts.Request, in, out)
-		runner.BodyBufferSize = opts.BodyBufferSize * 1024 * 1024
+		runner.BodyBufferSize = opts.MaxBodySize * 1024 * 1024
 		runner.Extract = opts.extract
 
 		runner.Client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
