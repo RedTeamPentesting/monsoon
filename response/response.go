@@ -122,7 +122,7 @@ func (r *Response) ReadBody(body io.Reader, maxBodySize int) (err error) {
 	// closed preemptively, closing the TCP connection. The reason is that opening a
 	// new connection likely has a much lower performance impact than tranferring large
 	// amounts of unwanted data over the network.
-	r.RawBody, err = ioutil.ReadAll(&io.LimitedReader{R: body, N: int64(maxBodySize)})
+	r.RawBody, err = ioutil.ReadAll(io.LimitReader(body, int64(maxBodySize)))
 	if err != nil {
 		return err
 	}
