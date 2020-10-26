@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 
@@ -236,8 +237,15 @@ func setupProducer(ctx context.Context, g *errgroup.Group, opts *Options, ch cha
 	}
 }
 
-func setupTerminal(ctx context.Context, g *errgroup.Group, logfilePrefix string) (term cli.Terminal, cleanup func(), err error) {
+func setupTerminal(ctx context.Context, g *errgroup.Group, maxFrameRate uint, logfilePrefix string) (term cli.Terminal, cleanup func(), err error) {
 	ctx, cancel := context.WithCancel(context.Background())
+
+	statusTerm := termstatus.New(os.Stdout, os.Stderr, false)
+	if maxFrameRate != 0 {
+		statusTerm.MaxFrameRate = maxFrameRate
+	}
+
+	term = statusTerm
 
 	if logfilePrefix != "" {
 		fmt.Printf("logfile is %s.log\n", logfilePrefix)
@@ -251,11 +259,9 @@ func setupTerminal(ctx context.Context, g *errgroup.Group, logfilePrefix string)
 
 		// write copies of messages to logfile
 		term = &cli.LogTerminal{
-			Terminal: termstatus.New(os.Stdout, os.Stderr, false),
+			Terminal: statusTerm,
 			Writer:   logfile,
 		}
-	} else {
-		term = termstatus.New(os.Stdout, os.Stderr, false)
 	}
 
 	// make sure error messages logged via the log package are printed nicely
@@ -376,7 +382,16 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 		return err
 	}
 
-	term, cleanup, err := setupTerminal(ctx, g, logfilePrefix)
+	var maxFrameRate uint
+	if s, ok := os.LookupEnv("MONSOON_PROGRESS_FPS"); ok {
+		rate, err := strconv.ParseUint(s, 10, 32)
+		if err != nil {
+			return fmt.Errorf("parse $MONSOON_PROGRESS_FPS: %w", err)
+		}
+		maxFrameRate = uint(rate)
+	}
+
+	term, cleanup, err := setupTerminal(ctx, g, maxFrameRate, logfilePrefix)
 	defer cleanup()
 	if err != nil {
 		return err
