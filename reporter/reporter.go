@@ -78,7 +78,7 @@ func (h *HTTPStats) Report(current string) (res []string) {
 	res = append(res, status)
 
 	for code, count := range h.StatusCodes {
-		res = append(res, fmt.Sprintf("%v: %v", code, count))
+		res = append(res, fmt.Sprintf("%s: %v", colorStatusCode(code, ""), count))
 	}
 
 	sort.Strings(res[2:])
@@ -88,7 +88,7 @@ func (h *HTTPStats) Report(current string) (res []string) {
 
 // Display shows incoming Responses.
 func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int) error {
-	r.term.Printf("%7s %8s %8s   %-8s %s\n", "status", "header", "body", "value", "extract")
+	r.term.Printf(Bold("%7s %8s %8s   %-8s %s\n"), "status", "header", "body", "value", "extract")
 
 	stats := &HTTPStats{
 		Start:       time.Now(),
@@ -111,7 +111,7 @@ func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int)
 		}
 
 		if !response.Hide {
-			r.term.Printf("%v\n", response)
+			r.term.Printf("%v\n", FormatResponse(response))
 			stats.ShownResponses++
 		}
 

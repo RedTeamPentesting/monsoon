@@ -248,7 +248,7 @@ func setupTerminal(ctx context.Context, g *errgroup.Group, maxFrameRate uint, lo
 	term = statusTerm
 
 	if logfilePrefix != "" {
-		fmt.Printf("logfile is %s.log\n", logfilePrefix)
+		fmt.Printf(reporter.Bold("Logfile:")+" %s.log\n", logfilePrefix)
 
 		logfile, err := os.Create(logfilePrefix + ".log")
 		if err != nil {
@@ -469,7 +469,7 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	}
 
 	// run the reporter
-	term.Printf("input URL %v\n\n", inputURL)
+	term.Printf(reporter.Bold("Target URL:")+" %v\n\n", inputURL)
 	reporter := reporter.New(term)
 	return reporter.Display(responseCh, countCh)
 }
