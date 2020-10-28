@@ -1,1 +1,0 @@
-./monsoon --file filenames.txt --insecure --hide-status 403,404 https://invalid.example.com/FUZZ
