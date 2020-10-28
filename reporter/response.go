@@ -66,8 +66,8 @@ func FormatResponse(r response.Response) string {
 	}
 
 	res := r.HTTPResponse
-	status := fmt.Sprintf("%s %8d %8d   %-8v", colorStatusCode(res.StatusCode, "%7d"),
-		r.Header.Bytes, r.Body.Bytes, Bold(r.Item))
+	status := fmt.Sprintf("%s %8d %8d   %s", colorStatusCode(res.StatusCode, "%7d"),
+		r.Header.Bytes, r.Body.Bytes, Bold(fmt.Sprintf("%-8v", r.Item)))
 	if res.StatusCode >= 300 && res.StatusCode < 400 {
 		loc, ok := res.Header["Location"]
 		if ok {
