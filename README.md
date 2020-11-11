@@ -18,7 +18,7 @@ Run an HTTP GET request for each entry in `filenames.txt`, hide all responses wi
 These instructions will get you a compiled version of the code in the master branch.
 
 You'll need a recent version of the [Go compiler](https://golang.org/dl), at
-least version 1.11. For Debian, install the package `golang-go`.
+least version 1.14. For Debian, install the package `golang-go`.
 
 Clone the repository, then from within the checkout run the following command:
 
