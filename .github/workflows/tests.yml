@@ -1,8 +1,16 @@
 name: Build and tests
-on: [push, pull_request]
+on: 
+  # run tests on push to master, but not when other branches are pushed to
+  push:
+    branches:
+      - master
+
+  # run tests for all pull requests
+  pull_request:
+
+
 jobs:
   build:
-    name: Build
     strategy:
       matrix:
         go-version:
@@ -10,6 +18,7 @@ jobs:
           - 1.15.x
     runs-on: ubuntu-latest
 
+    name: Go ${{ matrix.go-version }}
     env:
       GOPROXY: https://proxy.golang.org
 
@@ -34,3 +43,23 @@ jobs:
         run: |
           export PATH=$HOME/bin:$PATH
           go test ./...
+
+  lint:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v1
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
+          version: v1.32
+          args: --verbose --timeout 5m --enable goimports,govet,misspell,stylecheck
+
+      - name: Check go.mod/go.sum
+        run: |
+          echo "check if go.mod and go.sum are up to date"
+          go mod tidy
+          git diff --exit-code go.mod go.sum
