@@ -7,9 +7,12 @@ requests, filter the responses and display them in real-time.
 
 ## Example
 
-Run an HTTP GET request for each entry in `filenames.txt`, hide all responses with the status code 403 or 404:
+Run an HTTP GET request for each entry in `filenames.txt`, hide all responses with the status code `403` or `404`:
 
 ![basic demo](demos/demo1.gif)
+
+Common usage of monsoon is also covered in our blog article
+["Introducing monsoon - a lean and versatile HTTP enumerator"](https://blog.redteam-pentesting.de/2020/introducing-monsoon/).
 
 # Installation
 
