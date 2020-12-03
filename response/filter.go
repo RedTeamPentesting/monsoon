@@ -54,9 +54,13 @@ func (f FilterStatusCode) Reject(r Response) bool {
 	}
 
 	for _, f := range f.accepts {
-		if !f(r.HTTPResponse.StatusCode) {
-			return true
+		if f(r.HTTPResponse.StatusCode) {
+			return false
 		}
+	}
+
+	if len(f.accepts) > 0 {
+		return true
 	}
 
 	return false
