@@ -49,17 +49,22 @@ func (f FilterStatusCode) Reject(r Response) bool {
 
 	for _, f := range f.rejects {
 		if f(r.HTTPResponse.StatusCode) {
+			// if a status code from f.rejects matches, reject this response
 			return true
 		}
 	}
 
 	for _, f := range f.accepts {
 		if f(r.HTTPResponse.StatusCode) {
+			// if a status code from f.accepts matches, accept this response
 			return false
 		}
 	}
 
+	// nolint:gosimple
 	if len(f.accepts) > 0 {
+		// if the list of status codes to show is not empty, implicitly reject
+		// everything else
 		return true
 	}
 
