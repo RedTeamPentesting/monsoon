@@ -119,7 +119,7 @@ loop:
 		}
 
 		data.SentRequests++
-		if !res.Hide {
+		if !res.Hide || res.Error != nil {
 			data.ShownResponses++
 			data.Responses = append(data.Responses, NewResponse(res))
 		} else {

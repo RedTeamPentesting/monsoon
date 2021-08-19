@@ -436,9 +436,6 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	extracter := &response.Extracter{
 		Pattern:  opts.extract,
 		Commands: opts.extractPipe,
-		Error: func(err error) {
-			term.Printf("%v", err)
-		},
 	}
 	responseCh = extracter.Run(responseCh)
 

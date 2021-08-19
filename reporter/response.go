@@ -2,7 +2,9 @@ package reporter
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"net/url"
 	"strconv"
 	"strings"
@@ -44,6 +46,10 @@ func colorStatusCode(statusCode int, format string) string {
 	return fmt.Sprintf("\033[%dm"+format+"\033[0m", color, statusCode)
 }
 
+func colored(color int, s string) string {
+	return fmt.Sprintf("\033[%dm%s\033[0m", color, s)
+}
+
 func Bold(s string) string {
 	return "\033[1m" + s + "\033[0m"
 }
@@ -55,14 +61,12 @@ func Dim(s string) string {
 func FormatResponse(r response.Response) string {
 	if r.Error != nil {
 		// don't print anything if the request has been cancelled
-		if r.Error == context.Canceled {
-			return ""
-		}
-		if e, ok := r.Error.(*url.Error); ok && e.Err == context.Canceled {
+		if errors.Is(r.Error, context.Canceled) {
 			return ""
 		}
 
-		return fmt.Sprintf("%7s %18s   %v", "error", r.Error, r.Item)
+		return fmt.Sprintf("    %s %8d %8d   %s %s", Bold(colored(red, "Err")), 0, 0,
+			Bold(fmt.Sprintf("%-8v", r.Item)), colored(red, cleanedErrorString(r.Error)))
 	}
 
 	res := r.HTTPResponse
@@ -88,4 +92,33 @@ func quote(strs []string) []string {
 		res = append(res, r)
 	}
 	return res
+}
+
+func cleanedErrorString(err error) string {
+	var urlErr *url.Error
+	if errors.As(err, &urlErr) {
+		err = urlErr.Err
+	}
+
+	if errors.Is(err, io.EOF) {
+		return "connection closed (EOF)"
+	}
+
+	errStr := err.Error()
+
+	for {
+		cleanedErrStr := errStr
+
+		for _, prefix := range []string{"net/http", "net/url"} {
+			cleanedErrStr = strings.TrimPrefix(cleanedErrStr, prefix+": ")
+		}
+
+		if cleanedErrStr == errStr {
+			break
+		} else {
+			errStr = cleanedErrStr
+		}
+	}
+
+	return errStr
 }

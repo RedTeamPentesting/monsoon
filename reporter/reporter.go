@@ -1,8 +1,10 @@
 package reporter
 
 import (
+	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/RedTeamPentesting/monsoon/cli"
@@ -21,12 +23,13 @@ func New(term cli.Terminal) *Reporter {
 
 // HTTPStats collects statistics about several HTTP responses.
 type HTTPStats struct {
-	Start          time.Time
-	StatusCodes    map[int]int
-	Errors         int
-	Responses      int
-	ShownResponses int
-	Count          int
+	Start            time.Time
+	StatusCodes      map[int]int
+	InvalidInputData map[string][]string
+	Errors           int
+	Responses        int
+	ShownResponses   int
+	Count            int
 
 	lastRPS time.Time
 	rps     float64
@@ -83,6 +86,14 @@ func (h *HTTPStats) Report(current string) (res []string) {
 
 	sort.Strings(res[2:])
 
+	if len(h.InvalidInputData) > 0 {
+		res = append(res, colored(red, "Invalid Input Data:"))
+	}
+
+	for errString, data := range h.InvalidInputData {
+		res = append(res, Bold("  * "+errString)+": "+strings.Join(data, ", "))
+	}
+
 	return res
 }
 
@@ -91,11 +102,12 @@ func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int)
 	r.term.Printf(Bold("%7s %8s %8s   %-8s %s\n"), "status", "header", "body", "value", "extract")
 
 	stats := &HTTPStats{
-		Start:       time.Now(),
-		StatusCodes: make(map[int]int),
+		Start:            time.Now(),
+		StatusCodes:      make(map[int]int),
+		InvalidInputData: make(map[string][]string),
 	}
 
-	for response := range ch {
+	for resp := range ch {
 		select {
 		case c := <-countChannel:
 			stats.Count = c
@@ -104,18 +116,26 @@ func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int)
 
 		stats.Responses++
 
-		if response.Error != nil {
+		if resp.Error != nil {
 			stats.Errors++
+
+			var reqErr response.InvalidRequest
+			if errors.As(resp.Error, &reqErr) {
+				errString := cleanedErrorString(reqErr.Err)
+				stats.InvalidInputData[errString] = append(stats.InvalidInputData[errString], fmt.Sprintf("%q", resp.Item))
+
+				continue
+			}
 		} else {
-			stats.StatusCodes[response.HTTPResponse.StatusCode]++
+			stats.StatusCodes[resp.HTTPResponse.StatusCode]++
 		}
 
-		if !response.Hide {
-			r.term.Printf("%v\n", FormatResponse(response))
+		if !resp.Hide || resp.Error != nil {
+			r.term.Printf("%v\n", FormatResponse(resp))
 			stats.ShownResponses++
 		}
 
-		r.term.SetStatus(stats.Report(response.Item))
+		r.term.SetStatus(stats.Report(resp.Item))
 	}
 
 	r.term.Print("\n")

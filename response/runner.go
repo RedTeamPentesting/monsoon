@@ -173,17 +173,24 @@ func NewRunner(tr *http.Transport, template *request.Request, input <-chan strin
 	}
 }
 
+type InvalidRequest struct {
+	Err error
+}
+
+func (ir InvalidRequest) Error() string {
+	return "invalid request: " + ir.Err.Error()
+}
+
 func (r *Runner) request(ctx context.Context, item string) (response Response) {
+	response.Item = item
+
 	req, err := r.Template.Apply(item)
 	if err != nil {
-		response.Error = err
+		response.Error = InvalidRequest{err}
 		return
 	}
 
-	response = Response{
-		URL:  req.URL.String(),
-		Item: item,
-	}
+	response.URL = req.URL.String()
 
 	start := time.Now()
 	res, err := r.Client.Do(req.WithContext(ctx))

@@ -6,7 +6,7 @@ import "regexp"
 type Extracter struct {
 	Pattern  []*regexp.Regexp
 	Commands [][]string
-	Error    func(error)
+	Error    error
 }
 
 // Run extracts data from the body of a response by running external commands
@@ -27,7 +27,7 @@ func (e *Extracter) Run(in <-chan Response) <-chan Response {
 
 			err := res.ExtractBodyCommand(e.Commands)
 			if err != nil && e.Error != nil {
-				e.Error(err)
+				e.Error = err
 			}
 
 			res.ExtractBody(e.Pattern)
