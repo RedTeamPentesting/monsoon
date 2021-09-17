@@ -80,11 +80,17 @@ func (h *HTTPStats) Report(current string) (res []string) {
 
 	res = append(res, status)
 
-	for code, count := range h.StatusCodes {
-		res = append(res, fmt.Sprintf("%s: %v", colorStatusCode(code, ""), count))
+	// add list of status codes sorted by the code
+	statusCodes := make([]int, 0, len(h.StatusCodes))
+	for code := range h.StatusCodes {
+		statusCodes = append(statusCodes, code)
 	}
 
-	sort.Strings(res[2:])
+	sort.Ints(statusCodes)
+
+	for _, code := range statusCodes {
+		res = append(res, fmt.Sprintf("%s: %v", colorStatusCode(code, ""), h.StatusCodes[code]))
+	}
 
 	if len(h.InvalidInputData) > 0 {
 		res = append(res, colored(red, "Invalid Input Data:"))
