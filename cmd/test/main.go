@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/http/httputil"
 	"os"
 	"strings"
@@ -18,7 +19,9 @@ import (
 
 // Options collect options for the command.
 type Options struct {
-	Request     *request.Request // the template for the HTTP request
+	Request        *request.Request // the template for the HTTP request
+	FollowRedirect int
+
 	Value       string
 	ShowRequest bool
 }
@@ -34,6 +37,8 @@ func AddCommand(c *cobra.Command) {
 
 	opts.Request = request.New("")
 	request.AddFlags(opts.Request, fs)
+
+	fs.IntVar(&opts.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
 
 	fs.StringVarP(&opts.Value, "value", "v", "test", "Use `string` for the placeholder")
 	fs.BoolVar(&opts.ShowRequest, "show-request", false, "Also print HTTP request")
@@ -122,6 +127,13 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	}
 
 	runner := response.NewRunner(tr, opts.Request, input, output)
+	runner.Client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		if len(via) <= opts.FollowRedirect {
+			return nil
+		}
+		return http.ErrUseLastResponse
+	}
+
 	runner.Run(ctx)
 	close(output)
 
