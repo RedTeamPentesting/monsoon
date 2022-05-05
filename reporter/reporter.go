@@ -97,7 +97,7 @@ func (h *HTTPStats) Report(current string) (res []string) {
 	}
 
 	for errString, data := range h.InvalidInputData {
-		res = append(res, Bold("  * "+errString)+": "+strings.Join(data, ", "))
+		res = append(res, Bold("  - "+errString)+": "+strings.Join(data, ", "))
 	}
 
 	return res
