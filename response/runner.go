@@ -38,7 +38,8 @@ const DefaultMaxBodySize = 5 * 1024 * 1024
 
 // NewTransport creates a new shared transport for clients to use.
 func NewTransport(insecure bool, TLSClientCertKeyFilename string,
-	disableHTTP2 bool, concurrentRequests int) (*http.Transport, error) {
+	disableHTTP2 bool, concurrentRequests int, network string,
+) (*http.Transport, error) {
 	// for timeouts, see
 	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
 	tr := &http.Transport{
@@ -71,6 +72,12 @@ func NewTransport(insecure bool, TLSClientCertKeyFilename string,
 		}
 
 		tr.DialContext = socks5Dialer.DialContext
+	}
+
+	// modify dialer so we can force a certain network (e.g. tcp6 instead of tcp)
+	originalDialContext := tr.DialContext
+	tr.DialContext = func(ctx context.Context, _, addr string) (net.Conn, error) {
+		return originalDialContext(ctx, network, addr)
 	}
 
 	if insecure {

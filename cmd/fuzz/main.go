@@ -58,6 +58,10 @@ type Options struct {
 	ExtractPipe []string
 	extractPipe [][]string
 	MaxBodySize int
+
+	IPv4Only bool
+	IPv6Only bool
+	network  string
 }
 
 var opts Options
@@ -124,6 +128,17 @@ func (opts *Options) valid() (err error) {
 		return err
 	}
 
+	switch {
+	case opts.IPv4Only && opts.IPv6Only:
+		return fmt.Errorf("--ipv4-only and --ipv6-only cannot be used together")
+	case opts.IPv4Only:
+		opts.network = "tcp4"
+	case opts.IPv6Only:
+		opts.network = "tcp6"
+	default:
+		opts.network = "tpp"
+	}
+
 	return nil
 }
 
@@ -178,6 +193,9 @@ func AddCommand(c *cobra.Command) {
 	fs.StringArrayVar(&opts.Extract, "extract", nil, "extract `regex` from response header or body (can be specified multiple times)")
 	fs.StringArrayVar(&opts.ExtractPipe, "extract-pipe", nil, "pipe response body to `cmd` to extract data (can be specified multiple times)")
 	fs.IntVar(&opts.MaxBodySize, "max-body-size", 5, "read at most `n` MiB from a returned response body (used for extracting data from the body)")
+
+	fs.BoolVar(&opts.IPv4Only, "ipv4-only", false, "only connect to target host via IPv4")
+	fs.BoolVar(&opts.IPv6Only, "ipv6-only", false, "only connect to target host via IPv6")
 }
 
 // logfilePath returns the prefix for the logfiles, if any.
@@ -326,7 +344,7 @@ func startRunners(ctx context.Context, opts *Options, in <-chan string) (<-chan 
 
 	var wg sync.WaitGroup
 	transport, err := response.NewTransport(opts.Request.Insecure, opts.Request.TLSClientKeyCertFile,
-		opts.Request.DisableHTTP2, opts.Threads)
+		opts.Request.DisableHTTP2, opts.Threads, opts.network)
 	if err != nil {
 		return nil, err
 	}

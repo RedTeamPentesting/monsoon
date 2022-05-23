@@ -24,6 +24,10 @@ type Options struct {
 
 	Value       string
 	ShowRequest bool
+
+	IPv4Only bool
+	IPv6Only bool
+	network  string
 }
 
 var opts Options
@@ -40,8 +44,11 @@ func AddCommand(c *cobra.Command) {
 
 	fs.IntVar(&opts.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
 
-	fs.StringVarP(&opts.Value, "value", "v", "test", "Use `string` for the placeholder")
-	fs.BoolVar(&opts.ShowRequest, "show-request", false, "Also print HTTP request")
+	fs.StringVarP(&opts.Value, "value", "v", "test", "use `string` for the placeholder")
+	fs.BoolVar(&opts.ShowRequest, "show-request", false, "also print HTTP request")
+
+	fs.BoolVar(&opts.IPv4Only, "ipv4-only", false, "only connect to target host via IPv4")
+	fs.BoolVar(&opts.IPv6Only, "ipv6-only", false, "only connect to target host via IPv6")
 }
 
 func header(name string) string {
@@ -72,6 +79,17 @@ var cmd = &cobra.Command{
 }
 
 func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) error {
+	switch {
+	case opts.IPv4Only && opts.IPv6Only:
+		return fmt.Errorf("--ipv4-only and --ipv6-only cannot be used together")
+	case opts.IPv4Only:
+		opts.network = "tcp4"
+	case opts.IPv6Only:
+		opts.network = "tcp6"
+	default:
+		opts.network = "tpp"
+	}
+
 	if len(args) == 0 {
 		return errors.New("last argument needs to be the URL")
 	}
@@ -121,7 +139,7 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	output := make(chan response.Response, 1)
 
 	tr, err := response.NewTransport(opts.Request.Insecure, opts.Request.TLSClientKeyCertFile,
-		opts.Request.DisableHTTP2, 1)
+		opts.Request.DisableHTTP2, 1, opts.network)
 	if err != nil {
 		return err
 	}
