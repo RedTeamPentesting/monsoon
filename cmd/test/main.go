@@ -87,7 +87,7 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	case opts.IPv6Only:
 		opts.network = "tcp6"
 	default:
-		opts.network = "tpp"
+		opts.network = "tcp"
 	}
 
 	if len(args) == 0 {

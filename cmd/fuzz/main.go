@@ -136,7 +136,7 @@ func (opts *Options) valid() (err error) {
 	case opts.IPv6Only:
 		opts.network = "tcp6"
 	default:
-		opts.network = "tpp"
+		opts.network = "tcp"
 	}
 
 	return nil
