@@ -96,8 +96,11 @@ func (h *HTTPStats) Report(current string) (res []string) {
 		res = append(res, colored(red, "Invalid Input Data:"))
 	}
 
-	for errString, data := range h.InvalidInputData {
-		res = append(res, Bold("  - "+errString)+": "+strings.Join(data, ", "))
+	for _, errString := range sortedKeys(h.InvalidInputData) {
+		invalidValues := h.InvalidInputData[errString]
+		sort.Strings(invalidValues)
+
+		res = append(res, Bold("  - "+errString)+": "+strings.Join(invalidValues, ", "))
 	}
 
 	return res
@@ -152,4 +155,16 @@ func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int)
 	}
 
 	return nil
+}
+
+func sortedKeys(m map[string][]string) []string {
+	keys := make([]string, 0, len(m))
+
+	for key := range m {
+		keys = append(keys, key)
+	}
+
+	sort.Strings(keys)
+
+	return keys
 }
