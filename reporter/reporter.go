@@ -97,10 +97,7 @@ func (h *HTTPStats) Report(current string) (res []string) {
 	}
 
 	for _, errString := range sortedKeys(h.InvalidInputData) {
-		invalidValues := h.InvalidInputData[errString]
-		sort.Strings(invalidValues)
-
-		res = append(res, Bold("  - "+errString)+": "+strings.Join(invalidValues, ", "))
+		res = append(res, Bold("  - "+errString)+": "+strings.Join(h.InvalidInputData[errString], ", "))
 	}
 
 	return res
