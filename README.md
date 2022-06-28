@@ -21,7 +21,7 @@ Common usage of monsoon is also covered in our blog article
 These instructions will get you a compiled version of the code in the main branch.
 
 You'll need a recent version of the [Go compiler](https://golang.org/dl), at
-least version 1.14. For Debian, install the package `golang-go`.
+least version 1.17. For Debian, install the package `golang-go`.
 
 Clone the repository, then from within the checkout run the following command:
 
