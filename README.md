@@ -7,7 +7,7 @@ requests, filter the responses and display them in real-time.
 
 ## Example
 
-Run an HTTP GET request for each entry in `filenames.txt`, hide all responses with the status code `403` or `404`:
+Run an HTTP GET request for each entry in `filenames.txt`, hide all responses with the status code `404`:
 
 ![basic demo](demos/demo1.gif)
 
