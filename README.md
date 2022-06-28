@@ -1,4 +1,4 @@
-[![Status badge for tests](https://github.com/happal/monsoon/workflows/Build%20and%20tests/badge.svg)](https://github.com/happal/monsoon/actions?query=workflow%3A%22Build+and+tests%22)
+[![Status badge for tests](https://github.com/RedTeamPentesting/monsoon/workflows/Build%20and%20tests/badge.svg)](https://github.com/RedTeamPentesting/monsoon/actions?query=workflow%3A%22Build+and+tests%22)
 
 # monsoon
 
