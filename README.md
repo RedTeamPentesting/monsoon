@@ -18,7 +18,7 @@ Common usage of monsoon is also covered in our blog article
 
 ## Building from source
 
-These instructions will get you a compiled version of the code in the master branch.
+These instructions will get you a compiled version of the code in the main branch.
 
 You'll need a recent version of the [Go compiler](https://golang.org/dl), at
 least version 1.14. For Debian, install the package `golang-go`.
@@ -77,4 +77,3 @@ also shows an extensive list of examples.
 
 The [SecLists Project](https://github.com/danielmiessler/SecLists) collects
 wordlists that can be used with `monsoon`.
-

@@ -1,9 +1,9 @@
 name: Build and tests
 on:
-  # run tests on push to master, but not when other branches are pushed to
+  # run tests on push to main, but not when other branches are pushed to
   push:
     branches:
-      - master
+      - main
 
   # run tests for all pull requests
   pull_request:
