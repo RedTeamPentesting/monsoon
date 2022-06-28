@@ -1,5 +1,5 @@
 name: Build and tests
-on: 
+on:
   # run tests on push to master, but not when other branches are pushed to
   push:
     branches:
@@ -17,6 +17,8 @@ jobs:
           - 1.14.x
           - 1.15.x
           - 1.16.x
+          - 1.17.x
+          - 1.18.x
     runs-on: ubuntu-latest
 
     name: Go ${{ matrix.go-version }}
