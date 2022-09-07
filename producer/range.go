@@ -25,16 +25,26 @@ func ParseRange(s string) (r Range, err error) {
 		return Range{}, fmt.Errorf("wrong format for range, expected: first-last, got: %q", s)
 	}
 
-	if r.First > r.Last {
-		return Range{}, fmt.Errorf("last value is smaller than first value for range %q", s)
-	}
-
 	return r, nil
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 // Count returns the number of items in the range.
 func (r Range) Count() int {
-	return r.Last - r.First + 1
+	return max(r.Last, r.First) - min(r.Last, r.First) + 1
 }
 
 // Ranges sends all range values to the channel ch, and the number of items to
@@ -56,7 +66,18 @@ func Ranges(ctx context.Context, ranges []Range, format string, ch chan<- string
 	defer close(ch)
 
 	for _, r := range ranges {
-		for i := r.First; i <= r.Last; i++ {
+		//If the order of the range is reversed, increment reversed
+		var increment int
+		maxN := max(r.Last, r.First)
+		minN := min(r.Last, r.First)
+
+		if maxN == r.Last {
+			increment = 1
+		} else {
+			increment = -1
+		}
+
+		for i := r.First; i <= maxN && i >= minN; i += increment {
 			v := fmt.Sprintf(format, i)
 			select {
 			case ch <- v:
