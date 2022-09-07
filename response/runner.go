@@ -145,6 +145,8 @@ func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transpor
 
 	if opts.Insecure {
 		tr.TLSClientConfig.InsecureSkipVerify = true
+		tr.TLSClientConfig.CipherSuites = getAllCipherSuiteIDs()
+		tr.TLSClientConfig.MinVersion = tls.VersionTLS10
 	}
 
 	if !opts.DisableHTTP2 {
@@ -169,6 +171,15 @@ func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transpor
 	}
 
 	return tr, nil
+}
+
+func getAllCipherSuiteIDs() []uint16 {
+	allCiphers := make([]uint16, 0)
+	// Adding all cipher suites, to communicate with most servers
+	for _, v := range append(tls.CipherSuites(), tls.InsecureCipherSuites()...) {
+		allCiphers = append(allCiphers, v.ID)
+	}
+	return allCiphers
 }
 
 func socks5ContextDialer(dialer proxy.Dialer, socks5Conf string) (proxy.ContextDialer, error) {
