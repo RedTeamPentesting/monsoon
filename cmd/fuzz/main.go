@@ -343,8 +343,16 @@ func startRunners(ctx context.Context, opts *Options, in <-chan string) (<-chan 
 	out := make(chan response.Response)
 
 	var wg sync.WaitGroup
-	transport, err := response.NewTransport(opts.Request.Insecure, opts.Request.TLSClientKeyCertFile,
-		opts.Request.DisableHTTP2, opts.Threads, opts.network)
+
+	transportOpts := response.TransportOptions{
+		Insecure:                 opts.Request.Insecure,
+		TLSClientCertKeyFilename: opts.Request.TLSClientKeyCertFile,
+		DisableHTTP2:             opts.Request.DisableHTTP2,
+		ConcurrentRequests:       opts.Threads,
+		Network:                  opts.network,
+	}
+
+	transport, err := response.NewTransport(transportOpts)
 	if err != nil {
 		return nil, err
 	}

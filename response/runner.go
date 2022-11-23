@@ -33,28 +33,64 @@ type Runner struct {
 	output chan<- Response
 }
 
-// DefaultMaxBodySize is the default size for peeking at the body to extract strings via regexp.
-const DefaultMaxBodySize = 5 * 1024 * 1024
+type TransportOptions struct {
+	Insecure                 bool
+	TLSClientCertKeyFilename string
+	DisableHTTP2             bool
+	ConcurrentRequests       int
+	Network                  string
+
+	ConnectTimeout        time.Duration
+	TLSHandshakeTimeout   time.Duration
+	ResponseHeaderTimeout time.Duration
+}
+
+const (
+	// DefaultMaxBodySize is the default size for peeking at the body to extract strings via regexp.
+	DefaultMaxBodySize = 5 * 1024 * 1024
+
+	// DefaultConnectTimeout limits how long the TCP connection setup can take.
+	DefaultConnectTimeout = 30 * time.Second
+
+	// DefaultTLSHandshakeTimeout limits the time until a TLS connection must be established.
+	DefaultTLSHandshakeTimeout = 10 * time.Second
+
+	// DefaultResponseHeaderTimeout limits the time until the first HTTP
+	// response header must have been received.
+	DefaultResponseHeaderTimeout = 10 * time.Second
+)
 
 // NewTransport creates a new shared transport for clients to use.
-func NewTransport(insecure bool, TLSClientCertKeyFilename string,
-	disableHTTP2 bool, concurrentRequests int, network string,
-) (*http.Transport, error) {
+func NewTransport(opts TransportOptions) (*http.Transport, error) {
+
 	// for timeouts, see
 	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
+
+	if opts.ConnectTimeout == 0 {
+		opts.ConnectTimeout = DefaultConnectTimeout
+	}
+
+	if opts.TLSHandshakeTimeout == 0 {
+		opts.TLSHandshakeTimeout = DefaultTLSHandshakeTimeout
+	}
+
+	if opts.ResponseHeaderTimeout == 0 {
+		opts.ResponseHeaderTimeout = DefaultResponseHeaderTimeout
+	}
+
 	tr := &http.Transport{
 		Proxy:                 http.ProxyFromEnvironment,
-		TLSHandshakeTimeout:   10 * time.Second,
-		ResponseHeaderTimeout: 10 * time.Second,
+		TLSHandshakeTimeout:   opts.TLSHandshakeTimeout,
+		ResponseHeaderTimeout: opts.ResponseHeaderTimeout,
 		ExpectContinueTimeout: 1 * time.Second,
 		IdleConnTimeout:       15 * time.Second,
 		TLSClientConfig:       &tls.Config{},
-		MaxIdleConns:          concurrentRequests,
-		MaxIdleConnsPerHost:   concurrentRequests,
+		MaxIdleConns:          opts.ConcurrentRequests,
+		MaxIdleConnsPerHost:   opts.ConcurrentRequests,
 	}
 
 	dialer := &net.Dialer{
-		Timeout:   30 * time.Second,
+		Timeout:   opts.ConnectTimeout,
 		KeepAlive: 30 * time.Second,
 	}
 
@@ -77,14 +113,14 @@ func NewTransport(insecure bool, TLSClientCertKeyFilename string,
 	// modify dialer so we can force a certain network (e.g. tcp6 instead of tcp)
 	originalDialContext := tr.DialContext
 	tr.DialContext = func(ctx context.Context, _, addr string) (net.Conn, error) {
-		return originalDialContext(ctx, network, addr)
+		return originalDialContext(ctx, opts.Network, addr)
 	}
 
-	if insecure {
+	if opts.Insecure {
 		tr.TLSClientConfig.InsecureSkipVerify = true
 	}
 
-	if !disableHTTP2 {
+	if !opts.DisableHTTP2 {
 		// enable http2
 		err := http2.ConfigureTransport(tr)
 		if err != nil {
@@ -92,8 +128,8 @@ func NewTransport(insecure bool, TLSClientCertKeyFilename string,
 		}
 	}
 
-	if TLSClientCertKeyFilename != "" {
-		certs, key, err := readPEMCertKey(TLSClientCertKeyFilename)
+	if opts.TLSClientCertKeyFilename != "" {
+		certs, key, err := readPEMCertKey(opts.TLSClientCertKeyFilename)
 		if err != nil {
 			return nil, err
 		}

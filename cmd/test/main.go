@@ -138,8 +138,15 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	output := make(chan response.Response, 1)
 
-	tr, err := response.NewTransport(opts.Request.Insecure, opts.Request.TLSClientKeyCertFile,
-		opts.Request.DisableHTTP2, 1, opts.network)
+	transportOpts := response.TransportOptions{
+		Insecure:                 opts.Request.Insecure,
+		TLSClientCertKeyFilename: opts.Request.TLSClientKeyCertFile,
+		DisableHTTP2:             opts.Request.DisableHTTP2,
+		ConcurrentRequests:       1,
+		Network:                  opts.network,
+	}
+
+	tr, err := response.NewTransport(transportOpts)
 	if err != nil {
 		return err
 	}
