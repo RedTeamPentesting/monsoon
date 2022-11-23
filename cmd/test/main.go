@@ -25,9 +25,10 @@ type Options struct {
 	Value       string
 	ShowRequest bool
 
+	response.TransportOptions
+
 	IPv4Only bool
 	IPv6Only bool
-	network  string
 }
 
 var opts Options
@@ -46,6 +47,9 @@ func AddCommand(c *cobra.Command) {
 
 	fs.StringVarP(&opts.Value, "value", "v", "test", "use `string` for the placeholder")
 	fs.BoolVar(&opts.ShowRequest, "show-request", false, "also print HTTP request")
+
+	// add transport options
+	response.AddTransportFlags(fs, &opts.TransportOptions)
 
 	fs.BoolVar(&opts.IPv4Only, "ipv4-only", false, "only connect to target host via IPv4")
 	fs.BoolVar(&opts.IPv6Only, "ipv6-only", false, "only connect to target host via IPv6")
@@ -83,11 +87,9 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	case opts.IPv4Only && opts.IPv6Only:
 		return fmt.Errorf("--ipv4-only and --ipv6-only cannot be used together")
 	case opts.IPv4Only:
-		opts.network = "tcp4"
+		opts.TransportOptions.Network = "tcp4"
 	case opts.IPv6Only:
-		opts.network = "tcp6"
-	default:
-		opts.network = "tcp"
+		opts.TransportOptions.Network = "tcp6"
 	}
 
 	if len(args) == 0 {
@@ -96,6 +98,11 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	if len(args) > 1 {
 		return errors.New("more than one target URL specified")
+	}
+
+	err := opts.TransportOptions.Valid()
+	if err != nil {
+		return err
 	}
 
 	opts.Request.URL = args[0]
@@ -138,15 +145,7 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	output := make(chan response.Response, 1)
 
-	transportOpts := response.TransportOptions{
-		Insecure:                 opts.Request.Insecure,
-		TLSClientCertKeyFilename: opts.Request.TLSClientKeyCertFile,
-		DisableHTTP2:             opts.Request.DisableHTTP2,
-		ConcurrentRequests:       1,
-		Network:                  opts.network,
-	}
-
-	tr, err := response.NewTransport(transportOpts)
+	tr, err := response.NewTransport(opts.TransportOptions, 1)
 	if err != nil {
 		return err
 	}

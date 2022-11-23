@@ -41,7 +41,10 @@ type Options struct {
 	Skip       int
 	Limit      int
 
-	Request        *request.Request // the template for the HTTP request
+	Request *request.Request // the template for the HTTP request
+
+	response.TransportOptions
+
 	FollowRedirect int
 
 	HideStatusCodes []string
@@ -61,7 +64,6 @@ type Options struct {
 
 	IPv4Only bool
 	IPv6Only bool
-	network  string
 }
 
 var opts Options
@@ -132,11 +134,9 @@ func (opts *Options) valid() (err error) {
 	case opts.IPv4Only && opts.IPv6Only:
 		return fmt.Errorf("--ipv4-only and --ipv6-only cannot be used together")
 	case opts.IPv4Only:
-		opts.network = "tcp4"
+		opts.TransportOptions.Network = "tcp4"
 	case opts.IPv6Only:
-		opts.network = "tcp6"
-	default:
-		opts.network = "tcp"
+		opts.TransportOptions.Network = "tcp6"
 	}
 
 	return nil
@@ -193,6 +193,9 @@ func AddCommand(c *cobra.Command) {
 	fs.StringArrayVar(&opts.Extract, "extract", nil, "extract `regex` from response header or body (can be specified multiple times)")
 	fs.StringArrayVar(&opts.ExtractPipe, "extract-pipe", nil, "pipe response body to `cmd` to extract data (can be specified multiple times)")
 	fs.IntVar(&opts.MaxBodySize, "max-body-size", 5, "read at most `n` MiB from a returned response body (used for extracting data from the body)")
+
+	// add transport options
+	response.AddTransportFlags(fs, &opts.TransportOptions)
 
 	fs.BoolVar(&opts.IPv4Only, "ipv4-only", false, "only connect to target host via IPv4")
 	fs.BoolVar(&opts.IPv6Only, "ipv6-only", false, "only connect to target host via IPv6")
@@ -344,15 +347,7 @@ func startRunners(ctx context.Context, opts *Options, in <-chan string) (<-chan 
 
 	var wg sync.WaitGroup
 
-	transportOpts := response.TransportOptions{
-		Insecure:                 opts.Request.Insecure,
-		TLSClientCertKeyFilename: opts.Request.TLSClientKeyCertFile,
-		DisableHTTP2:             opts.Request.DisableHTTP2,
-		ConcurrentRequests:       opts.Threads,
-		Network:                  opts.network,
-	}
-
-	transport, err := response.NewTransport(transportOpts)
+	transport, err := response.NewTransport(opts.TransportOptions, opts.Threads)
 	if err != nil {
 		return nil, err
 	}

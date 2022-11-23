@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/RedTeamPentesting/monsoon/request"
+	"github.com/spf13/pflag"
 	"golang.org/x/net/http2"
 	"golang.org/x/net/proxy"
 )
@@ -33,18 +34,6 @@ type Runner struct {
 	output chan<- Response
 }
 
-type TransportOptions struct {
-	Insecure                 bool
-	TLSClientCertKeyFilename string
-	DisableHTTP2             bool
-	ConcurrentRequests       int
-	Network                  string
-
-	ConnectTimeout        time.Duration
-	TLSHandshakeTimeout   time.Duration
-	ResponseHeaderTimeout time.Duration
-}
-
 const (
 	// DefaultMaxBodySize is the default size for peeking at the body to extract strings via regexp.
 	DefaultMaxBodySize = 5 * 1024 * 1024
@@ -60,8 +49,39 @@ const (
 	DefaultResponseHeaderTimeout = 10 * time.Second
 )
 
+type TransportOptions struct {
+	Insecure                 bool
+	TLSClientCertKeyFilename string
+	DisableHTTP2             bool
+	ConcurrentRequests       int
+	Network                  string
+
+	ConnectTimeout        time.Duration
+	TLSHandshakeTimeout   time.Duration
+	ResponseHeaderTimeout time.Duration
+}
+
+func (t TransportOptions) Valid() error {
+	return nil
+}
+
+func AddTransportFlags(fs *pflag.FlagSet, opts *TransportOptions) {
+	// Transport
+	fs.BoolVarP(&opts.Insecure, "insecure", "k", false, "disable TLS certificate verification")
+	fs.StringVar(&opts.TLSClientCertKeyFilename, "client-cert", "", "read TLS client key and cert from `file`")
+	fs.BoolVar(&opts.DisableHTTP2, "disable-http2", false, "do not try to negotiate an HTTP2 connection")
+
+	fs.DurationVar(&opts.ConnectTimeout, "connect-timeout", DefaultConnectTimeout, "limit TCP connection establishment")
+	fs.DurationVar(&opts.TLSHandshakeTimeout, "tls-handshake-timeout", DefaultTLSHandshakeTimeout, "limit TLS connection establishment")
+	fs.DurationVar(&opts.ResponseHeaderTimeout, "response-header-timeout", DefaultResponseHeaderTimeout, "limit time until the first response header line must have been received")
+}
+
 // NewTransport creates a new shared transport for clients to use.
-func NewTransport(opts TransportOptions) (*http.Transport, error) {
+func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transport, error) {
+	err := opts.Valid()
+	if err != nil {
+		return nil, fmt.Errorf("transport: %w", err)
+	}
 
 	// for timeouts, see
 	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
@@ -76,6 +96,10 @@ func NewTransport(opts TransportOptions) (*http.Transport, error) {
 
 	if opts.ResponseHeaderTimeout == 0 {
 		opts.ResponseHeaderTimeout = DefaultResponseHeaderTimeout
+	}
+
+	if opts.Network == "" {
+		opts.Network = "tcp"
 	}
 
 	tr := &http.Transport{

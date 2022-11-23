@@ -165,9 +165,6 @@ type Request struct {
 
 	Replace string // this string is being replaced by a value in a specific http request
 
-	Insecure             bool
-	TLSClientKeyCertFile string
-	DisableHTTP2         bool
 	ForceChunkedEncoding bool
 }
 
