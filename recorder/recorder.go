@@ -3,7 +3,7 @@ package recorder
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/RedTeamPentesting/monsoon/request"
@@ -27,6 +27,7 @@ type Data struct {
 	ShownResponses  int       `json:"shown_responses"`
 	Cancelled       bool      `json:"cancelled"`
 
+	Names       []string   `json:"names"`
 	Template    Template   `json:"template"`
 	InputFile   string     `json:"input_file,omitempty"`
 	Ranges      []string   `json:"ranges,omitempty"`
@@ -38,9 +39,9 @@ type Data struct {
 
 // Response is the result of a request sent to the target.
 type Response struct {
-	Item     string  `json:"item"`
-	Error    string  `json:"error,omitempty"`
-	Duration float64 `json:"duration"`
+	Values   []string `json:"values"`
+	Error    string   `json:"error,omitempty"`
+	Duration float64  `json:"duration"`
 
 	StatusCode    int                `json:"status_code"`
 	StatusText    string             `json:"status_text"`
@@ -60,6 +61,7 @@ func New(filename string, request *request.Request) (*Recorder, error) {
 		filename: filename,
 		Request:  request,
 		Data: Data{
+			Names:    request.Names,
 			Template: t,
 		},
 	}
@@ -156,12 +158,12 @@ func (r *Recorder) dump(data Data) error {
 	}
 	buf = append(buf, '\n')
 
-	return ioutil.WriteFile(r.filename, buf, 0644)
+	return os.WriteFile(r.filename, buf, 0644)
 }
 
 // NewResponse builds a Response struct for serialization with JSON.
 func NewResponse(r response.Response) (res Response) {
-	res.Item = r.Item
+	res.Values = r.Values
 	if r.Duration != 0 {
 		res.Duration = float64(r.Duration) / float64(time.Second)
 	}

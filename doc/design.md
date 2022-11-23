@@ -1,21 +1,25 @@
-The program creates a processing pipeline consisting of the following items:
+The program creates a processing pipeline consisting of the following elements:
 
- * Producer: emits a sequence of values in a deterministic way that are to be
-   inserted into requests instead of the string `FUZZ`. Implemented are a range
-   produces (which can be configured with a format string) and a file producer
-   which emits each line of a file.
+ * Sources: emit a sequence of values in a deterministic way that are to be
+   inserted into requests. Implemented are a range source (which can be
+   configured with a format string) and a file source which emits each line
+   of a file.
 
- * ValueFilter: filters the sequence of items emitted by the producer. Can be
-   used to skip the first n items (`--skip`) and limit the number of items
+ * Multiplexer: If several sources are to be used, the multiplexer combines
+   them and computes the cross product. It reads values from all sources and
+   sends tuples of strings to the next stage.
+
+ * ValueFilter: filters the sequence of tuples emitted by the multiplexer. Can
+   be used to skip the first n tuples (`--skip`) and limit the number of tuples
    processed (`--limit`).
 
  * Limiter: optional, limits the throughput of items to the runners, can be
    used to only process a number of items per second.
 
- * Runners: take the items, builds HTTP requests and sends them to the server.
-   Emit a sequence of responses. Multiple Runners are working in parallel, so
-   the sequence of responses is not deterministic any more and highly depends
-   on the server.
+ * Runners: take the tuples, builds HTTP requests by replacing strings and
+   sends them to the server. Emit a sequence of responses. Multiple Runners are
+   working in parallel, so the sequence of responses is not deterministic any
+   more and highly depends on the server.
 
  * ResponseFilter: decides for each HTTP response if it should be rejected
    according to the current configuration.
@@ -30,13 +34,13 @@ The program creates a processing pipeline consisting of the following items:
 This is a rough diagram of how it all fits together:
 
 ```
-                                                  +--------+
-                                               +->| Runner |-+
-                                               |  +--------+ |   
-+----------+   +-------------+   +---------+   |             |   +----------------+   +------------+   +----------+
-| Producer +-->| ValueFilter +-->| Limiter +---+->  ...      +-->| ResponseFilter +-->|  Extracter +-->| Reporter |
-+----------+   +-------------+   +---------+   |             |   +----------------+   +------------+   +----------+
-                                               |  +--------+ |
-                                               +->| Runner |-+
-                                                  +--------+
++--------+                                                         +--------+
+| Source +-+                                                    +->| Runner |-+
++--------+ |                                                    |  +--------+ |
+           |  +-------------+   +-------------+   +---------+   |             |   +----------------+   +------------+   +----------+
+  ...      +->| Multiplexer +-->| ValueFilter +-->| Limiter +---+->  ...      +-->| ResponseFilter +-->|  Extracter +-->| Reporter |
+           |  +-------------+   +-------------+   +---------+   |             |   +----------------+   +------------+   +----------+
++--------+ |                                                    |  +--------+ |
+| Source +-+                                                    +->| Runner |-+
++--------+                                                         +--------+
 ```

@@ -74,9 +74,9 @@ func (f FilterStatusCode) Reject(r Response) bool {
 // parseRangeFilterSpec returns a function that returns true if the size matches with the spec.
 //
 // possible matches:
-//  * exact: 1234
-//  * range: 100-200
-//  * open range: -200, 200-
+//   - exact: 1234
+//   - range: 100-200
+//   - open range: -200, 200-
 func parseRangeFilterSpec(spec string) (func(int) bool, error) {
 	if strings.HasPrefix(spec, "-") {
 		v, err := strconv.Atoi(spec[1:])

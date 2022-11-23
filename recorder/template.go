@@ -1,7 +1,7 @@
 package recorder
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/RedTeamPentesting/monsoon/request"
@@ -17,7 +17,7 @@ type Template struct {
 
 // NewTemplate builds a template to write to the JSON data file.
 func NewTemplate(request *request.Request) (t Template, err error) {
-	req, err := request.Apply(request.Replace)
+	req, err := request.Apply(request.Names)
 	if err != nil {
 		return Template{}, err
 	}
@@ -26,7 +26,7 @@ func NewTemplate(request *request.Request) (t Template, err error) {
 	t.Method = req.Method
 	t.Header = req.Header
 
-	buf, err := ioutil.ReadAll(req.Body)
+	buf, err := io.ReadAll(req.Body)
 	if err != nil {
 		return Template{}, err
 	}

@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
@@ -30,7 +29,7 @@ type Runner struct {
 	Client    *http.Client
 	Transport *http.Transport
 
-	input  <-chan string
+	input  <-chan []string
 	output chan<- Response
 }
 
@@ -190,7 +189,7 @@ func socks5ContextDialer(dialer proxy.Dialer, socks5Conf string) (proxy.ContextD
 // readPEMCertKey reads a file and returns the PEM encoded certificate and key
 // blocks.
 func readPEMCertKey(filename string) (certs []byte, key []byte, err error) {
-	data, err := ioutil.ReadFile(filename)
+	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, nil, fmt.Errorf("ReadFile: %v", err)
 	}
@@ -222,7 +221,7 @@ func readPEMCertKey(filename string) (certs []byte, key []byte, err error) {
 }
 
 // NewRunner returns a new runner to execute HTTP requests.
-func NewRunner(tr *http.Transport, template *request.Request, input <-chan string, output chan<- Response) *Runner {
+func NewRunner(tr *http.Transport, template *request.Request, input <-chan []string, output chan<- Response) *Runner {
 	c := &http.Client{
 		Transport: tr,
 		CheckRedirect: func(*http.Request, []*http.Request) error {
@@ -248,10 +247,10 @@ func (ir InvalidRequest) Error() string {
 	return "invalid request: " + ir.Err.Error()
 }
 
-func (r *Runner) request(ctx context.Context, item string) (response Response) {
-	response.Item = item
+func (r *Runner) request(ctx context.Context, values []string) (response Response) {
+	response.Values = values
 
-	req, err := r.Template.Apply(item)
+	req, err := r.Template.Apply(values)
 	if err != nil {
 		response.Error = InvalidRequest{err}
 		return

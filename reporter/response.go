@@ -60,6 +60,15 @@ func Dim(s string) string {
 }
 
 func FormatResponse(r response.Response, longRequest time.Duration) string {
+	var values string
+	if len(r.Values) == 1 {
+		values = fmt.Sprintf("%-8v", r.Values[0])
+	} else {
+		values = "[" + strings.Join(r.Values, ", ") + "]"
+	}
+
+	values = fmt.Sprintf("%-8v", values)
+
 	if r.Error != nil {
 		// don't print anything if the request has been cancelled
 		if errors.Is(r.Error, context.Canceled) {
@@ -67,12 +76,12 @@ func FormatResponse(r response.Response, longRequest time.Duration) string {
 		}
 
 		return fmt.Sprintf("    %s %8d %8d   %s %s", Bold(colored(red, "Err")), 0, 0,
-			Bold(fmt.Sprintf("%-8v", r.Item)), colored(red, cleanedErrorString(r.Error)))
+			Bold(values), colored(red, cleanedErrorString(r.Error)))
 	}
 
 	res := r.HTTPResponse
 	status := fmt.Sprintf("%s %8d %8d   %s", colorStatusCode(res.StatusCode, "%7d"),
-		r.Header.Bytes, r.Body.Bytes, Bold(fmt.Sprintf("%-8v", r.Item)))
+		r.Header.Bytes, r.Body.Bytes, Bold(values))
 	if res.StatusCode >= 300 && res.StatusCode < 400 {
 		loc, ok := res.Header["Location"]
 		if ok {

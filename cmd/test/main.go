@@ -22,7 +22,7 @@ type Options struct {
 	Request        *request.Request // the template for the HTTP request
 	FollowRedirect int
 
-	Value       string
+	Values      []string
 	ShowRequest bool
 
 	response.TransportOptions
@@ -40,12 +40,12 @@ func AddCommand(c *cobra.Command) {
 	fs := cmd.Flags()
 	fs.SortFlags = false
 
-	opts.Request = request.New("")
+	opts.Request = request.New(nil)
 	request.AddFlags(opts.Request, fs)
 
 	fs.IntVar(&opts.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
 
-	fs.StringVarP(&opts.Value, "value", "v", "test", "use `string` for the placeholder")
+	fs.StringSliceVarP(&opts.Values, "value", "v", []string{}, "use `string` as the value (can be specified multiple times)")
 	fs.BoolVar(&opts.ShowRequest, "show-request", false, "also print HTTP request")
 
 	// add transport options
@@ -106,8 +106,13 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	}
 
 	opts.Request.URL = args[0]
+	opts.Request.Names = []string{"FUZZ"}
 
-	req, err := opts.Request.Apply(opts.Value)
+	if len(opts.Values) == 0 {
+		return errors.New("no value specified, use --value")
+	}
+
+	req, err := opts.Request.Apply(opts.Values)
 	if err != nil {
 		return err
 	}
@@ -139,8 +144,8 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 		}
 	}
 
-	input := make(chan string, 1)
-	input <- opts.Value
+	input := make(chan []string, 1)
+	input <- opts.Values
 	close(input)
 
 	output := make(chan response.Response, 1)

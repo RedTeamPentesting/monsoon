@@ -2,7 +2,7 @@ package request
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -210,7 +210,7 @@ func checkBasicAuth(user, password string) CheckFunc {
 
 func checkBody(body string) CheckFunc {
 	return func(t testing.TB, req *http.Request) {
-		buf, err := ioutil.ReadAll(req.Body)
+		buf, err := io.ReadAll(req.Body)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -230,13 +230,14 @@ func TestRequestApply(t *testing.T) {
 		Header []string // passed in as a sequence of "name: value" strings
 		Body   string
 
-		Template             string
-		Value                string
+		Names                []string
+		Values               []string
 		ForceChunkedEncoding bool
 		Checks               []CheckFunc
 	}{
 		// basic URL tests
 		{
+			// replace nothing
 			URL: "http://www.example.com",
 			Checks: []CheckFunc{
 				checkURL("/"),
@@ -265,7 +266,9 @@ X-foo: bar
 		},
 		{
 			// replace FUZZ in path with empty string
-			URL: "http://www.example.com",
+			Names:  []string{"FUZZ"},
+			Values: []string{""},
+			URL:    "http://www.example.com",
 			File: `GET /FUZZ HTTP/1.1
 User-Agent: Firefox
 
@@ -277,7 +280,9 @@ User-Agent: Firefox
 			},
 		},
 		{
-			URL: "http://www.example.com/FUZZ",
+			Names:  []string{"FUZZ"},
+			Values: []string{""},
+			URL:    "http://www.example.com/FUZZ",
 			Checks: []CheckFunc{
 				checkURL("/"),
 				checkMethod("GET"),
@@ -286,21 +291,23 @@ User-Agent: Firefox
 		},
 		{
 			// replace FUZZ in path with value
-			URL: "http://www.example.com",
+			Names:  []string{"FUZZ"},
+			Values: []string{"foobar"},
+			URL:    "http://www.example.com",
 			File: `GET /FUZZ HTTP/1.1
 User-Agent: Firefox
 Accept: */*
 
 `,
-			Value: "foobar",
 			Checks: []CheckFunc{
 				checkURL("/foobar"),
 				checkMethod("GET"),
 			},
 		},
 		{
-			URL:   "http://www.example.com/FUZZ",
-			Value: "foobar",
+			Names:  []string{"FUZZ"},
+			Values: []string{"foobar"},
+			URL:    "http://www.example.com/FUZZ",
 			Checks: []CheckFunc{
 				checkURL("/foobar"),
 				checkMethod("GET"),
@@ -378,11 +385,12 @@ Authorization: Basic Zm9vOnp6eg==
 			},
 		},
 		{
-			URL: "http://fooFUZZ:secret@www.example.com",
+			Names:  []string{"ZZZZ"},
+			Values: []string{"bar"},
+			URL:    "http://fooZZZZ:secret@www.example.com",
 			File: `GET /secret HTTP/1.1
 
 `,
-			Value: "bar",
 			Checks: []CheckFunc{
 				checkURL("/secret"),
 				checkMethod("GET"),
@@ -392,11 +400,12 @@ Authorization: Basic Zm9vOnp6eg==
 			},
 		},
 		{
-			URL: "http://foo:secFUZZret@www.example.com",
+			Names:  []string{"FUZZ"},
+			Values: []string{"bar"},
+			URL:    "http://foo:secFUZZret@www.example.com",
 			File: `GET /secret HTTP/1.1
 
 `,
-			Value: "bar",
 			Checks: []CheckFunc{
 				checkURL("/secret"),
 				checkMethod("GET"),
@@ -483,12 +492,14 @@ User-Agent: Firefox
 			},
 		},
 		{
+			Names:  []string{"FUZZ"},
+			Values: []string{"xxxx"},
+
 			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 User-Agent: fooFUZZbar
 
 `,
-			Value: "xxxx",
 			Checks: []CheckFunc{
 				checkURL("/"),
 				checkMethod("GET"),
@@ -496,9 +507,12 @@ User-Agent: fooFUZZbar
 			},
 		},
 		{
+			Names:  []string{"FUZZ"},
+			Values: []string{"xxxx"},
+
 			URL:    "http://www.example.com",
 			Header: []string{"User-Agent: fooFUZZbar"},
-			Value:  "xxxx",
+
 			Checks: []CheckFunc{
 				checkURL("/"),
 				checkMethod("GET"),
@@ -506,13 +520,15 @@ User-Agent: fooFUZZbar
 			},
 		},
 		{
+			Names:  []string{"FUZZ"},
+			Values: []string{"xxxx"},
+
 			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 User-Agent: fooFUZZbar
 
 `,
 			Header: []string{"User-Agent: testFUZZvalue"},
-			Value:  "xxxx",
 			Checks: []CheckFunc{
 				checkURL("/"),
 				checkMethod("GET"),
@@ -520,12 +536,14 @@ User-Agent: fooFUZZbar
 			},
 		},
 		{
+			Names:  []string{"FUZZ"},
+			Values: []string{"xxxx"},
+
 			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 User-Agent: foobar
 
 `,
-			Value:  "xxxx",
 			Header: []string{"User-Agent: fooFUZZbar"},
 			Checks: []CheckFunc{
 				checkURL("/"),
@@ -534,13 +552,15 @@ User-Agent: foobar
 			},
 		},
 		{
+			Names:  []string{"FUZZ"},
+			Values: []string{"xxxx"},
+
 			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 Accept: foo
 Accept: bar
 
 `,
-			Value: "xxxx",
 			Checks: []CheckFunc{
 				checkURL("/"),
 				checkMethod("GET"),
@@ -548,6 +568,9 @@ Accept: bar
 			},
 		},
 		{
+			Names:  []string{"FUZZ"},
+			Values: []string{"xxxx"},
+
 			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 
@@ -556,7 +579,6 @@ Accept: bar
 				"Accept: foo",
 				"Accept: bar",
 			},
-			Value: "xxxx",
 			Checks: []CheckFunc{
 				checkURL("/"),
 				checkMethod("GET"),
@@ -586,36 +608,42 @@ Accept: bar
 			},
 		},
 		{
+			Names:  []string{"FUZZ"},
+			Values: []string{"xxxx"},
+
 			URL: "http://www.example.com",
 			File: `GET / HTTP/1.1
 
 `,
 			Method: "POSTFUZZ",
-			Value:  "xxxx",
 			Checks: []CheckFunc{
 				checkURL("/"),
 				checkMethod("POSTxxxx"),
 			},
 		},
 		{
+			Names:  []string{"FUZZ"},
+			Values: []string{"xxxx"},
+
 			URL: "http://www.example.com",
 			File: `POSTFUZZ / HTTP/1.1
 
 `,
-			Value: "xxxx",
 			Checks: []CheckFunc{
 				checkURL("/"),
 				checkMethod("POSTxxxx"),
 			},
 		},
 		{
+			Names:  []string{"FUZZ"},
+			Values: []string{"xxxx"},
+
 			URL: "http://www.example.com",
 			File: `POST / HTTP/1.1
 Content-Length: 80
 
 foobarFUZZbaz`,
-			Body:  "otherFUZZvalue",
-			Value: "xxxx",
+			Body: "otherFUZZvalue",
 			Checks: []CheckFunc{
 				checkURL("/"),
 				checkMethod("POST"),
@@ -624,12 +652,14 @@ foobarFUZZbaz`,
 			},
 		},
 		{
+			Names:  []string{"FUZZ"},
+			Values: []string{"xxxx"},
+
 			URL: "http://www.example.com",
 			File: `POST / HTTP/1.1
 Content-Length: 80
 
 foobarFUZZbaz`,
-			Value: "xxxx",
 			Checks: []CheckFunc{
 				checkURL("/"),
 				checkMethod("POST"),
@@ -638,12 +668,14 @@ foobarFUZZbaz`,
 			},
 		},
 		{
+			Names:  []string{"FUZZ"},
+			Values: []string{"xxxx"},
+
 			URL: "http://www.example.com",
 			File: `POST / HTTP/1.1
 
 `,
-			Body:  "foobarFUZZbaz",
-			Value: "xxxx",
+			Body: "foobarFUZZbaz",
 			Checks: []CheckFunc{
 				checkURL("/"),
 				checkMethod("POST"),
@@ -693,17 +725,22 @@ Host: server:1234
 		},
 		{
 			// replace strings in header values
+			Names:  []string{"FUZZ"},
+			Values: []string{"xxxx"},
+
 			URL: "http://www.example.com",
 			Header: []string{
 				"Accept: foo-FUZZ",
 				"Accept: other",
 			},
-			Value: "xxxx",
 			Checks: []CheckFunc{
 				checkHeaderMulti("Accept", []string{"foo-xxxx", "other"}),
 			},
 		},
 		{
+			Names:  []string{"FUZZ"},
+			Values: []string{"xxxx"},
+
 			URL: "http://www.example.com",
 			File: `GET /secret HTTP/1.1
 Host: server:1234
@@ -713,46 +750,73 @@ Host: server:1234
 				"Accept: foo-FUZZ",
 				"Accept: other",
 			},
-			Value: "xxxx",
 			Checks: []CheckFunc{
 				checkHeaderMulti("Accept", []string{"foo-xxxx", "other"}),
 			},
 		},
 		{
+			Names:  []string{"FUZZ"},
+			Values: []string{"xxxx"},
+
 			URL: "http://www.example.com",
 			Header: []string{
 				"Host: foo-FUZZ",
 			},
-			Value: "xxxx",
 			Checks: []CheckFunc{
 				checkHost("foo-xxxx"),
 			},
 		},
 		{
 			// replace strings in header names
+			Names:  []string{"FUZZ"},
+			Values: []string{"testheader"},
+
 			URL:    "http://www.example.com",
 			Header: []string{"X-FUZZ: fooboar"},
-			Value:  "testheader",
 			Checks: []CheckFunc{
 				checkHeader("X-testheader", "fooboar"),
 			},
 		},
 		{
+			Names:  []string{"FUZZ"},
+			Values: []string{"testheader"},
+
 			URL: "http://www.example.com",
 			File: `GET /secret HTTP/1.1
 Host: server:1234
 
 `,
 			Header: []string{"X-FUZZ: fooboar"},
-			Value:  "testheader",
 			Checks: []CheckFunc{
 				checkHeader("X-testheader", "fooboar"),
+			},
+		},
+		// replace multiple values
+		{
+			Names:  []string{"DIR", "FILE"},
+			Values: []string{"foo", "bar"},
+			URL:    "http://www.example.com/include/DIR/FILE",
+			Checks: []CheckFunc{
+				checkURL("/include/foo/bar"),
+				checkMethod("GET"),
+			},
+		},
+		{
+			Names:  []string{"METHOD", "FUZZ"},
+			Values: []string{"DELETE", "testfile"},
+
+			URL:    "http://www.example.com/FUZZ",
+			Method: "METHOD",
+
+			Checks: []CheckFunc{
+				checkURL("/testfile"),
+				checkMethod("DELETE"),
 			},
 		},
 	}
 
 	for _, test := range tests {
-		tempdir, err := ioutil.TempDir("", "monsoon-test-request-")
+		tempdir, err := os.MkdirTemp("", "monsoon-test-request-")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -767,7 +831,7 @@ Host: server:1234
 			var filename string
 			if test.File != "" {
 				filename = filepath.Join(tempdir, "test-"+strings.Replace(t.Name(), "/", "_", -1))
-				err := ioutil.WriteFile(filename, []byte(test.File), 0644)
+				err := os.WriteFile(filename, []byte(test.File), 0644)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -780,7 +844,7 @@ Host: server:1234
 				}()
 			}
 
-			req := New(test.Template)
+			req := New(test.Names)
 			req.URL = test.URL
 			if test.File != "" {
 				req.TemplateFile = filename
@@ -795,7 +859,7 @@ Host: server:1234
 				}
 			}
 
-			genReq, err := req.Apply(test.Value)
+			genReq, err := req.Apply(test.Values)
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -3,7 +3,6 @@ package recorder
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -57,7 +56,7 @@ func LoadRuns(dir string) (runs []Run, err error) {
 	}
 
 	for _, file := range files {
-		buf, err := ioutil.ReadFile(file)
+		buf, err := os.ReadFile(file)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "unable to read file, skipping: %v\n", file)
 			continue

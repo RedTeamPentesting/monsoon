@@ -7,10 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/textproto"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
 )
@@ -163,19 +163,16 @@ type Request struct {
 
 	TemplateFile string // used to read the request from a file
 
-	Replace string // this string is being replaced by a value in a specific http request
+	Names []string // these string are being replaced by a value in a specific http request
 
 	ForceChunkedEncoding bool
 }
 
-// New returns a new request. If replace is the empty string, "FUZZ" is used.
-func New(replace string) *Request {
-	if replace == "" {
-		replace = "FUZZ"
-	}
+// New returns a new request.
+func New(names []string) *Request {
 	return &Request{
-		Header:  NewHeader(DefaultHeader),
-		Replace: replace,
+		Header: NewHeader(DefaultHeader),
+		Names:  names,
 	}
 }
 
@@ -188,7 +185,7 @@ func replaceTemplate(s, template, value string) string {
 }
 
 func readRequestFromFile(filename string, target *url.URL, replace func([]byte) []byte) (*http.Request, error) {
-	buf, err := ioutil.ReadFile(filename)
+	buf, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
@@ -203,7 +200,7 @@ func readRequestFromFile(filename string, target *url.URL, replace func([]byte) 
 	}
 
 	// append the rest of the file to the body
-	rest, err := ioutil.ReadAll(rd)
+	rest, err := io.ReadAll(rd)
 	if err == io.EOF {
 		// if nothing further can be read, that's fine with us
 		err = nil
@@ -213,7 +210,7 @@ func readRequestFromFile(filename string, target *url.URL, replace func([]byte) 
 	}
 
 	// rebuild body
-	origBody, err := ioutil.ReadAll(req.Body)
+	origBody, err := io.ReadAll(req.Body)
 	if err == io.ErrUnexpectedEOF {
 		err = nil
 	}
@@ -222,7 +219,7 @@ func readRequestFromFile(filename string, target *url.URL, replace func([]byte) 
 	}
 
 	origBody = append(origBody, rest...)
-	req.Body = ioutil.NopCloser(bytes.NewReader(origBody))
+	req.Body = io.NopCloser(bytes.NewReader(origBody))
 	req.ContentLength = int64(len(origBody))
 
 	// fill some details from the URL
@@ -252,13 +249,29 @@ func readRequestFromFile(filename string, target *url.URL, replace func([]byte) 
 
 // Apply replaces the template with value in all fields of the request and
 // returns a new http.Request.
-func (r *Request) Apply(value string) (*http.Request, error) {
-	insertValue := func(s string) string {
-		return replaceTemplate(s, r.Replace, value)
+func (r *Request) Apply(values []string) (*http.Request, error) {
+	if len(r.Names) != len(values) {
+		return nil, fmt.Errorf("got %v values for %v replacement strings (%v)", len(values), len(r.Names), strings.Join(r.Names, ", "))
 	}
 
-	targetURL := insertValue(r.URL)
-	body := []byte(insertValue(r.Body))
+	insertValues := func(s string) string {
+		for i := range r.Names {
+			s = replaceTemplate(s, r.Names[i], values[i])
+		}
+
+		return s
+	}
+
+	insertValueBytes := func(buf []byte) []byte {
+		for i := range r.Names {
+			buf = bytes.Replace(buf, []byte(r.Names[i]), []byte(values[i]), -1)
+		}
+
+		return buf
+	}
+
+	targetURL := insertValues(r.URL)
+	body := []byte(insertValues(r.Body))
 
 	var req *http.Request
 
@@ -269,28 +282,26 @@ func (r *Request) Apply(value string) (*http.Request, error) {
 			return nil, err
 		}
 
-		req, err = readRequestFromFile(r.TemplateFile, target, func(buf []byte) []byte {
-			return bytes.Replace(buf, []byte(r.Replace), []byte(value), -1)
-		})
+		req, err = readRequestFromFile(r.TemplateFile, target, insertValueBytes)
 		if err != nil {
 			return nil, err
 		}
 
 		if len(body) > 0 {
 			// use new body and set content length
-			req.Body = ioutil.NopCloser(bytes.NewReader(body))
+			req.Body = io.NopCloser(bytes.NewReader(body))
 			req.ContentLength = int64(len(body))
 		}
 
 		if r.Method != "" {
-			req.Method = insertValue(r.Method)
+			req.Method = insertValues(r.Method)
 		}
 
 	} else {
 		var err error
 
 		// create new request from scratch
-		req, err = http.NewRequest(insertValue(r.Method), targetURL, bytes.NewReader(body))
+		req, err = http.NewRequest(insertValues(r.Method), targetURL, bytes.NewReader(body))
 		if err != nil {
 			return nil, err
 		}
@@ -309,7 +320,7 @@ func (r *Request) Apply(value string) (*http.Request, error) {
 
 	// but if an explicit user and pass is specified, override them again
 	if r.UserPass != "" {
-		data := strings.SplitN(strings.Replace(r.UserPass, r.Replace, value, -1), ":", 2)
+		data := strings.SplitN(insertValues(r.UserPass), ":", 2)
 		u := data[0]
 		p := ""
 		if len(data) > 1 {
@@ -325,13 +336,13 @@ func (r *Request) Apply(value string) (*http.Request, error) {
 	}
 
 	// apply template headers
-	r.Header.Apply(req.Header, insertValue)
+	r.Header.Apply(req.Header, insertValues)
 
 	// special handling for the Host header, which needs to be set on the
 	// request field Host
 	for k, v := range r.Header.Header {
 		if textproto.CanonicalMIMEHeaderKey(k) == "Host" {
-			req.Host = insertValue(v[0])
+			req.Host = insertValues(v[0])
 		}
 	}
 

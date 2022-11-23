@@ -1,7 +1,6 @@
 package recorder
 
 import (
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -12,7 +11,7 @@ import (
 )
 
 func TestTemplate(t *testing.T) {
-	tempdir, err := ioutil.TempDir("", "monsoon-recorder-test-")
+	tempdir, err := os.MkdirTemp("", "monsoon-recorder-test-")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +29,7 @@ func TestTemplate(t *testing.T) {
 	}{
 		{
 			request: func() *request.Request {
-				req := request.New("")
+				req := request.New([]string{"FUZZ"})
 				req.URL = "https://localhost:8443/"
 				req.Method = "foo"
 				return req
@@ -43,7 +42,7 @@ func TestTemplate(t *testing.T) {
 		},
 		{
 			request: func() *request.Request {
-				req := request.New("")
+				req := request.New([]string{"FUZZ"})
 				req.URL = "https://localhost:8443/?bar"
 				req.Method = "xFUZZ"
 				req.Body = "testbody"
@@ -73,12 +72,12 @@ Accept: image/jpeg
 X-foo: bar
 
 foobar`)
-				err := ioutil.WriteFile(fn, data, 0644)
+				err := os.WriteFile(fn, data, 0644)
 				if err != nil {
 					t.Fatal(err)
 				}
 
-				req := request.New("")
+				req := request.New([]string{"FUZZ"})
 				req.TemplateFile = fn
 				req.URL = "https://host"
 				return req

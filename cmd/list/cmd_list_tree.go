@@ -38,7 +38,15 @@ func printTree(target string, runs []recorder.Run) error {
 		}
 
 		// only consider the runs for which the path was tested
-		if !strings.Contains(run.URL.Path, "FUZZ") {
+		foundTemplate := false
+		for _, name := range run.Names {
+			if strings.Contains(run.URL.Path, name) {
+				foundTemplate = true
+				break
+			}
+		}
+
+		if !foundTemplate {
 			continue
 		}
 
@@ -49,7 +57,12 @@ func printTree(target string, runs []recorder.Run) error {
 			}
 
 			// rebuild the request URL
-			responseURL, err := url.Parse(strings.Replace(run.URL.String(), "FUZZ", resp.Item, -1))
+			reqURL := run.URL.String()
+			for i := range run.Data.Names {
+				reqURL = strings.Replace(reqURL, run.Names[i], resp.Values[i], -1)
+			}
+
+			responseURL, err := url.Parse(reqURL)
 			if err != nil {
 				// ignore errors for now
 				continue

@@ -2,19 +2,22 @@ package producer
 
 import "context"
 
-// Filter selects/rejects items received from a producer.
+// Filter selects/rejects items received from a source.
 type Filter interface {
 	// Count corrects the number of total items to test
 	Count(ctx context.Context, in <-chan int) <-chan int
 
 	// Select filters the items
-	Select(ctx context.Context, in <-chan string) <-chan string
+	Select(ctx context.Context, in <-chan []string) <-chan []string
 }
 
 // FilterSkip skips the first n values sent over the channel.
 type FilterSkip struct {
 	Skip int
 }
+
+// ensure Filter Skip implements Filter
+var _ Filter = &FilterSkip{}
 
 // Count filters the number of values.
 func (f *FilterSkip) Count(ctx context.Context, in <-chan int) <-chan int {
@@ -45,14 +48,14 @@ func (f *FilterSkip) Count(ctx context.Context, in <-chan int) <-chan int {
 }
 
 // Select filters values sent over ch.
-func (f *FilterSkip) Select(ctx context.Context, in <-chan string) <-chan string {
-	out := make(chan string)
+func (f *FilterSkip) Select(ctx context.Context, in <-chan []string) <-chan []string {
+	out := make(chan []string)
 
 	go func() {
 		defer close(out)
 		var cur int
 		for {
-			var v string
+			var v []string
 			var ok bool
 			select {
 			case <-ctx.Done():
@@ -86,6 +89,9 @@ type FilterLimit struct {
 	Max int
 }
 
+// ensure FilterLimit implements Filter.
+var _ Filter = &FilterLimit{}
+
 // Count filters the number of values.
 func (f *FilterLimit) Count(ctx context.Context, in <-chan int) <-chan int {
 	out := make(chan int, 1)
@@ -113,14 +119,14 @@ func (f *FilterLimit) Count(ctx context.Context, in <-chan int) <-chan int {
 }
 
 // Select filters values sent over ch.
-func (f *FilterLimit) Select(ctx context.Context, in <-chan string) <-chan string {
-	out := make(chan string)
+func (f *FilterLimit) Select(ctx context.Context, in <-chan []string) <-chan []string {
+	out := make(chan []string)
 
 	go func() {
 		defer close(out)
 		var cur int
 		for {
-			var v string
+			var v []string
 			var ok bool
 			select {
 			case <-ctx.Done():

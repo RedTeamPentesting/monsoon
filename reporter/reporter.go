@@ -52,7 +52,7 @@ func formatSeconds(secs float64) string {
 }
 
 // Report returns a report about the received HTTP status codes.
-func (h *HTTPStats) Report(current string) (res []string) {
+func (h *HTTPStats) Report(current []string) (res []string) {
 	res = append(res, "")
 	status := fmt.Sprintf("%v of %v requests shown", h.ShownResponses, h.Responses)
 	dur := time.Since(h.Start) / time.Second
@@ -76,8 +76,13 @@ func (h *HTTPStats) Report(current string) (res []string) {
 		}
 	}
 
-	if current != "" {
-		status += fmt.Sprintf(", current: %v", current)
+	if len(current) > 0 {
+		values := fmt.Sprintf("%v", current)
+		if len(current) == 1 {
+			values = fmt.Sprintf("%v", current[0])
+		}
+
+		status += fmt.Sprintf(", current: %v", values)
 	}
 
 	res = append(res, status)
@@ -130,7 +135,7 @@ func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int)
 			var reqErr response.InvalidRequest
 			if errors.As(resp.Error, &reqErr) {
 				errString := cleanedErrorString(reqErr.Err)
-				stats.InvalidInputData[errString] = append(stats.InvalidInputData[errString], fmt.Sprintf("%q", resp.Item))
+				stats.InvalidInputData[errString] = append(stats.InvalidInputData[errString], fmt.Sprintf("%q", resp.Values))
 
 				continue
 			}
@@ -143,13 +148,13 @@ func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int)
 			stats.ShownResponses++
 		}
 
-		r.term.SetStatus(stats.Report(resp.Item))
+		r.term.SetStatus(stats.Report(resp.Values))
 	}
 
 	r.term.Print("\n")
 	r.term.Printf("processed %d HTTP requests in %v\n", stats.Responses, formatSeconds(time.Since(stats.Start).Seconds()))
 
-	for _, line := range stats.Report("")[1:] {
+	for _, line := range stats.Report(nil)[1:] {
 		r.term.Print(line)
 	}
 

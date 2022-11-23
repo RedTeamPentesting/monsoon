@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -21,7 +20,7 @@ import (
 
 // Response is an HTTP response.
 type Response struct {
-	Item     string
+	Values   []string
 	URL      string
 	Error    error
 	Duration time.Duration
@@ -56,11 +55,11 @@ func (r Response) String() string {
 			return ""
 		}
 
-		return fmt.Sprintf("%7s %18s   %v", "error", r.Error, r.Item)
+		return fmt.Sprintf("%7s %18s   %v", "error", r.Error, r.Values)
 	}
 
 	res := r.HTTPResponse
-	status := fmt.Sprintf("%7d %8d %8d   %-8v", res.StatusCode, r.Header.Bytes, r.Body.Bytes, r.Item)
+	status := fmt.Sprintf("%7d %8d %8d   %-8v", res.StatusCode, r.Header.Bytes, r.Body.Bytes, r.Values)
 	if res.StatusCode >= 300 && res.StatusCode < 400 {
 		loc, ok := res.Header["Location"]
 		if ok {
@@ -122,7 +121,7 @@ func (r *Response) ReadBody(body io.Reader, maxBodySize int) (err error) {
 	// closed preemptively, closing the TCP connection. The reason is that opening a
 	// new connection likely has a much lower performance impact than tranferring large
 	// amounts of unwanted data over the network.
-	r.RawBody, err = ioutil.ReadAll(io.LimitReader(body, int64(maxBodySize)))
+	r.RawBody, err = io.ReadAll(io.LimitReader(body, int64(maxBodySize)))
 	if err != nil {
 		return err
 	}

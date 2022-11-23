@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,9 +32,11 @@ type Options struct {
 	Range       []string
 	RangeFormat string
 	Filename    string
-	Logfile     string
-	Logdir      string
-	Threads     int
+	Replace     []string
+
+	Logfile string
+	Logdir  string
+	Threads int
 
 	RequestsPerSecond float64
 
@@ -105,11 +108,19 @@ func (opts *Options) valid() (err error) {
 	}
 
 	if len(opts.Range) > 0 && opts.Filename != "" {
-		return errors.New("only one source allowed but both range and filename specified")
+		return errors.New("both range and filename specified")
 	}
 
-	if len(opts.Range) == 0 && opts.Filename == "" {
-		return errors.New("neither file nor range specified, nothing to do")
+	if len(opts.Range) > 0 && len(opts.Replace) > 0 {
+		return errors.New("both range and replace specified, use --replace if you want both")
+	}
+
+	if len(opts.Filename) > 0 && len(opts.Replace) > 0 {
+		return errors.New("both filename and replace specified, use --replace if you want both")
+	}
+
+	if len(opts.Range) == 0 && opts.Filename == "" && len(opts.Replace) == 0 {
+		return errors.New("no replace specified, nothing to do")
 	}
 
 	opts.extract, err = compileRegexps(opts.Extract)
@@ -167,9 +178,10 @@ func AddCommand(c *cobra.Command) {
 	fs.SortFlags = false
 
 	fs.StringSliceVarP(&opts.Range, "range", "r", nil, "set range `from-to`")
-	fs.StringVar(&opts.RangeFormat, "range-format", "%d", "set `format` for range")
-
+	fs.StringVar(&opts.RangeFormat, "range-format", "%d", "set `format` for range (when used with --range)")
 	fs.StringVarP(&opts.Filename, "file", "f", "", "read values from `filename`")
+	fs.StringArrayVar(&opts.Replace, "replace", []string{}, "add replace var `name:type:options`, mutually exclusive with --range and --file")
+
 	fs.StringVar(&opts.Logfile, "logfile", "", "write copy of printed messages to `filename`.log")
 	fs.StringVar(&opts.Logdir, "logdir", os.Getenv("MONSOON_LOG_DIR"), "automatically log all output to files in `dir`")
 
@@ -180,7 +192,7 @@ func AddCommand(c *cobra.Command) {
 	fs.Float64Var(&opts.RequestsPerSecond, "requests-per-second", 0, "do at most `n` requests per second (e.g. 0.5)")
 
 	// add all options to define a request
-	opts.Request = request.New("")
+	opts.Request = request.New(nil)
 	request.AddFlags(opts.Request, fs)
 
 	fs.IntVar(&opts.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
@@ -222,44 +234,104 @@ func logfilePath(opts *Options, inputURL string) (prefix string, err error) {
 	return opts.Logfile, nil
 }
 
-func setupProducer(ctx context.Context, g *errgroup.Group, opts *Options, ch chan<- string, count chan<- int) error {
+func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, error) {
+	multiplexer := &producer.Multiplexer{}
+
 	switch {
+	// handle old user interface, only range
 	case len(opts.Range) > 0:
 		var ranges []producer.Range
 		for _, r := range opts.Range {
-			rng, err := producer.ParseRange(r)
+			rng, err := producer.NewRange(r)
 			if err != nil {
-				return err
+				return nil, err
 			}
 
 			ranges = append(ranges, rng)
 		}
 
-		g.Go(func() error {
-			return producer.Ranges(ctx, ranges, opts.RangeFormat, ch, count)
-		})
-		return nil
+		src := producer.NewRanges(ranges, opts.RangeFormat)
+		multiplexer.AddSource("FUZZ", src)
 
+		return multiplexer, nil
+
+	// handle old user interface, read from stdin
 	case opts.Filename == "-":
-		g.Go(func() error {
-			return producer.Reader(ctx, os.Stdin, ch, count)
-		})
-		return nil
+		src := producer.NewFile(os.Stdin)
+		multiplexer.AddSource("FUZZ", src)
 
+		return multiplexer, nil
+
+	// handle old user interface, only filename
 	case opts.Filename != "":
 		file, err := os.Open(opts.Filename)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
-		g.Go(func() error {
-			return producer.Reader(ctx, file, ch, count)
-		})
-		return nil
+		src := producer.NewFile(file)
+		multiplexer.AddSource("FUZZ", src)
 
-	default:
-		return errors.New("neither file nor range specified, nothing to do")
+		return multiplexer, nil
 	}
+
+	if len(opts.Replace) == 0 {
+		return nil, errors.New("no source specified, nothing to do")
+	}
+
+	// handle new user interface with replace rules
+	for _, s := range opts.Replace {
+		r, err := ParseReplace(s)
+		if err != nil {
+			return nil, fmt.Errorf("invalid replace rule: %w", err)
+		}
+
+		switch r.Type {
+		case "file":
+			var f *os.File
+			if r.Options == "-" {
+				f = os.Stdin
+			} else {
+				f, err = os.Open(r.Options)
+				if err != nil {
+					return nil, fmt.Errorf("file source: %w", err)
+				}
+			}
+
+			multiplexer.AddSource(r.Name, producer.NewFile(f))
+		case "range":
+			rangeFormat := "%d"
+
+			// check if there is a format specifier
+			if strings.Contains(r.Options, ":") {
+				data := strings.SplitN(r.Options, ":", 2)
+				if len(data) != 2 {
+					return nil, fmt.Errorf("wrong options format for range, want NAME:range:A-B[,C-D][:format]")
+				}
+
+				r.Options = data[0]
+				rangeFormat = data[1]
+			}
+
+			var ranges []producer.Range
+			for _, r := range strings.Split(r.Options, ",") {
+				rng, err := producer.NewRange(r)
+				if err != nil {
+					return nil, err
+				}
+
+				ranges = append(ranges, rng)
+			}
+
+			src := producer.NewRanges(ranges, rangeFormat)
+			multiplexer.AddSource(r.Name, src)
+
+		default:
+			return nil, fmt.Errorf("unknown replace type %q", r.Type)
+		}
+	}
+
+	return multiplexer, nil
 }
 
 func setupTerminal(ctx context.Context, g *errgroup.Group, maxFrameRate uint, logfilePrefix string) (term cli.Terminal, cleanup func(), err error) {
@@ -330,7 +402,7 @@ func setupResponseFilters(opts *Options) ([]response.Filter, error) {
 	return filters, nil
 }
 
-func setupValueFilters(ctx context.Context, opts *Options, valueCh <-chan string, countCh <-chan int) (<-chan string, <-chan int) {
+func setupValueFilters(ctx context.Context, opts *Options, valueCh <-chan []string, countCh <-chan int) (<-chan []string, <-chan int) {
 	if opts.Skip > 0 {
 		f := &producer.FilterSkip{Skip: opts.Skip}
 		countCh = f.Count(ctx, countCh)
@@ -346,7 +418,7 @@ func setupValueFilters(ctx context.Context, opts *Options, valueCh <-chan string
 	return valueCh, countCh
 }
 
-func startRunners(ctx context.Context, opts *Options, in <-chan string) (<-chan response.Response, error) {
+func startRunners(ctx context.Context, opts *Options, in <-chan []string) (<-chan response.Response, error) {
 	out := make(chan response.Response)
 
 	var wg sync.WaitGroup
@@ -429,16 +501,23 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	}
 
 	// setup the pipeline for the values
-	vch := make(chan string, opts.BufferSize)
-	var valueCh <-chan string = vch
+	vch := make(chan []string, opts.BufferSize)
+	var valueCh <-chan []string = vch
 	cch := make(chan int, 1)
 	var countCh <-chan int = cch
 
-	// start a producer from the options
-	err = setupProducer(ctx, g, opts, vch, cch)
+	// start produces and initialize multiplexer
+	multiplexer, err := setupProducer(ctx, opts)
 	if err != nil {
 		return err
 	}
+
+	opts.Request.Names = multiplexer.Names
+
+	// run Multiplexer
+	g.Go(func() error {
+		return multiplexer.Run(ctx, vch, cch)
+	})
 
 	// filter values (skip, limit)
 	valueCh, countCh = setupValueFilters(ctx, opts, valueCh, countCh)

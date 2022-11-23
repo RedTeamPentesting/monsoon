@@ -14,7 +14,7 @@ import (
 // Options collect options for the command.
 type Options struct {
 	Request *request.Request // the template for the HTTP request
-	Value   string
+	Values  []string
 }
 
 var opts Options
@@ -26,10 +26,10 @@ func AddCommand(c *cobra.Command) {
 	fs := cmd.Flags()
 	fs.SortFlags = false
 
-	opts.Request = request.New("")
+	opts.Request = request.New(nil)
 	request.AddFlags(opts.Request, fs)
 
-	fs.StringVarP(&opts.Value, "value", "v", "FUZZ", "use `string` instead for the placeholder")
+	fs.StringSliceVarP(&opts.Values, "value", "v", []string{}, "use `string` as the value (can be specified multiple times)")
 }
 
 var cmd = &cobra.Command{
@@ -50,8 +50,13 @@ var cmd = &cobra.Command{
 		}
 
 		opts.Request.URL = args[0]
+		opts.Request.Names = []string{"FUZZ"}
 
-		req, err := opts.Request.Apply(opts.Value)
+		if len(opts.Values) == 0 {
+			return errors.New("no value specified, use --value")
+		}
+
+		req, err := opts.Request.Apply(opts.Values)
 		if err != nil {
 			return err
 		}

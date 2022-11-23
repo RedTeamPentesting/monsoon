@@ -33,7 +33,7 @@ func TestParseRange(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			r, err := ParseRange(test.Input)
+			r, err := NewRange(test.Input)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -77,7 +77,7 @@ func TestRange(t *testing.T) {
 			var ranges []Range
 
 			for _, s := range test.Inputs {
-				r, err := ParseRange(s)
+				r, err := NewRange(s)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -88,9 +88,11 @@ func TestRange(t *testing.T) {
 			ch := make(chan string)
 			count := make(chan int, 1)
 
+			src := NewRanges(ranges, "%d")
+
 			var eg errgroup.Group
 			eg.Go(func() error {
-				return Ranges(context.Background(), ranges, "%d", ch, count)
+				return src.Yield(context.Background(), ch, count)
 			})
 
 			var values []string
