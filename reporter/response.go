@@ -100,8 +100,20 @@ func cleanedErrorString(err error) string {
 		err = urlErr.Err
 	}
 
-	if errors.Is(err, io.EOF) {
+	switch {
+	case errors.Is(err, io.EOF):
 		return "connection closed (EOF)"
+
+	// check for not exported type via reflection, this is ugly
+	case fmt.Sprintf("%T", err) == "http.tlsHandshakeTimeoutError":
+		return "TLS handshake timeout (use '--tls-handshake-timeout' to adjust)"
+
+	// check pattern for IO connect timeout
+	case strings.HasPrefix(err.Error(), "dial tcp") && strings.HasSuffix(err.Error(), ": i/o timeout"):
+		return "connect timeout (use '--connect-timeout' to adjust)"
+
+	case err.Error() == "net/http: timeout awaiting response headers":
+		return "timeout awaiting response headers (use '--response-header-timeout' to adjust)"
 	}
 
 	errStr := err.Error()
