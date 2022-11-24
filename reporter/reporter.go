@@ -13,12 +13,14 @@ import (
 
 // Reporter prints the Responses to a terminal.
 type Reporter struct {
-	term cli.Terminal
+	term        cli.Terminal
+	longRequest time.Duration
 }
 
-// New returns a new reporter.
-func New(term cli.Terminal) *Reporter {
-	return &Reporter{term: term}
+// New returns a new reporter. For requests which took longer than longRequest
+// to process, the time is shown.
+func New(term cli.Terminal, longRequest time.Duration) *Reporter {
+	return &Reporter{term: term, longRequest: longRequest}
 }
 
 // HTTPStats collects statistics about several HTTP responses.
@@ -137,7 +139,7 @@ func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int)
 		}
 
 		if !resp.Hide || resp.Error != nil {
-			r.term.Printf("%v\n", FormatResponse(resp))
+			r.term.Printf("%v\n", FormatResponse(resp, r.longRequest))
 			stats.ShownResponses++
 		}
 

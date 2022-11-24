@@ -62,6 +62,8 @@ type Options struct {
 	extractPipe [][]string
 	MaxBodySize int
 
+	LongRequest time.Duration
+
 	IPv4Only bool
 	IPv6Only bool
 }
@@ -196,6 +198,8 @@ func AddCommand(c *cobra.Command) {
 
 	// add transport options
 	response.AddTransportFlags(fs, &opts.TransportOptions)
+
+	fs.DurationVar(&opts.LongRequest, "long-request", 5*time.Second, "show response duration for requests longer than `duration`")
 
 	fs.BoolVar(&opts.IPv4Only, "ipv4-only", false, "only connect to target host via IPv4")
 	fs.BoolVar(&opts.IPv6Only, "ipv6-only", false, "only connect to target host via IPv6")
@@ -488,6 +492,6 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	// run the reporter
 	term.Printf(reporter.Bold("Target URL:")+" %v\n\n", inputURL)
-	reporter := reporter.New(term)
+	reporter := reporter.New(term, opts.LongRequest)
 	return reporter.Display(responseCh, countCh)
 }

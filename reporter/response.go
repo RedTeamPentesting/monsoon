@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/RedTeamPentesting/monsoon/response"
 )
@@ -58,7 +59,7 @@ func Dim(s string) string {
 	return "\033[2m" + s + "\033[0m"
 }
 
-func FormatResponse(r response.Response) string {
+func FormatResponse(r response.Response, longRequest time.Duration) string {
 	if r.Error != nil {
 		// don't print anything if the request has been cancelled
 		if errors.Is(r.Error, context.Canceled) {
@@ -81,6 +82,11 @@ func FormatResponse(r response.Response) string {
 	if len(r.Extract) > 0 {
 		status += Dim(" data: ") + Bold(strings.Join(quote(r.Extract), ", "))
 	}
+
+	if r.Duration > longRequest {
+		status += Dim(" response took ") + Bold(fmt.Sprintf("%.2fs", r.Duration.Seconds()))
+	}
+
 	return status
 }
 
