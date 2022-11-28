@@ -84,7 +84,7 @@ func FormatResponse(r response.Response, longRequest time.Duration) string {
 	}
 
 	if r.Duration > longRequest {
-		status += Dim(" response took ") + Bold(fmt.Sprintf("%.2fs", r.Duration.Seconds()))
+		status += Dim(" response took ") + Bold(colored(yellow, fmt.Sprintf("%.2fs", r.Duration.Seconds())))
 	}
 
 	return status
