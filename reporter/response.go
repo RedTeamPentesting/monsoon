@@ -118,7 +118,7 @@ func cleanedErrorString(err error) string {
 	case strings.HasPrefix(err.Error(), "dial tcp") && strings.HasSuffix(err.Error(), ": i/o timeout"):
 		return "connect timeout (use '--connect-timeout' to adjust)"
 
-	case err.Error() == "net/http: timeout awaiting response headers":
+	case strings.HasSuffix(err.Error(), ": timeout awaiting response headers"):
 		return "timeout awaiting response headers (use '--response-header-timeout' to adjust)"
 	}
 
