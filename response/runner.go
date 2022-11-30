@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -52,7 +53,6 @@ type TransportOptions struct {
 	Insecure                 bool
 	TLSClientCertKeyFilename string
 	DisableHTTP2             bool
-	ConcurrentRequests       int
 	Network                  string
 
 	ConnectTimeout        time.Duration
@@ -82,6 +82,10 @@ func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transpor
 		return nil, fmt.Errorf("transport: %w", err)
 	}
 
+	if concurrentRequests == 0 {
+		return nil, errors.New("concurrentRequests is zero")
+	}
+
 	// for timeouts, see
 	// https://blog.cloudflare.com/the-complete-guide-to-golang-net-http-timeouts/
 
@@ -108,8 +112,8 @@ func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transpor
 		ExpectContinueTimeout: 1 * time.Second,
 		IdleConnTimeout:       15 * time.Second,
 		TLSClientConfig:       &tls.Config{},
-		MaxIdleConns:          opts.ConcurrentRequests,
-		MaxIdleConnsPerHost:   opts.ConcurrentRequests,
+		MaxIdleConns:          concurrentRequests,
+		MaxIdleConnsPerHost:   concurrentRequests,
 	}
 
 	dialer := &net.Dialer{
