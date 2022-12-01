@@ -52,7 +52,7 @@ func formatSeconds(secs float64) string {
 }
 
 // Report returns a report about the received HTTP status codes.
-func (h *HTTPStats) Report(current []string) (res []string) {
+func (h *HTTPStats) Report(last []string) (res []string) {
 	res = append(res, "")
 	status := fmt.Sprintf("%v of %v requests shown", h.ShownResponses, h.Responses)
 	dur := time.Since(h.Start) / time.Second
@@ -76,13 +76,11 @@ func (h *HTTPStats) Report(current []string) (res []string) {
 		}
 	}
 
-	if len(current) > 0 {
-		values := fmt.Sprintf("%v", current)
-		if len(current) == 1 {
-			values = fmt.Sprintf("%v", current[0])
-		}
-
-		status += fmt.Sprintf(", current: %v", values)
+	switch {
+	case len(last) == 1:
+		status += fmt.Sprintf(", last: %v", last[0])
+	case len(last) > 1:
+		status += fmt.Sprintf(", last: [%v]", strings.Join(last, ", "))
 	}
 
 	res = append(res, status)
@@ -120,11 +118,29 @@ func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int)
 		InvalidInputData: make(map[string][]string),
 	}
 
-	for resp := range ch {
+	// make sure we update the status at least once per second
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+
+next_response:
+	for {
+		var (
+			resp response.Response
+			ok   bool
+		)
+
 		select {
+		case resp, ok = <-ch:
+			if !ok {
+				break next_response
+			}
 		case c := <-countChannel:
 			stats.Count = c
-		default:
+			countChannel = nil
+			continue next_response
+		case <-ticker.C:
+			r.term.SetStatus(stats.Report(nil))
+			continue next_response
 		}
 
 		stats.Responses++
