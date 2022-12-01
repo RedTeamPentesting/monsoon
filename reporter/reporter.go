@@ -122,6 +122,8 @@ func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int)
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 
+	var last []string
+
 next_response:
 	for {
 		var (
@@ -139,7 +141,7 @@ next_response:
 			countChannel = nil
 			continue next_response
 		case <-ticker.C:
-			r.term.SetStatus(stats.Report(nil))
+			r.term.SetStatus(stats.Report(last))
 			continue next_response
 		}
 
@@ -164,7 +166,8 @@ next_response:
 			stats.ShownResponses++
 		}
 
-		r.term.SetStatus(stats.Report(resp.Values))
+		last = resp.Values
+		r.term.SetStatus(stats.Report(last))
 	}
 
 	r.term.Print("\n")
