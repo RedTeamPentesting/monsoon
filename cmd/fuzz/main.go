@@ -180,7 +180,7 @@ func AddCommand(c *cobra.Command) {
 	fs.StringSliceVarP(&opts.Range, "range", "r", nil, "set range `from-to`")
 	fs.StringVar(&opts.RangeFormat, "range-format", "%d", "set `format` for range (when used with --range)")
 	fs.StringVarP(&opts.Filename, "file", "f", "", "read values from `filename`")
-	fs.StringArrayVar(&opts.Replace, "replace", []string{}, "add replace var `name:type:options`, mutually exclusive with --range and --file")
+	fs.StringArrayVar(&opts.Replace, "replace", []string{}, "add replace var `name:type:options` (valid types: 'file' and 'range', e.g. 'FUZZ:range:1-100'), mutually exclusive with --range and --file")
 
 	fs.StringVar(&opts.Logfile, "logfile", "", "write copy of printed messages to `filename`.log")
 	fs.StringVar(&opts.Logdir, "logdir", os.Getenv("MONSOON_LOG_DIR"), "automatically log all output to files in `dir`")
