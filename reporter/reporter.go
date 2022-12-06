@@ -3,6 +3,7 @@ package reporter
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http/httputil"
 	"sort"
 	"strings"
@@ -201,15 +202,27 @@ func (r *Reporter) PrintLastReponse(printRequest bool) error {
 	}
 
 	if printRequest {
-		request_bytes, err := httputil.DumpRequestOut(r.lastResponse.HTTPResponse.Request, true)
+		r.term.Print(colored(34, "\nRequest:\n"))
+		request_header_bytes, err := httputil.DumpRequestOut(r.lastResponse.HTTPResponse.Request, false)
+		if err != nil {
+			return err
+		}
+		r.term.Print(Dim(string(request_header_bytes)))
+
+		request_body_bytes, err := io.ReadAll(r.lastResponse.HTTPResponse.Request.Body)
 		if err != nil {
 			return err
 		}
 
-		r.term.Print(string(request_bytes))
+		if len(request_body_bytes) != 0 {
+			r.term.Print(string(request_body_bytes))
+		}
 	}
-
-	r.term.Printf("%s%s", string(r.lastResponse.RawHeader), string(r.lastResponse.RawBody))
+	r.term.Print(colored(34, "Response:\n"))
+	r.term.Print(Dim(string(r.lastResponse.RawHeader)))
+	if len(r.lastResponse.RawBody) != 0 {
+		r.term.Print(string(r.lastResponse.RawBody))
+	}
 
 	return nil
 }
