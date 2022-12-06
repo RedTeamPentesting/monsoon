@@ -3,6 +3,7 @@ package reporter
 import (
 	"errors"
 	"fmt"
+	"net/http/httputil"
 	"sort"
 	"strings"
 	"time"
@@ -13,8 +14,9 @@ import (
 
 // Reporter prints the Responses to a terminal.
 type Reporter struct {
-	term        cli.Terminal
-	longRequest time.Duration
+	term         cli.Terminal
+	longRequest  time.Duration
+	lastResponse response.Response
 }
 
 // New returns a new reporter. For requests which took longer than longRequest
@@ -167,6 +169,7 @@ next_response:
 		}
 
 		last = resp.Values
+		r.lastResponse = resp
 		r.term.SetStatus(stats.Report(last))
 	}
 
@@ -190,4 +193,23 @@ func sortedKeys(m map[string][]string) []string {
 	sort.Strings(keys)
 
 	return keys
+}
+
+func (r *Reporter) PrintLastReponse(printRequest bool) error {
+	if r.lastResponse.HTTPResponse == nil {
+		return nil
+	}
+
+	if printRequest {
+		request_bytes, err := httputil.DumpRequestOut(r.lastResponse.HTTPResponse.Request, true)
+		if err != nil {
+			return err
+		}
+
+		r.term.Print(string(request_bytes))
+	}
+
+	r.term.Printf("%s%s", string(r.lastResponse.RawHeader), string(r.lastResponse.RawBody))
+
+	return nil
 }

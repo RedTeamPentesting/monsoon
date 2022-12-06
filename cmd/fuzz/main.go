@@ -28,6 +28,9 @@ import (
 )
 
 // Options collect options for a run.
+
+var isTest bool = true
+
 type Options struct {
 	Range       []string
 	RangeFormat string
@@ -581,5 +584,11 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	// run the reporter
 	term.Printf(reporter.Bold("Target URL:")+" %v\n\n", targetURL)
 	reporter := reporter.New(term, opts.LongRequest)
-	return reporter.Display(responseCh, countCh)
+	err = reporter.Display(responseCh, countCh)
+
+	if isTest {
+		reporter.PrintLastReponse(true)
+	}
+
+	return err
 }
