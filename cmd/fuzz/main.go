@@ -1,6 +1,7 @@
 package fuzz
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -131,7 +132,7 @@ func (opts *Options) valid() (err error) {
 		}
 	}
 
-	if len(opts.Range) == 0 && opts.Filename == "" && len(opts.Replace) == 0 {
+	if len(opts.Range) == 0 && opts.Filename == "" && len(opts.Replace) == 0 && !(opts.IsTest && len(opts.Values) > 0) {
 		return errors.New("no replace specified, nothing to do")
 	}
 
@@ -183,6 +184,10 @@ func (opts *Options) valid() (err error) {
 
 		opts.Limit = 1
 		opts.Skip = 0
+
+		if len(opts.Values) > 0 {
+			opts.Limit = len(opts.Values)
+		}
 	}
 
 	return nil
@@ -328,6 +333,14 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 		src := producer.NewFile(file)
 		multiplexer.AddSource("FUZZ", src)
 
+		return multiplexer, nil
+	case len(opts.Values) > 0:
+		inValues := make([]byte, 0)
+		for _, v := range opts.Values {
+			inValues = append(inValues, []byte(v)...)
+			inValues = append(inValues, []byte("\n")...)
+		}
+		multiplexer.AddSource("FUZZ", producer.NewFile(bytes.NewReader(inValues)))
 		return multiplexer, nil
 	}
 
