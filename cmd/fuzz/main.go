@@ -29,8 +29,6 @@ import (
 
 // Options collect options for a run.
 
-var isTest bool = true
-
 type Options struct {
 	Range       []string
 	RangeFormat string
@@ -73,6 +71,10 @@ type Options struct {
 
 	IPv4Only bool
 	IPv6Only bool
+
+	IsTest      bool
+	Values      []string
+	ShowRequest bool
 }
 
 var opts Options
@@ -123,6 +125,12 @@ func (opts *Options) valid() (err error) {
 		return errors.New("both filename and replace specified, use --replace if you want both")
 	}
 
+	if len(opts.Values) > 0 {
+		if len(opts.Replace) > 0 || len(opts.Filename) > 0 || len(opts.Range) > 0 {
+			return errors.New("if values is specified, range, filename, and replace cannot be used")
+		}
+	}
+
 	if len(opts.Range) == 0 && opts.Filename == "" && len(opts.Replace) == 0 {
 		return errors.New("no replace specified, nothing to do")
 	}
@@ -156,6 +164,27 @@ func (opts *Options) valid() (err error) {
 		opts.TransportOptions.Network = "tcp6"
 	}
 
+	if opts.IsTest {
+		if opts.Threads > 0 {
+			fmt.Println("--threads is redundant for test mode.")
+		}
+
+		if opts.RequestsPerSecond > 0 {
+			fmt.Println("--requests-per-second is redundant for test mode.")
+		}
+
+		if opts.Skip > 0 {
+			fmt.Println("--skip is redundant for test mode.")
+		}
+
+		if opts.Limit > 0 {
+			fmt.Println("--limit is redundant for test mode.")
+		}
+
+		opts.Limit = 1
+		opts.Skip = 0
+	}
+
 	return nil
 }
 
@@ -169,6 +198,22 @@ var cmd = &cobra.Command{
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cli.WithContext(func(ctx context.Context, g *errgroup.Group) error {
+			return run(ctx, g, &opts, args)
+		})
+	},
+}
+
+var cmdTest = &cobra.Command{
+	Use:                   "test [options] URL",
+	DisableFlagsInUseLine: true,
+
+	Short:   helpShort,
+	Long:    helpLong,
+	Example: helpExamples,
+
+	RunE: func(cmd *cobra.Command, args []string) error {
+		return cli.WithContext(func(ctx context.Context, g *errgroup.Group) error {
+			opts.IsTest = true
 			return run(ctx, g, &opts, args)
 		})
 	},
@@ -220,6 +265,12 @@ func AddCommand(c *cobra.Command) {
 
 	fs.BoolVar(&opts.IPv4Only, "ipv4-only", false, "only connect to target host via IPv4")
 	fs.BoolVar(&opts.IPv6Only, "ipv6-only", false, "only connect to target host via IPv6")
+
+	c.AddCommand(cmdTest)
+	testFlags := cmdTest.Flags()
+	testFlags.AddFlagSet(fs)
+	testFlags.StringSliceVarP(&opts.Values, "value", "v", []string{}, "use `string` as the value (can be specified multiple times)")
+	testFlags.BoolVar(&opts.ShowRequest, "show-request", false, "also print HTTP request")
 }
 
 // logfilePath returns the prefix for the logfiles, if any.
@@ -586,7 +637,7 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	reporter := reporter.New(term, opts.LongRequest)
 	err = reporter.Display(responseCh, countCh)
 
-	if isTest {
+	if opts.IsTest {
 		reporter.PrintLastReponse(true)
 	}
 

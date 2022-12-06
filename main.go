@@ -8,7 +8,6 @@ import (
 	"github.com/RedTeamPentesting/monsoon/cmd/fuzz"
 	"github.com/RedTeamPentesting/monsoon/cmd/list"
 	"github.com/RedTeamPentesting/monsoon/cmd/show"
-	"github.com/RedTeamPentesting/monsoon/cmd/test"
 	"github.com/spf13/cobra"
 )
 
@@ -34,7 +33,6 @@ func init() {
 	setupHelp(cmdRoot)
 	fuzz.AddCommand(cmdRoot)
 	show.AddCommand(cmdRoot)
-	test.AddCommand(cmdRoot)
 	list.AddCommand(cmdRoot)
 	cmdRoot.AddCommand(cmdVersion)
 }
