@@ -11,10 +11,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var version = "build from source"
+
 var cmdRoot = &cobra.Command{
 	Use:           "monsoon COMMAND [options]",
 	SilenceErrors: true,
 	SilenceUsage:  true,
+}
+
+var cmdVersion = &cobra.Command{
+	Use:   "version",
+	Short: "Print the current version",
+	Args:  cobra.NoArgs,
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("monsoon " + version)
+	},
 }
 
 func init() {
@@ -24,6 +35,7 @@ func init() {
 	show.AddCommand(cmdRoot)
 	test.AddCommand(cmdRoot)
 	list.AddCommand(cmdRoot)
+	cmdRoot.AddCommand(cmdVersion)
 }
 
 func injectDefaultCommand(args []string) []string {
