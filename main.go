@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "build from source"
+var version = "built from source"
 
 var cmdRoot = &cobra.Command{
 	Use:           "monsoon COMMAND [options]",
