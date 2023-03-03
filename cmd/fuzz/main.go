@@ -325,7 +325,8 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 
 			src := producer.NewRanges(ranges, rangeFormat)
 			multiplexer.AddSource(r.Name, src)
-
+		case "value":
+			multiplexer.AddSource(r.Name, producer.NewValue(r.Options))
 		default:
 			return nil, fmt.Errorf("unknown replace type %q", r.Type)
 		}
