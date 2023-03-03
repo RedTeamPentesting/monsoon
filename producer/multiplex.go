@@ -60,6 +60,8 @@ func (m *Multiplexer) Run(ctx context.Context, ch chan<- []string, count chan<- 
 	})
 
 	eg.Go(func() error {
+		defer close(sourceCountChan)
+
 		return run(ctx, ch, sourceCountChan, m.Sources, nil, false)
 	})
 
@@ -67,8 +69,6 @@ func (m *Multiplexer) Run(ctx context.Context, ch chan<- []string, count chan<- 
 }
 
 func run(ctx context.Context, resultChan chan<- []string, sourceCountChan chan<- sourceCount, sources []Source, partResult []string, countKnownSubtree bool) error {
-	defer close(sourceCountChan)
-
 	var eg errgroup.Group
 
 	src := sources[0]
