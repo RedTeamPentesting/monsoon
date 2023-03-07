@@ -29,6 +29,14 @@ func TestParseReplace(t *testing.T) {
 			err:   true,
 		},
 		{
+			input: "SID:value:xx123",
+			replace: Replace{
+				Name:    "SID",
+				Type:    "value",
+				Options: "xx123",
+			},
+		},
+		{
 			input: "FUZZ:file:/tmp/foo.txt",
 			replace: Replace{
 				Name:    "FUZZ",
