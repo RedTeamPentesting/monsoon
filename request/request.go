@@ -247,6 +247,23 @@ func readRequestFromFile(filename string, target *url.URL, replace func([]byte) 
 	return req, nil
 }
 
+func (r *Request) GetURL() string {
+	if r.TemplateFile == "" {
+		return r.URL
+	}
+
+	target, err := url.Parse(r.URL)
+	if err != nil {
+		return r.URL
+	}
+
+	req, err := readRequestFromFile(r.TemplateFile, target, func(b []byte) []byte { return b })
+	if err != nil {
+		return r.URL
+	}
+	return req.URL.String()
+}
+
 // Apply replaces the template with value in all fields of the request and
 // returns a new http.Request.
 func (r *Request) Apply(values []string) (*http.Request, error) {
