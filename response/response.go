@@ -173,7 +173,6 @@ func Count(rd io.Reader) (stats TextStats, err error) {
 	for {
 		current, err = bufReader.ReadByte()
 		if err == io.EOF {
-			err = nil
 			break
 		}
 

@@ -1,8 +1,6 @@
 package producer
 
-import (
-	"context"
-)
+import "context"
 
 // File produces items from a file.
 type Value struct {
@@ -18,7 +16,7 @@ func NewValue(value string) *Value {
 }
 
 func (f *Value) Yield(ctx context.Context, ch chan<- string, count chan<- int) (err error) {
-        defer close(ch)
+	defer close(ch)
 	ch <- f.value
 	count <- 1
 	return nil
