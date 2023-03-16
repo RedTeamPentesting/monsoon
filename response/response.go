@@ -131,7 +131,7 @@ func (r *Response) ReadBody(body io.Reader, maxBodySize int) (err error) {
 		}
 	}
 
-	r.RawBody, err = io.ReadAll(body)
+	r.RawBody, err = io.ReadAll(io.LimitReader(body, int64(maxBodySize)))
 	if err != nil {
 		return err
 	}
