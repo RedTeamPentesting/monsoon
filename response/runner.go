@@ -1,6 +1,8 @@
 package response
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/pem"
@@ -283,16 +285,23 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 		return
 	}
 
-	err = response.ReadBody(res.Body, r.MaxBodySize)
+	// dump the header and extract data now so the stats about the header are
+	// present when the filter runs in the next step. We need to dump the header
+	// for that, so we can easily run data extraction in the same step.
+	err = response.ExtractHeader(res, r.Extract)
 	if err != nil {
 		response.Error = err
 		return
 	}
 
-	// dump the header and extract data now so the stats about the header are
-	// present when the filter runs in the next step. We need to dump the header
-	// for that, so we can easily run data extraction in the same step.
-	err = response.ExtractHeader(res, r.Extract)
+	parsed_header, err := http.ReadResponse(bufio.NewReader(bytes.NewReader(response.RawHeader)), nil)
+	if err != nil {
+		response.Error = err
+		return
+	}
+	response.ParsedHeader = parsed_header.Header
+
+	err = response.ReadBody(res.Body, r.MaxBodySize)
 	if err != nil {
 		response.Error = err
 		return

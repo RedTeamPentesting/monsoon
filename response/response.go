@@ -3,6 +3,7 @@ package response
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"context"
 	"fmt"
 	"io"
@@ -31,6 +32,7 @@ type Response struct {
 	HTTPResponse *http.Response
 	RawBody      []byte
 	RawHeader    []byte
+	ParsedHeader http.Header
 
 	Hide bool // can be set by a filter, response should not be displayed
 }
@@ -121,7 +123,15 @@ func (r *Response) ReadBody(body io.Reader, maxBodySize int) (err error) {
 	// closed preemptively, closing the TCP connection. The reason is that opening a
 	// new connection likely has a much lower performance impact than tranferring large
 	// amounts of unwanted data over the network.
-	r.RawBody, err = io.ReadAll(io.LimitReader(body, int64(maxBodySize)))
+
+	if strings.EqualFold(r.ParsedHeader.Get("Content-Encoding"), "gzip") {
+		body, err = gzip.NewReader(body)
+		if err != nil {
+			return err
+		}
+	}
+
+	r.RawBody, err = io.ReadAll(body)
 	if err != nil {
 		return err
 	}
