@@ -50,10 +50,11 @@ const (
 )
 
 type TransportOptions struct {
-	Insecure                 bool
-	TLSClientCertKeyFilename string
-	DisableHTTP2             bool
-	Network                  string
+	SkipCertificateVerification         bool
+	EnableInsecureCiphersAndTLSVersions bool
+	TLSClientCertKeyFilename            string
+	DisableHTTP2                        bool
+	Network                             string
 
 	ConnectTimeout        time.Duration
 	TLSHandshakeTimeout   time.Duration
@@ -66,7 +67,8 @@ func (t TransportOptions) Valid() error {
 
 func AddTransportFlags(fs *pflag.FlagSet, opts *TransportOptions) {
 	// Transport
-	fs.BoolVarP(&opts.Insecure, "insecure", "k", false, "disable TLS certificate verification")
+	fs.BoolVarP(&opts.SkipCertificateVerification, "insecure", "k", false, "disable TLS certificate verification")
+	fs.BoolVar(&opts.EnableInsecureCiphersAndTLSVersions, "insecure-ciphersuites", false, "enable insecure ciphersuites and TLS versions")
 	fs.StringVar(&opts.TLSClientCertKeyFilename, "client-cert", "", "read TLS client key and cert from `file`")
 	fs.BoolVar(&opts.DisableHTTP2, "disable-http2", false, "do not try to negotiate an HTTP2 connection")
 
@@ -143,8 +145,8 @@ func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transpor
 		return originalDialContext(ctx, opts.Network, addr)
 	}
 
-	if opts.Insecure {
-		tr.TLSClientConfig.InsecureSkipVerify = true
+	tr.TLSClientConfig.InsecureSkipVerify = opts.SkipCertificateVerification
+	if opts.EnableInsecureCiphersAndTLSVersions {
 		tr.TLSClientConfig.CipherSuites = getAllCipherSuiteIDs()
 		tr.TLSClientConfig.MinVersion = tls.VersionTLS10
 	}
