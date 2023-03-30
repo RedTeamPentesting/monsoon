@@ -184,13 +184,13 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 		return err
 	}
 
-	_, err = os.Stdout.Write(res.RawBody)
+	_, err = os.Stdout.Write(res.Body)
 	if err != nil {
 		return err
 	}
 
 	// be nice to the CLI user and append a newline if there isn't one yet
-	if !bytes.HasSuffix(res.RawBody, []byte("\n")) {
+	if !bytes.HasSuffix(res.Body, []byte("\n")) {
 		fmt.Println()
 	}
 

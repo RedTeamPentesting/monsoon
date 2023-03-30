@@ -148,8 +148,9 @@ func headerDefaultValue(h Header, name string) bool {
 // DefaultHeader contains all HTTP header values that are added by default. If
 // the header is already present, it is not added.
 var DefaultHeader = http.Header{
-	"Accept":     []string{"*/*"},
-	"User-Agent": []string{"monsoon"},
+	"Accept":          []string{"*/*"},
+	"User-Agent":      []string{"monsoon"},
+	"Accept-Encoding": []string{"gzip"},
 }
 
 // Request is a template for an HTTP request.

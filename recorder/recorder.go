@@ -158,7 +158,7 @@ func (r *Recorder) dump(data Data) error {
 	}
 	buf = append(buf, '\n')
 
-	return os.WriteFile(r.filename, buf, 0644)
+	return os.WriteFile(r.filename, buf, 0o644)
 }
 
 // NewResponse builds a Response struct for serialization with JSON.
@@ -176,7 +176,7 @@ func NewResponse(r response.Response) (res Response) {
 		res.StatusText = r.HTTPResponse.Status
 	}
 	res.Header = r.Header
-	res.Body = r.Body
+	res.Body = r.BodyStats
 	res.ExtractedData = r.Extract
 
 	return res

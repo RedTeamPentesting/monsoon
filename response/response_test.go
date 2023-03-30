@@ -1,14 +1,20 @@
 package response
 
 import (
+	"bytes"
+	"compress/gzip"
+	"io"
+	"math"
+	"net/http"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
 
 func TestExtract(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		input string
 		stats TextStats
 	}{
@@ -53,7 +59,7 @@ func TestExtract(t *testing.T) {
 }
 
 func TestExtractBody(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		body    string
 		targets []*regexp.Regexp
 		data    []string
@@ -110,7 +116,7 @@ func TestExtractBody(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			var r Response
-			err := r.ReadBody(strings.NewReader(test.body), 1024*1024)
+			err := r.ReadBody(&http.Response{Body: io.NopCloser(strings.NewReader(test.body))}, 1024*1024, false)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -122,4 +128,102 @@ func TestExtractBody(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDecompressBody(t *testing.T) {
+	rawBody := []byte("body")
+	compressedBody := compress(t, rawBody)
+
+	tests := []struct {
+		Algorithm            string
+		Body                 []byte
+		ExpectedResult       []byte
+		DecompressionEnabled bool
+		MaxBodySize          int
+	}{
+		{
+			Algorithm:            "gzip",
+			Body:                 compressedBody,
+			ExpectedResult:       rawBody,
+			DecompressionEnabled: true,
+		},
+		{
+			Algorithm:            "gzip",
+			Body:                 compressedBody,
+			ExpectedResult:       compressedBody,
+			DecompressionEnabled: false,
+		},
+		{
+			Algorithm:            "",
+			Body:                 compressedBody,
+			ExpectedResult:       compressedBody,
+			DecompressionEnabled: true,
+		},
+		{
+			Algorithm:            "",
+			Body:                 compressedBody,
+			ExpectedResult:       compressedBody,
+			DecompressionEnabled: false,
+		},
+		{
+			Algorithm: "gzip",
+			Body:      compress(t, bytes.Repeat(rawBody, 70)),
+			ExpectedResult: []byte("bodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybo" +
+				"dybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybod" +
+				"ybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybodybody" +
+				"bodybodybodybo"),
+			DecompressionEnabled: true,
+			MaxBodySize:          16,
+		},
+	}
+
+	for i, test := range tests {
+		test := test // capture variable
+
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			r := Response{
+				HTTPResponse: &http.Response{
+					Body:   io.NopCloser(bytes.NewReader(test.Body)),
+					Header: make(http.Header),
+				},
+			}
+
+			if test.Algorithm != "" {
+				r.HTTPResponse.Header.Add("Content-Encoding", test.Algorithm)
+			}
+
+			if test.MaxBodySize == 0 {
+				test.MaxBodySize = math.MaxInt
+			}
+
+			err := r.ReadBody(r.HTTPResponse, test.MaxBodySize, test.DecompressionEnabled)
+			if err != nil {
+				t.Fatalf("read body: %v", err)
+			}
+
+			if !bytes.Equal(r.Body, test.ExpectedResult) {
+				t.Fatalf("read body %q instead of %q", string(r.Body), string(test.ExpectedResult))
+			}
+		})
+	}
+}
+
+func compress(tb testing.TB, data []byte) []byte {
+	tb.Helper()
+
+	buf := &bytes.Buffer{}
+
+	gzw := gzip.NewWriter(buf)
+
+	_, err := gzw.Write(data)
+	if err != nil {
+		tb.Fatalf("compress: %v", err)
+	}
+
+	err = gzw.Close()
+	if err != nil {
+		tb.Fatalf("close compressor: %v", err)
+	}
+
+	return buf.Bytes()
 }

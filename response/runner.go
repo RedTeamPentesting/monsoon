@@ -1,8 +1,6 @@
 package response
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/pem"
@@ -29,8 +27,9 @@ type Runner struct {
 	MaxBodySize int
 	Extract     []*regexp.Regexp
 
-	Client    *http.Client
-	Transport *http.Transport
+	Client                 *http.Client
+	Transport              *http.Transport
+	DecompressResponseBody bool
 
 	input  <-chan []string
 	output chan<- Response
@@ -118,6 +117,7 @@ func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transpor
 		TLSClientConfig:       &tls.Config{},
 		MaxIdleConns:          concurrentRequests,
 		MaxIdleConnsPerHost:   concurrentRequests,
+		DisableCompression:    true, // we handle that ourselves
 	}
 
 	dialer := &net.Dialer{
@@ -285,6 +285,8 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 		return
 	}
 
+	response.HTTPResponse = res
+
 	// dump the header and extract data now so the stats about the header are
 	// present when the filter runs in the next step. We need to dump the header
 	// for that, so we can easily run data extraction in the same step.
@@ -294,14 +296,7 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 		return
 	}
 
-	parsed_header, err := http.ReadResponse(bufio.NewReader(bytes.NewReader(response.RawHeader)), nil)
-	if err != nil {
-		response.Error = err
-		return
-	}
-	response.ParsedHeader = parsed_header.Header
-
-	err = response.ReadBody(res.Body, r.MaxBodySize)
+	err = response.ReadBody(res, r.MaxBodySize, r.DecompressResponseBody)
 	if err != nil {
 		response.Error = err
 		return
@@ -312,8 +307,6 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 		response.Error = err
 		return
 	}
-
-	response.HTTPResponse = res
 
 	return
 }

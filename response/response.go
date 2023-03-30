@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"compress/gzip"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -26,13 +27,13 @@ type Response struct {
 	Error    error
 	Duration time.Duration
 
-	Header, Body TextStats
-	Extract      []string
+	Header, BodyStats TextStats
+	Extract           []string
 
 	HTTPResponse *http.Response
-	RawBody      []byte
+	Body         []byte
 	RawHeader    []byte
-	ParsedHeader http.Header
+	Decompressed bool
 
 	Hide bool // can be set by a filter, response should not be displayed
 }
@@ -61,7 +62,7 @@ func (r Response) String() string {
 	}
 
 	res := r.HTTPResponse
-	status := fmt.Sprintf("%7d %8d %8d   %-8v", res.StatusCode, r.Header.Bytes, r.Body.Bytes, r.Values)
+	status := fmt.Sprintf("%7d %8d %8d   %-8v", res.StatusCode, r.Header.Bytes, r.BodyStats.Bytes, r.Values)
 	if res.StatusCode >= 300 && res.StatusCode < 400 {
 		loc, ok := res.Header["Location"]
 		if ok {
@@ -117,37 +118,54 @@ func extractCommand(buf []byte, cmds [][]string) (data []string, err error) {
 
 // ReadBody reads at most maxBodySize bytes from the body and saves it to a buffer in the
 // Response struct for later processing.
-func (r *Response) ReadBody(body io.Reader, maxBodySize int) (err error) {
+func (r *Response) ReadBody(res *http.Response, maxBodySize int, decompress bool) (finalError error) {
+	var err error
+
 	// Read a limited amount of data from the response such that extraordinarily large
-	// responses don't slow down the scan. If the actual body is larger, it will be
+	// responses don't slow down the scan. If the actual bodyReader is larger, it will be
 	// closed preemptively, closing the TCP connection. The reason is that opening a
 	// new connection likely has a much lower performance impact than tranferring large
 	// amounts of unwanted data over the network.
+	bodyReader := io.NopCloser(io.LimitReader(res.Body, int64(maxBodySize)))
 
-	if strings.EqualFold(r.ParsedHeader.Get("Content-Encoding"), "gzip") {
-		body, err = gzip.NewReader(body)
-		if err != nil {
-			return err
+	if decompress {
+		switch strings.ToLower(res.Header.Get("Content-Encoding")) {
+		case "gzip":
+			r.Decompressed = true
+
+			bodyReader, err = gzip.NewReader(bodyReader)
+			if err != nil {
+				return fmt.Errorf("create gzip reader: %w", err)
+			}
+
+			defer func() {
+				err := bodyReader.Close()
+				if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && finalError == nil {
+					finalError = fmt.Errorf("close gzip reader: %w", err)
+				}
+			}()
+		default:
 		}
 	}
 
-	r.RawBody, err = io.ReadAll(io.LimitReader(body, int64(maxBodySize)))
-	if err != nil {
+	r.Body, err = io.ReadAll(bodyReader)
+	if err != nil && !(errors.Is(err, io.ErrUnexpectedEOF) && r.Decompressed) {
 		return err
 	}
 
-	r.Body, err = Count(bytes.NewReader(r.RawBody))
+	r.BodyStats, err = Count(bytes.NewReader(r.Body))
+
 	return err
 }
 
 // ExtractBody extracts data from the HTTP response body.
 func (r *Response) ExtractBody(targets []*regexp.Regexp) {
-	r.Extract = append(r.Extract, extractRegexp(r.RawBody, targets)...)
+	r.Extract = append(r.Extract, extractRegexp(r.Body, targets)...)
 }
 
 // ExtractBodyCommand extracts data from the HTTP response body by running an external command.
 func (r *Response) ExtractBodyCommand(cmds [][]string) (err error) {
-	data, err := extractCommand(r.RawBody, cmds)
+	data, err := extractCommand(r.Body, cmds)
 	if err != nil {
 		return err
 	}
@@ -177,11 +195,13 @@ type TextStats struct {
 }
 
 // Count counts the bytes, words and lines in the body.
-func Count(rd io.Reader) (stats TextStats, err error) {
+func Count(rd io.Reader) (TextStats, error) {
+	var stats TextStats
+
 	bufReader := bufio.NewReader(rd)
 	var previous, current byte
 	for {
-		current, err = bufReader.ReadByte()
+		current, err := bufReader.ReadByte()
 		if err == io.EOF {
 			break
 		}

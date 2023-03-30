@@ -59,11 +59,12 @@ type Options struct {
 	ShowPattern     []string
 	showPattern     []*regexp.Regexp
 
-	Extract     []string
-	extract     []*regexp.Regexp
-	ExtractPipe []string
-	extractPipe [][]string
-	MaxBodySize int
+	Extract              []string
+	extract              []*regexp.Regexp
+	ExtractPipe          []string
+	extractPipe          [][]string
+	MaxBodySize          int
+	DisableDecompression bool
 
 	LongRequest time.Duration
 
@@ -207,6 +208,7 @@ func AddCommand(c *cobra.Command) {
 	fs.StringArrayVar(&opts.Extract, "extract", nil, "extract `regex` from response header or body (can be specified multiple times)")
 	fs.StringArrayVar(&opts.ExtractPipe, "extract-pipe", nil, "pipe response body to `cmd` to extract data (can be specified multiple times)")
 	fs.IntVar(&opts.MaxBodySize, "max-body-size", 5, "read at most `n` MiB from a returned response body (used for extracting data from the body)")
+	fs.BoolVar(&opts.DisableDecompression, "disable-decompression", false, "disable automatic decompression of the response body")
 
 	// add transport options
 	response.AddTransportFlags(fs, &opts.TransportOptions)
@@ -433,6 +435,7 @@ func startRunners(ctx context.Context, opts *Options, in <-chan []string) (<-cha
 		runner := response.NewRunner(transport, opts.Request, in, out)
 		runner.MaxBodySize = opts.MaxBodySize * 1024 * 1024
 		runner.Extract = opts.extract
+		runner.DecompressResponseBody = !opts.DisableDecompression
 
 		runner.Client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			if len(via) <= opts.FollowRedirect {

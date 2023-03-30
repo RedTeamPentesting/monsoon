@@ -173,7 +173,7 @@ func (f FilterSize) Reject(r Response) bool {
 	}
 
 	for _, f := range f.bodyBytes {
-		if f(r.Body.Bytes) {
+		if f(r.BodyStats.Bytes) {
 			return true
 		}
 	}
@@ -196,9 +196,9 @@ func (f FilterRejectPattern) Reject(res Response) bool {
 		}
 	}
 
-	if res.RawBody != nil {
+	if res.Body != nil {
 		for _, r := range f.Pattern {
-			if r.Match(res.RawBody) {
+			if r.Match(res.Body) {
 				return true
 			}
 		}
@@ -222,9 +222,9 @@ func (f FilterAcceptPattern) Reject(res Response) bool {
 		}
 	}
 
-	if res.RawBody != nil {
+	if res.Body != nil {
 		for _, r := range f.Pattern {
-			if r.Match(res.RawBody) {
+			if r.Match(res.Body) {
 				return false
 			}
 		}
