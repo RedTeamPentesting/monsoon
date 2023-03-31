@@ -18,6 +18,10 @@ func TestParseRange(t *testing.T) {
 			Range{First: 2, Last: 2},
 		},
 		{
+			"1e1",
+			Range{First: 10, Last: 10},
+		},
+		{
 			"1-2",
 			Range{First: 1, Last: 2},
 		},
@@ -29,10 +33,38 @@ func TestParseRange(t *testing.T) {
 			"500-200",
 			Range{First: 500, Last: 200},
 		},
+		{
+			"-5-10",
+			Range{First: -5, Last: 10},
+		},
+		{
+			"-10--5",
+			Range{First: -10, Last: -5},
+		},
+		{
+			"1e1-1E2",
+			Range{First: 10, Last: 100},
+		},
+		{
+			"1-10e2",
+			Range{First: 1, Last: 1000},
+		},
+		{
+			"1-10e10",
+			Range{First: 1, Last: 100000000000},
+		},
+		{
+			"1e10-99999999999",
+			Range{First: 10000000000, Last: 99999999999},
+		},
+		{
+			"-10e2--10e1",
+			Range{First: -1000, Last: -100},
+		},
 	}
 
 	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
+		t.Run(test.Input, func(t *testing.T) {
 			r, err := NewRange(test.Input)
 			if err != nil {
 				t.Fatal(err)

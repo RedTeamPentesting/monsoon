@@ -3,8 +3,14 @@ package producer
 import (
 	"context"
 	"fmt"
+	"math"
+	"math/bits"
+	"regexp"
 	"strconv"
+	"strings"
 )
+
+var rangeRegex = regexp.MustCompile(`^(-?\d+(?:[eE]\d+)?)(?:-(-?\d+(?:[eE]\d+)?))?$`)
 
 // Range defines a range of values which should be tested.
 type Range struct {
@@ -13,19 +19,31 @@ type Range struct {
 
 // NewRange parses a range from the string s. Valid formats are `n` and `n-m`.
 func NewRange(s string) (r Range, err error) {
-	// test if it's a number only
-	n, err := strconv.Atoi(s)
-	if err == nil {
-		return Range{First: n, Last: n}, nil
-	}
+	matches := rangeRegex.FindStringSubmatch(s)
+	switch {
+	case len(matches) == 3 && matches[2] == "":
+		value, err := parseInt(matches[1])
+		if err != nil {
+			return Range{}, fmt.Errorf("parse single value: %w", err)
+		}
 
-	// otherwise assume it's a range
-	_, err = fmt.Sscanf(s, "%d-%d", &r.First, &r.Last)
-	if err != nil {
-		return Range{}, fmt.Errorf("wrong format for range, expected: first-last, got: %q", s)
-	}
+		return Range{First: value, Last: value}, nil
+	case len(matches) == 3:
+		first, err := parseInt(matches[1])
+		if err != nil {
+			return Range{}, fmt.Errorf("parse range start value %q: %w", matches[1], err)
+		}
 
-	return r, nil
+		last, err := parseInt(matches[2])
+		if err != nil {
+			return Range{}, fmt.Errorf("parse range end value: %q: %w", matches[2], err)
+		}
+
+		return Range{First: first, Last: last}, nil
+	default:
+		return Range{}, fmt.Errorf("invalid range expression: %s", s)
+
+	}
 }
 
 // Count returns the number of items in the range.
@@ -91,4 +109,46 @@ func (r *Ranges) Yield(ctx context.Context, ch chan<- string, count chan<- int) 
 	}
 
 	return nil
+}
+
+func parseInt(s string) (int, error) {
+	if !strings.HasPrefix(s, "-") && strings.Contains(s, "-") {
+		return 0, fmt.Errorf("invalid integer")
+	}
+
+	value, initialErr := strconv.Atoi(s)
+	if initialErr == nil {
+		return value, nil
+	}
+
+	var exp int
+
+	n, err := fmt.Sscanf(strings.TrimSpace(strings.ToLower(s))+"\n", "%de%d\n", &value, &exp)
+	if err != nil || n != 2 {
+		return 0, fmt.Errorf("invalid integer")
+	}
+
+	maxExp := math.Log10(math.MaxInt)
+	if exp > int(maxExp) {
+		return 0, fmt.Errorf("exponent %d is larger than the maximum of %d", exp, int(maxExp))
+	}
+
+	magnitude := int64(math.Pow10(exp))
+
+	negative := false
+	if value < 0 {
+		value = -value
+		negative = true
+	}
+
+	hi, lo := bits.Mul64(uint64(value), uint64(magnitude))
+	if hi != 0 || lo > math.MaxInt {
+		return 0, fmt.Errorf("%s is too large", s)
+	}
+
+	if negative {
+		return -int(lo), nil
+	}
+
+	return int(lo), nil
 }
