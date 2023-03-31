@@ -207,7 +207,7 @@ func (r *Reporter) dislayRequestAndResponse(res response.Response) {
 		return
 	}
 
-	r.term.Print(colored(34, Bold("\n―― Request: ―――――――――――――――――――――――――――――――――――――――")))
+	r.term.Print(colored(blue, Bold("\n―― Request: ―――――――――――――――――――――――――――――――――――――――")))
 	requestHeaderBytes, err := httputil.DumpRequestOut(res.HTTPResponse.Request, false)
 	if err != nil {
 		r.term.Print("Error: cannot dump request header: " + err.Error())
@@ -230,7 +230,7 @@ func (r *Reporter) dislayRequestAndResponse(res response.Response) {
 		r.term.Print(string(requestBodyBytes))
 	}
 
-	r.term.Print(colored(34, Bold("\n―― Response: ――――――――――――――――――――――――――――――――――――――")))
+	r.term.Print(colored(blue, Bold("\n―― Response: ――――――――――――――――――――――――――――――――――――――")))
 	r.term.Print(styleHeader(strings.TrimSpace(string(res.RawHeader))+"\n\n", ""))
 	if len(res.RawBody) != 0 {
 		r.term.Print(string(res.RawBody))
