@@ -63,12 +63,17 @@ func injectDefaultCommand(args []string) []string {
 }
 
 func main() {
+	resetTerminal := prepareTerminal()
+	defer resetTerminal()
+
 	os.Args = append(os.Args[:1], injectDefaultCommand(os.Args[1:])...)
 	cmdRoot.SetArgs(os.Args[1:])
 
 	err := cmdRoot.Execute()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+
+		resetTerminal()
 		os.Exit(1)
 	}
 }

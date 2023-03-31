@@ -17,3 +17,8 @@ func getTermWidth(fd int) int {
 	}
 	return width
 }
+
+// prepareTerminal does nothing on any other OS than Windows.
+func prepareTerminal() (reset func()) {
+	return func() {}
+}
