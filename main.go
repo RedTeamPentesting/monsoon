@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/RedTeamPentesting/monsoon/cmd/fuzz"
 	"github.com/RedTeamPentesting/monsoon/cmd/list"
@@ -11,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "built from source"
+var version = ""
 
 var cmdRoot = &cobra.Command{
 	Use:           "monsoon COMMAND [options]",
@@ -24,7 +25,7 @@ var cmdVersion = &cobra.Command{
 	Short: "Print the current version",
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("monsoon " + version)
+		fmt.Println("monsoon " + buildVersionString(version))
 	},
 }
 
@@ -72,4 +73,60 @@ func main() {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func buildVersionString(compileTimeVersion string) string {
+	fallback := compileTimeVersion
+	if fallback == "" {
+		fallback = "unknown version"
+	}
+
+	buildInfo, ok := debug.ReadBuildInfo()
+	if !ok {
+		return fallback
+	}
+
+	buildSetting := func(key string) (string, bool) {
+		for _, setting := range buildInfo.Settings {
+			if setting.Key == key {
+				return setting.Value, true
+			}
+		}
+
+		return "", false
+	}
+
+	vcs, ok := buildSetting("vcs")
+	if !ok {
+		return fallback
+	}
+
+	commit, _ := buildSetting("vcs.revision")
+	if !ok {
+		return version
+	}
+
+	dirty, ok := buildSetting("vcs.modified")
+	if ok && dirty == "true" && commit != "" {
+		dirty = " (dirty)"
+	}
+
+	if compileTimeVersion != "" {
+		versionString := compileTimeVersion
+		if commit != "" {
+			versionString += "-" + shortCommit(commit) + dirty
+		}
+
+		return versionString
+	}
+
+	return fmt.Sprintf("built from %s revision %s%s", vcs, commit, dirty)
+}
+
+func shortCommit(commit string) string {
+	if len(commit) < 8 {
+		return commit
+	}
+
+	return commit[:8]
 }
