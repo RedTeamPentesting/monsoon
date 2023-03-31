@@ -232,8 +232,8 @@ func (r *Reporter) dislayRequestAndResponse(res response.Response) {
 
 	r.term.Print(colored(blue, Bold("\n―― Response: ――――――――――――――――――――――――――――――――――――――")))
 	r.term.Print(styleHeader(strings.TrimSpace(string(res.RawHeader))+"\n\n", ""))
-	if len(res.RawBody) != 0 {
-		r.term.Print(string(res.RawBody))
+	if len(res.Body) != 0 {
+		r.term.Print(string(res.Body))
 	}
 }
 

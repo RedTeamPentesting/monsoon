@@ -320,7 +320,7 @@ func (r *Request) Apply(values []string) (*http.Request, error) {
 	var req *http.Request
 
 	// if a template file is given, read the HTTP request from it as a basis
-	if r.internalTemplateBuffer != nil {
+	if r.TemplateFile != "" {
 		target, err := url.Parse(targetURL)
 		if err != nil {
 			return nil, err

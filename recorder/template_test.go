@@ -77,8 +77,12 @@ foobar`)
 					t.Fatal(err)
 				}
 
+				t.Cleanup(func() { _ = os.Remove(fn) })
+
 				req := request.New([]string{"FUZZ"})
 				req.URL = "https://host"
+				req.TemplateFile = fn
+
 				return req
 			},
 			want: Template{
