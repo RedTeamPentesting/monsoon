@@ -277,6 +277,10 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 
 	response.URL = req.URL.String()
 
+	if r.DecompressResponseBody {
+		addHeader(req, "Accept-Encoding", "gzip")
+	}
+
 	start := time.Now()
 	res, err := r.Client.Do(req.WithContext(ctx))
 	response.Duration = time.Since(start)
@@ -322,4 +326,14 @@ func (r *Runner) Run(ctx context.Context) {
 		case r.output <- res:
 		}
 	}
+}
+
+func addHeader(req *http.Request, name string, value string) {
+	for _, existingValue := range req.Header.Values(name) {
+		if strings.EqualFold(existingValue, value) {
+			return
+		}
+	}
+
+	req.Header.Add(name, value)
 }
