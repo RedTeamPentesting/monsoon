@@ -573,8 +573,13 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 		})
 	}
 
+	targetURL, err := opts.Request.TargetURL()
+	if err != nil {
+		return err
+	}
+
 	// run the reporter
-	term.Printf(reporter.Bold("Target URL:")+" %v\n\n", opts.Request.GetURL())
+	term.Printf(reporter.Bold("Target URL:")+" %v\n\n", targetURL)
 	reporter := reporter.New(term, opts.LongRequest)
 	return reporter.Display(responseCh, countCh)
 }

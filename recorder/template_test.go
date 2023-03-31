@@ -23,7 +23,7 @@ func TestTemplate(t *testing.T) {
 		}
 	}()
 
-	var tests = []struct {
+	tests := []struct {
 		request func() *request.Request
 		want    Template
 	}{
@@ -72,13 +72,12 @@ Accept: image/jpeg
 X-foo: bar
 
 foobar`)
-				err := os.WriteFile(fn, data, 0644)
+				err := os.WriteFile(fn, data, 0o644)
 				if err != nil {
 					t.Fatal(err)
 				}
 
 				req := request.New([]string{"FUZZ"})
-				req.TemplateFile = fn
 				req.URL = "https://host"
 				return req
 			},

@@ -13,6 +13,7 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // Header is an HTTP header that implements the pflag.Value interface.
@@ -161,7 +162,9 @@ type Request struct {
 
 	UserPass string // user:password for HTTP basic auth
 
-	TemplateFile string // used to read the request from a file
+	TemplateFile           string // used to read the request from a file
+	internalTemplateBuffer []byte
+	templateMutex          sync.Mutex
 
 	Names []string // these string are being replaced by a value in a specific http request
 
@@ -176,6 +179,27 @@ func New(names []string) *Request {
 	}
 }
 
+func (r *Request) template() ([]byte, error) {
+	r.templateMutex.Lock()
+	defer r.templateMutex.Unlock()
+
+	if r.TemplateFile == "" {
+		return nil, nil
+	}
+
+	if r.internalTemplateBuffer == nil {
+		fmt.Println("reading template")
+		buf, err := os.ReadFile(r.TemplateFile)
+		if err != nil {
+			return nil, err
+		}
+
+		r.internalTemplateBuffer = buf
+	}
+
+	return r.internalTemplateBuffer, nil
+}
+
 func replaceTemplate(s, template, value string) string {
 	if !strings.Contains(s, template) {
 		return s
@@ -184,19 +208,16 @@ func replaceTemplate(s, template, value string) string {
 	return strings.Replace(s, template, value, -1)
 }
 
-func readRequestFromFile(filename string, target *url.URL, replace func([]byte) []byte) (*http.Request, error) {
-	buf, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
+func requestFromBuffer(buf []byte, target *url.URL, replace func([]byte) []byte) (*http.Request, error) {
 	// replace the placeholder in the file we just read
-	buf = replace(buf)
+	if replace != nil {
+		buf = replace(buf)
+	}
 
 	rd := bufio.NewReader(bytes.NewReader(buf))
 	req, err := http.ReadRequest(rd)
 	if err != nil {
-		return nil, fmt.Errorf("error reading HTTP request from %v: %v", filename, err)
+		return nil, fmt.Errorf("parse HTTP request: %w", err)
 	}
 
 	// append the rest of the file to the body
@@ -247,21 +268,27 @@ func readRequestFromFile(filename string, target *url.URL, replace func([]byte) 
 	return req, nil
 }
 
-func (r *Request) GetURL() string {
+func (r *Request) TargetURL() (string, error) {
 	if r.TemplateFile == "" {
-		return r.URL
+		return r.URL, nil
 	}
 
 	target, err := url.Parse(r.URL)
 	if err != nil {
-		return r.URL
+		return r.URL, nil
 	}
 
-	req, err := readRequestFromFile(r.TemplateFile, target, func(b []byte) []byte { return b })
+	tmpl, err := r.template()
 	if err != nil {
-		return r.URL
+		return "", fmt.Errorf("read request template: %w", err)
 	}
-	return req.URL.String()
+
+	req, err := requestFromBuffer(tmpl, target, nil)
+	if err != nil {
+		return "", fmt.Errorf("parse request template: %w", err)
+	}
+
+	return req.URL.String(), nil
 }
 
 // Apply replaces the template with value in all fields of the request and
@@ -293,15 +320,20 @@ func (r *Request) Apply(values []string) (*http.Request, error) {
 	var req *http.Request
 
 	// if a template file is given, read the HTTP request from it as a basis
-	if r.TemplateFile != "" {
+	if r.internalTemplateBuffer != nil {
 		target, err := url.Parse(targetURL)
 		if err != nil {
 			return nil, err
 		}
 
-		req, err = readRequestFromFile(r.TemplateFile, target, insertValueBytes)
+		tmpl, err := r.template()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("read request template: %w", err)
+		}
+
+		req, err = requestFromBuffer(tmpl, target, insertValueBytes)
+		if err != nil {
+			return nil, fmt.Errorf("parse request template: %w", err)
 		}
 
 		if len(body) > 0 {

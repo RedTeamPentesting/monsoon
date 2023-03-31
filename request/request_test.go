@@ -18,7 +18,7 @@ import (
 )
 
 func TestHeaderSet(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		start  http.Header
 		values []string
 		item   string
@@ -222,7 +222,7 @@ func checkBody(body string) CheckFunc {
 }
 
 func TestRequestApply(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		URL  string
 		File string
 
@@ -831,7 +831,7 @@ Host: server:1234
 			var filename string
 			if test.File != "" {
 				filename = filepath.Join(tempdir, "test-"+strings.Replace(t.Name(), "/", "_", -1))
-				err := os.WriteFile(filename, []byte(test.File), 0644)
+				err := os.WriteFile(filename, []byte(test.File), 0o644)
 				if err != nil {
 					t.Fatal(err)
 				}
