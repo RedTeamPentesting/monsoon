@@ -165,21 +165,23 @@ func (opts *Options) valid() (err error) {
 		opts.TransportOptions.Network = "tcp6"
 	}
 
+	var ignoredOptions []string
+
 	if opts.IsTest {
 		if opts.Threads > 0 {
-			fmt.Println("--threads is redundant for test mode.")
+			ignoredOptions = append(ignoredOptions, "threads")
 		}
 
 		if opts.RequestsPerSecond > 0 {
-			fmt.Println("--requests-per-second is redundant for test mode.")
+			ignoredOptions = append(ignoredOptions, "requests-per-second")
 		}
 
 		if opts.Skip > 0 {
-			fmt.Println("--skip is redundant for test mode.")
+			ignoredOptions = append(ignoredOptions, "skip")
 		}
 
 		if opts.Limit > 0 {
-			fmt.Println("--limit is redundant for test mode.")
+			ignoredOptions = append(ignoredOptions, "limit")
 		}
 
 		opts.Limit = 1
@@ -187,6 +189,11 @@ func (opts *Options) valid() (err error) {
 
 		if len(opts.Values) > 0 {
 			opts.Limit = len(opts.Values)
+		}
+
+		if len(ignoredOptions) > 0 {
+			fmt.Fprintf(os.Stderr, reporter.Dim("Warning: The following options are ignored in test mode: %s\n"),
+				strings.Join(ignoredOptions, ", "))
 		}
 	}
 
@@ -503,6 +510,7 @@ func startRunners(ctx context.Context, opts *Options, in <-chan []string) (<-cha
 		runner.MaxBodySize = opts.MaxBodySize * 1024 * 1024
 		runner.Extract = opts.extract
 		runner.DecompressResponseBody = !opts.DisableDecompression
+		runner.PreserveRequestBody = opts.IsTest
 
 		runner.Client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
 			if len(via) <= opts.FollowRedirect {
@@ -647,12 +655,8 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	// run the reporter
 	term.Printf(reporter.Bold("Target URL:")+" %v\n\n", targetURL)
-	reporter := reporter.New(term, opts.LongRequest)
+	reporter := reporter.New(term, opts.LongRequest, opts.IsTest)
 	err = reporter.Display(responseCh, countCh)
-
-	if opts.IsTest {
-		reporter.PrintLastReponse(true)
-	}
 
 	return err
 }

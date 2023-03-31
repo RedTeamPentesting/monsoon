@@ -1,11 +1,13 @@
 package response
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"net/url"
@@ -30,6 +32,8 @@ type Runner struct {
 	Client                 *http.Client
 	Transport              *http.Transport
 	DecompressResponseBody bool
+
+	PreserveRequestBody bool
 
 	input  <-chan []string
 	output chan<- Response
@@ -275,6 +279,18 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 		return
 	}
 
+	var preservedBody []byte
+
+	if r.PreserveRequestBody {
+		preservedBody, err = io.ReadAll(req.Body)
+		if err != nil {
+			response.Error = InvalidRequest{err}
+			return
+		}
+
+		req.Body = io.NopCloser(bytes.NewReader(preservedBody))
+	}
+
 	response.URL = req.URL.String()
 
 	if r.DecompressResponseBody {
@@ -290,6 +306,9 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 	}
 
 	response.HTTPResponse = res
+	if len(preservedBody) > 0 {
+		res.Request.Body = io.NopCloser(bytes.NewReader(preservedBody))
+	}
 
 	// dump the header and extract data now so the stats about the header are
 	// present when the filter runs in the next step. We need to dump the header

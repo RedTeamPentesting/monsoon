@@ -25,6 +25,14 @@ const (
 )
 
 func colorStatusCode(statusCode int, format string) string {
+	if format == "" {
+		format = "%d"
+	}
+
+	return fmt.Sprintf(coloredByStatusCode(statusCode, format), statusCode)
+}
+
+func coloredByStatusCode(statusCode int, s string) string {
 	var color int
 
 	switch statusCode / 100 {
@@ -40,11 +48,7 @@ func colorStatusCode(statusCode int, format string) string {
 		color = red
 	}
 
-	if format == "" {
-		format = "%d"
-	}
-
-	return fmt.Sprintf("\033[%dm"+format+"\033[0m", color, statusCode)
+	return fmt.Sprintf("\033[%dm", color) + s + "\033[0m"
 }
 
 func colored(color int, s string) string {

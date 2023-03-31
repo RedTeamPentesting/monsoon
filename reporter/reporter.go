@@ -1,11 +1,13 @@
 package reporter
 
 import (
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
 	"net/http/httputil"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,15 +17,15 @@ import (
 
 // Reporter prints the Responses to a terminal.
 type Reporter struct {
-	term         cli.Terminal
-	longRequest  time.Duration
-	lastResponse response.Response
+	term                    cli.Terminal
+	longRequest             time.Duration
+	printRequestAndResponse bool
 }
 
 // New returns a new reporter. For requests which took longer than longRequest
 // to process, the time is shown.
-func New(term cli.Terminal, longRequest time.Duration) *Reporter {
-	return &Reporter{term: term, longRequest: longRequest}
+func New(term cli.Terminal, longRequest time.Duration, printRequestAndResponse bool) *Reporter {
+	return &Reporter{term: term, longRequest: longRequest, printRequestAndResponse: printRequestAndResponse}
 }
 
 // HTTPStats collects statistics about several HTTP responses.
@@ -170,8 +172,12 @@ next_response:
 		}
 
 		last = resp.Values
-		r.lastResponse = resp
+
 		r.term.SetStatus(stats.Report(last))
+
+		if r.printRequestAndResponse {
+			defer r.dislayRequestAndResponse(resp)
+		}
 	}
 
 	r.term.Print("\n")
@@ -196,33 +202,92 @@ func sortedKeys(m map[string][]string) []string {
 	return keys
 }
 
-func (r *Reporter) PrintLastReponse(printRequest bool) error {
-	if r.lastResponse.HTTPResponse == nil {
-		return nil
+func (r *Reporter) dislayRequestAndResponse(res response.Response) {
+	if res.HTTPResponse == nil {
+		return
 	}
 
-	if printRequest {
-		r.term.Print(colored(34, "\nRequest:\n"))
-		request_header_bytes, err := httputil.DumpRequestOut(r.lastResponse.HTTPResponse.Request, false)
-		if err != nil {
-			return err
-		}
-		r.term.Print(Dim(string(request_header_bytes)))
-
-		request_body_bytes, err := io.ReadAll(r.lastResponse.HTTPResponse.Request.Body)
-		if err != nil {
-			return err
-		}
-
-		if len(request_body_bytes) != 0 {
-			r.term.Print(string(request_body_bytes))
-		}
-	}
-	r.term.Print(colored(34, "Response:\n"))
-	r.term.Print(Dim(string(r.lastResponse.RawHeader)))
-	if len(r.lastResponse.RawBody) != 0 {
-		r.term.Print(string(r.lastResponse.RawBody))
+	r.term.Print(colored(34, Bold("\n―― Request: ―――――――――――――――――――――――――――――――――――――――")))
+	requestHeaderBytes, err := httputil.DumpRequestOut(res.HTTPResponse.Request, false)
+	if err != nil {
+		r.term.Print("Error: cannot dump request header: " + err.Error())
+		return
 	}
 
-	return nil
+	// we need to override the request protocol version because DumpRequestOut
+	// sends the request through a mock transport that resets the version, so
+	// our best guess for the actual version that we sent is the response
+	// protocol version
+	r.term.Print(styleHeader(strings.TrimSpace(string(requestHeaderBytes))+"\n\n", res.HTTPResponse.Proto))
+
+	requestBodyBytes, err := io.ReadAll(res.HTTPResponse.Request.Body)
+	if err != nil {
+		r.term.Print("Error: cannot dump request body: " + err.Error())
+		return
+	}
+
+	if len(requestBodyBytes) != 0 {
+		r.term.Print(string(requestBodyBytes))
+	}
+
+	r.term.Print(colored(34, Bold("\n―― Response: ――――――――――――――――――――――――――――――――――――――")))
+	r.term.Print(styleHeader(strings.TrimSpace(string(res.RawHeader))+"\n\n", ""))
+	if len(res.RawBody) != 0 {
+		r.term.Print(string(res.RawBody))
+	}
+}
+
+func styleHeader(hdr string, requestVersion string) string {
+	scanner := bufio.NewScanner(strings.NewReader(hdr))
+	scanner.Split(bufio.ScanLines)
+
+	if !scanner.Scan() {
+		return ""
+	}
+
+	var sb strings.Builder
+
+	firstLine := scanner.Text()
+	if strings.HasPrefix(firstLine, "HTTP") {
+		sb.WriteString(styleFirstResponseLine(firstLine))
+	} else {
+		sb.WriteString(styleFirstRequestLine(firstLine, requestVersion))
+	}
+
+	sb.WriteString("\n")
+
+	for scanner.Scan() {
+		sb.WriteString(styleHeaderLine(scanner.Text()) + "\n")
+	}
+
+	return sb.String()
+}
+
+func styleFirstResponseLine(line string) string {
+	parts := strings.SplitN(line, " ", 3)
+	if len(parts) != 3 {
+		return line
+	}
+
+	code, _ := strconv.Atoi(parts[1])
+
+	return parts[0] + " " + Bold(coloredByStatusCode(code, strings.Join(parts[1:], " ")))
+}
+
+func styleFirstRequestLine(line string, version string) string {
+	parts := strings.SplitN(line, " ", 3)
+	if len(parts) != 3 {
+		return line
+	}
+
+	return Bold(parts[0]) + " " + Bold(colored(cyan, parts[1])) + " " + version
+}
+
+func styleHeaderLine(line string) string {
+	parts := strings.SplitN(line, ":", 2)
+	if len(parts) != 2 {
+		return line
+	}
+
+	return Dim(parts[0]+":") + parts[1]
 }
