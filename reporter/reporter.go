@@ -207,7 +207,7 @@ func (r *Reporter) dislayRequestAndResponse(res response.Response) {
 		return
 	}
 
-	r.term.Print(colored(blue, Bold("\n―― Request: ―――――――――――――――――――――――――――――――――――――――")))
+	r.term.Print(delimiter("Request"))
 	requestHeaderBytes, err := httputil.DumpRequestOut(res.HTTPResponse.Request, false)
 	if err != nil {
 		r.term.Print("Error: cannot dump request header: " + err.Error())
@@ -230,8 +230,14 @@ func (r *Reporter) dislayRequestAndResponse(res response.Response) {
 		r.term.Print(string(requestBodyBytes))
 	}
 
-	r.term.Print(colored(blue, Bold("\n―― Response: ――――――――――――――――――――――――――――――――――――――")))
+	if res.Decompressed {
+		r.term.Print(delimiter("Decompressed Response"))
+	} else {
+		r.term.Print(delimiter("Response"))
+	}
+
 	r.term.Print(styleHeader(strings.TrimSpace(string(res.RawHeader))+"\n\n", ""))
+
 	if len(res.Body) != 0 {
 		r.term.Print(string(res.Body))
 	}
@@ -280,7 +286,7 @@ func styleFirstRequestLine(line string, version string) string {
 		return line
 	}
 
-	return Bold(parts[0]) + " " + Bold(colored(cyan, parts[1])) + " " + version
+	return Bold(parts[0]) + " " + colored(cyan, Bold(parts[1])) + " " + version
 }
 
 func styleHeaderLine(line string) string {
@@ -290,4 +296,13 @@ func styleHeaderLine(line string) string {
 	}
 
 	return Dim(parts[0]+":") + parts[1]
+}
+
+func delimiter(name string) string {
+	repeats := 50 - len(name)
+	if repeats < 1 {
+		repeats = 1
+	}
+
+	return colored(blue, Bold("\n―― "+name+": "+strings.Repeat("―", repeats)))
 }
