@@ -34,7 +34,7 @@ func TestFile(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			src := NewFile(strings.NewReader(test.Input))
+			src := NewFile(strings.NewReader(test.Input), true)
 
 			// test the source twice, so we check if it really yields the same
 			// values

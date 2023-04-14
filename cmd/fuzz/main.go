@@ -325,7 +325,7 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 
 	// handle old user interface, read from stdin
 	case opts.Filename == "-":
-		src := producer.NewFile(os.Stdin)
+		src := producer.NewFile(os.Stdin, false)
 		multiplexer.AddSource("FUZZ", src)
 
 		return multiplexer, nil
@@ -337,7 +337,7 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 			return nil, err
 		}
 
-		src := producer.NewFile(file)
+		src := producer.NewFile(file, true)
 		multiplexer.AddSource("FUZZ", src)
 
 		return multiplexer, nil
@@ -347,7 +347,7 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 			inValues = append(inValues, []byte(v)...)
 			inValues = append(inValues, []byte("\n")...)
 		}
-		multiplexer.AddSource("FUZZ", producer.NewFile(bytes.NewReader(inValues)))
+		multiplexer.AddSource("FUZZ", producer.NewFile(bytes.NewReader(inValues), true))
 		return multiplexer, nil
 	}
 
@@ -364,17 +364,17 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 
 		switch r.Type {
 		case "file":
-			var f *os.File
 			if r.Options == "-" {
-				f = os.Stdin
+				multiplexer.AddSource(r.Name, producer.NewFile(os.Stdin, false))
 			} else {
-				f, err = os.Open(r.Options)
+				f, err := os.Open(r.Options)
 				if err != nil {
 					return nil, fmt.Errorf("file source: %w", err)
 				}
+
+				multiplexer.AddSource(r.Name, producer.NewFile(f, true))
 			}
 
-			multiplexer.AddSource(r.Name, producer.NewFile(f))
 		case "range":
 			rangeFormat := "%d"
 

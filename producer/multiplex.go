@@ -69,7 +69,7 @@ func (m *Multiplexer) Run(ctx context.Context, ch chan<- []string, count chan<- 
 }
 
 func run(ctx context.Context, resultChan chan<- []string, sourceCountChan chan<- sourceCount, sources []Source, partResult []string, countKnownSubtree bool) error {
-	var eg errgroup.Group
+	eg, ctx := errgroup.WithContext(ctx)
 
 	src := sources[0]
 	sources = sources[1:]
@@ -110,7 +110,21 @@ func run(ctx context.Context, resultChan chan<- []string, sourceCountChan chan<-
 
 		partResult = append(partResult, "")
 
-		for v := range ch {
+		for {
+			var (
+				v  string
+				ok bool
+			)
+
+			select {
+			case <-ctx.Done():
+				return nil
+			case v, ok = <-ch:
+				if !ok {
+					return nil
+				}
+			}
+
 			values := make([]string, len(partResult))
 			copy(values, partResult)
 
@@ -136,8 +150,6 @@ func run(ctx context.Context, resultChan chan<- []string, sourceCountChan chan<-
 				return nil
 			}
 		}
-
-		return nil
 	})
 
 	return eg.Wait()

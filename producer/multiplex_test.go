@@ -44,7 +44,7 @@ func TestMultiplex(t *testing.T) {
 		{
 			names: []string{"FUZZ"},
 			sources: []Source{
-				NewFile(strings.NewReader("1\n2\n3")),
+				NewFile(strings.NewReader("1\n2\n3"), true),
 			},
 			result: [][]string{
 				{"1"},
@@ -109,7 +109,7 @@ func TestMultiplex(t *testing.T) {
 			names: []string{"FUZZ", "FUZ2Z", "FUZ3Z"},
 			sources: []Source{
 				mustParseRanges("1-3"),
-				NewFile(strings.NewReader("a\nb\n")),
+				NewFile(strings.NewReader("a\nb\n"), true),
 				mustParseRanges("10-11"),
 			},
 			result: [][]string{
