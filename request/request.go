@@ -188,13 +188,49 @@ func (r *Request) template() ([]byte, error) {
 	}
 
 	if r.internalTemplateBuffer == nil {
-		fmt.Println("reading template")
 		buf, err := os.ReadFile(r.TemplateFile)
 		if err != nil {
 			return nil, err
 		}
 
-		r.internalTemplateBuffer = buf
+		// the Go http library is unable to parse "HTTP/2", so we replace it by "HTTP/2.0"
+		// see https://stackoverflow.com/a/62388961
+
+		firstLine, rest, linefeedFound := bytes.Cut(buf, []byte("\n"))
+
+		if !linefeedFound {
+			// consider everything as the first line
+			firstLine = buf
+			rest = nil
+		}
+
+		suffix := []byte("HTTP/2")
+		replacement := []byte("HTTP/2.0")
+
+		// handle additional CR (line ending is \r\n)
+		if bytes.HasSuffix(firstLine, []byte("\r")) {
+			suffix = append(suffix, '\r')
+			replacement = append(replacement, '\r')
+		}
+
+		if bytes.HasSuffix(firstLine, suffix) {
+			firstLine = bytes.TrimSuffix(firstLine, []byte(suffix))
+
+			// build new buffer so we can squezee the longer text in
+			newbuf := make([]byte, 0, len(buf)+2)
+			newbuf = append(newbuf, firstLine...)
+			newbuf = append(newbuf, replacement...)
+
+			firstLine = newbuf
+		}
+
+		// put it back together
+		if linefeedFound {
+			firstLine = append(firstLine, '\n')
+			firstLine = append(firstLine, rest...)
+		}
+
+		r.internalTemplateBuffer = firstLine
 	}
 
 	return r.internalTemplateBuffer, nil

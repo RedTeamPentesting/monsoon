@@ -907,3 +907,59 @@ Host: server:1234
 		})
 	}
 }
+
+func TestTemplateHTTP2(t *testing.T) {
+	tests := []struct {
+		input  []byte
+		output []byte
+	}{
+		{
+			input:  []byte("GET / HTTP/1.1\nHost: www.example.com\n\n"),
+			output: []byte("GET / HTTP/1.1\nHost: www.example.com\n\n"),
+		},
+		{
+			input:  []byte("GET / HTTP/2\nHost: www.example.com\n\n"),
+			output: []byte("GET / HTTP/2.0\nHost: www.example.com\n\n"),
+		},
+		{
+			input:  []byte("GET / HTTP/2\r\nHost: www.example.com\r\n\r\n"),
+			output: []byte("GET / HTTP/2.0\r\nHost: www.example.com\r\n\r\n"),
+		},
+		{
+			input:  []byte("GET / HTTP/2"),
+			output: []byte("GET / HTTP/2.0"),
+		},
+		{
+			input:  []byte("GET / HTTP/2\n"),
+			output: []byte("GET / HTTP/2.0\n"),
+		},
+		{
+			input:  []byte("GET / HTTP/2\r\n"),
+			output: []byte("GET / HTTP/2.0\r\n"),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run("", func(t *testing.T) {
+			tempfile := t.TempDir() + "request-template.txt"
+
+			err := os.WriteFile(tempfile, test.input, 0o600)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			req := &Request{
+				TemplateFile: tempfile,
+			}
+
+			out, err := req.template()
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if !cmp.Equal(test.output, out) {
+				t.Error(cmp.Diff(test.output, out))
+			}
+		})
+	}
+}
