@@ -926,6 +926,10 @@ func TestTemplateHTTP2(t *testing.T) {
 			output: []byte("GET / HTTP/2.0\r\nHost: www.example.com\r\n\r\n"),
 		},
 		{
+			input:  []byte("GET / HTTP/1.1"),
+			output: []byte("GET / HTTP/1.1"),
+		},
+		{
 			input:  []byte("GET / HTTP/2"),
 			output: []byte("GET / HTTP/2.0"),
 		},
@@ -936,6 +940,10 @@ func TestTemplateHTTP2(t *testing.T) {
 		{
 			input:  []byte("GET / HTTP/2\r\n"),
 			output: []byte("GET / HTTP/2.0\r\n"),
+		},
+		{
+			input:  []byte("GET /HTTP/2.0 HTTP/1.1\nHost: www.example.com\n"),
+			output: []byte("GET /HTTP/2.0 HTTP/1.1\nHost: www.example.com\n"),
 		},
 	}
 
