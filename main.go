@@ -109,21 +109,23 @@ func buildVersionString(compileTimeVersion string) string {
 		return version
 	}
 
+	var dirtyTag string
+
 	dirty, ok := buildSetting("vcs.modified")
 	if ok && dirty == "true" && commit != "" {
-		dirty = " (dirty)"
+		dirtyTag = " (dirty)"
 	}
 
 	if compileTimeVersion != "" {
 		versionString := compileTimeVersion
 		if commit != "" {
-			versionString += "-" + shortCommit(commit) + dirty
+			versionString += "-" + shortCommit(commit) + dirtyTag
 		}
 
 		return versionString
 	}
 
-	return fmt.Sprintf("built from %s revision %s%s", vcs, commit, dirty)
+	return fmt.Sprintf("built from %s revision %s%s", vcs, commit, dirtyTag)
 }
 
 func shortCommit(commit string) string {
