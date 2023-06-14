@@ -86,7 +86,8 @@ func (f *FilterSkip) Select(ctx context.Context, in <-chan []string) <-chan []st
 
 // FilterLimit passes through at most Max values.
 type FilterLimit struct {
-	Max int
+	Max            int
+	CancelProducer func()
 }
 
 // ensure FilterLimit implements Filter.
@@ -124,6 +125,8 @@ func (f *FilterLimit) Select(ctx context.Context, in <-chan []string) <-chan []s
 
 	go func() {
 		defer close(out)
+		defer f.CancelProducer()
+
 		var cur int
 		for {
 			var v []string
@@ -139,7 +142,8 @@ func (f *FilterLimit) Select(ctx context.Context, in <-chan []string) <-chan []s
 			}
 
 			if cur >= f.Max {
-				// drop value, receive next
+				// cancel producer, drop value, receive next
+				f.CancelProducer()
 				continue
 			}
 			cur++

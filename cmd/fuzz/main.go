@@ -479,7 +479,7 @@ func setupResponseFilters(opts *Options) ([]response.Filter, error) {
 	return filters, nil
 }
 
-func setupValueFilters(ctx context.Context, opts *Options, valueCh <-chan []string, countCh <-chan int) (<-chan []string, <-chan int) {
+func setupValueFilters(ctx context.Context, opts *Options, cancelProducer func(), valueCh <-chan []string, countCh <-chan int) (<-chan []string, <-chan int) {
 	if opts.Skip > 0 {
 		f := &producer.FilterSkip{Skip: opts.Skip}
 		countCh = f.Count(ctx, countCh)
@@ -487,7 +487,7 @@ func setupValueFilters(ctx context.Context, opts *Options, valueCh <-chan []stri
 	}
 
 	if opts.Limit > 0 {
-		f := &producer.FilterLimit{Max: opts.Limit}
+		f := &producer.FilterLimit{Max: opts.Limit, CancelProducer: cancelProducer}
 		countCh = f.Count(ctx, countCh)
 		valueCh = f.Select(ctx, valueCh)
 	}
@@ -586,7 +586,10 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	var countCh <-chan int = cch
 
 	// start produces and initialize multiplexer
-	multiplexer, err := setupProducer(ctx, opts)
+	producerCtx, producerCancel := context.WithCancel(ctx)
+	defer producerCancel()
+
+	multiplexer, err := setupProducer(producerCtx, opts)
 	if err != nil {
 		return err
 	}
@@ -595,11 +598,11 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	// run Multiplexer
 	g.Go(func() error {
-		return multiplexer.Run(ctx, vch, cch)
+		return multiplexer.Run(producerCtx, vch, cch)
 	})
 
 	// filter values (skip, limit)
-	valueCh, countCh = setupValueFilters(ctx, opts, valueCh, countCh)
+	valueCh, countCh = setupValueFilters(ctx, opts, producerCancel, valueCh, countCh)
 
 	// limit the throughput (if requested)
 	if opts.RequestsPerSecond > 0 {
