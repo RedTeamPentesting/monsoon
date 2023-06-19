@@ -98,7 +98,7 @@ func extractRegexp(buf []byte, targets []*regexp.Regexp) (data []string) {
 	return data
 }
 
-func extractCommand(buf []byte, cmds [][]string) (data []string, err error) {
+func extractCommand(extraEnv []string, buf []byte, cmds [][]string) (data []string, err error) {
 	for _, command := range cmds {
 		if len(command) < 1 {
 			panic("command is invalid")
@@ -106,6 +106,7 @@ func extractCommand(buf []byte, cmds [][]string) (data []string, err error) {
 		cmd := exec.Command(command[0], command[1:]...)
 		cmd.Stdin = bytes.NewReader(buf)
 		cmd.Stderr = os.Stderr
+		cmd.Env = append(os.Environ(), extraEnv...)
 
 		buf, err := cmd.Output()
 		if err != nil {
@@ -165,7 +166,14 @@ func (r *Response) ExtractBody(targets []*regexp.Regexp) {
 
 // ExtractBodyCommand extracts data from the HTTP response body by running an external command.
 func (r *Response) ExtractBodyCommand(cmds [][]string) (err error) {
-	data, err := extractCommand(r.Body, cmds)
+	// pass values in environment variables
+	env := make([]string, 0, len(r.Values)+1)
+	env = append(env, "MONSOON_VALUE="+r.Values[0])
+	for i, v := range r.Values {
+		env = append(env, fmt.Sprintf("MONSOON_VALUE%d=%s", i, v))
+	}
+
+	data, err := extractCommand(env, r.Body, cmds)
 	if err != nil {
 		return err
 	}

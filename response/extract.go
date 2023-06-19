@@ -13,6 +13,10 @@ type Extracter struct {
 // and feeding them the response body. Commands used to extract data are only
 // run for non-hidden responses, since this is expensive. Extraction is done in
 // a separate goroutine, which terminates when the input channel is closed.
+//
+// The values that were used to produce the request are passed in the environment
+// variable $MONSOON_VALUE (for the first one) and $MONSOON_VALUE1 to $MONSOON_VALUEN
+// if several values were used.
 func (e *Extracter) Run(in <-chan Response) <-chan Response {
 	ch := make(chan Response)
 
