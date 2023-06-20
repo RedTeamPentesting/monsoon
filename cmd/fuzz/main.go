@@ -623,7 +623,9 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 		Pattern:  opts.extract,
 		Commands: opts.extractPipe,
 	}
-	responseCh = extracter.Run(ctx, responseCh)
+
+	// make sure we have enough extracters for longer-running processes
+	responseCh = extracter.Run(ctx, 2*opts.Threads, responseCh)
 
 	if logfilePrefix != "" {
 		rec, err := recorder.New(logfilePrefix+".json", opts.Request)
