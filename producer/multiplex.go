@@ -108,7 +108,7 @@ func run(ctx context.Context, resultChan chan<- []string, sourceCountChan chan<-
 	eg.Go(func() error {
 		countKnown := countKnownSubtree
 
-		partResult = append(partResult, "")
+		partResult := append(partResult, "")
 
 		for {
 			var (
