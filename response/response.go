@@ -104,9 +104,13 @@ func extractCommand(ctx context.Context, extraEnv []string, buf []byte, cmds [][
 		if len(command) < 1 {
 			panic("command is invalid")
 		}
+
 		cmd := exec.CommandContext(ctx, command[0], command[1:]...)
 		cmd.Stdin = bytes.NewReader(buf)
-		cmd.Stderr = os.Stderr
+
+		// we throw away stderr here so that it does not break the output
+		cmd.Stderr = io.Discard
+
 		cmd.Env = append(os.Environ(), extraEnv...)
 
 		buf, err := cmd.Output()
