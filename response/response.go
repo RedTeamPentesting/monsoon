@@ -168,7 +168,11 @@ func (r *Response) ExtractBody(targets []*regexp.Regexp) {
 func (r *Response) ExtractBodyCommand(cmds [][]string) (err error) {
 	// pass values in environment variables
 	env := make([]string, 0, len(r.Values)+1)
-	env = append(env, "MONSOON_VALUE="+r.Values[0])
+
+	if len(r.Values) > 0 {
+		env = append(env, "MONSOON_VALUE="+r.Values[0])
+	}
+
 	for i, v := range r.Values {
 		env = append(env, fmt.Sprintf("MONSOON_VALUE%d=%s", i, v))
 	}
