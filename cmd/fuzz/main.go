@@ -240,7 +240,8 @@ func AddCommand(c *cobra.Command) {
 	fs.StringSliceVarP(&opts.Range, "range", "r", nil, "set range `from-to`")
 	fs.StringVar(&opts.RangeFormat, "range-format", "%d", "set `format` for range (when used with --range)")
 	fs.StringVarP(&opts.Filename, "file", "f", "", "read values from `filename`")
-	fs.StringArrayVar(&opts.Replace, "replace", []string{}, "add replace var `name:type:options` (valid types: 'file','range', and 'value', e.g. 'FUZZ:range:1-100'), mutually exclusive with --range and --file")
+	fs.StringArrayVar(&opts.Replace, "replace", []string{}, "add replace var `name:type:options` (valid types: 'file','range', "+
+		"and 'value', e.g. 'FUZZ:range:1-100'), mutually exclusive with --range and --file")
 
 	fs.StringVar(&opts.Logfile, "logfile", "", "write copy of printed messages to `filename`.log")
 	fs.StringVar(&opts.Logdir, "logdir", os.Getenv("MONSOON_LOG_DIR"), "automatically log all output to files in `dir`")
@@ -265,7 +266,8 @@ func AddCommand(c *cobra.Command) {
 	fs.StringArrayVar(&opts.ShowPattern, "show-pattern", nil, "show only responses containing `regex` in response header or body (can be specified multiple times)")
 
 	fs.StringArrayVar(&opts.Extract, "extract", nil, "extract `regex` from response header or body (can be specified multiple times)")
-	fs.StringArrayVar(&opts.ExtractPipe, "extract-pipe", nil, "pipe response body to `cmd` to extract data (can be specified multiple times)")
+	fs.StringArrayVar(&opts.ExtractPipe, "extract-pipe", nil, "pipe response body to `cmd` to extract data (can be specified multiple times, "+
+		"the current fuzz values are passed as environment variables $MONSOON_VALUE or $MONSOON_VALUE1-$MONSOON_VALUEN)")
 	fs.IntVar(&opts.MaxBodySize, "max-body-size", 5, "read at most `n` MiB from a returned response body (used for extracting data from the body)")
 	fs.BoolVar(&opts.DisableDecompression, "disable-decompression", false, "disable automatic decompression of the response body")
 

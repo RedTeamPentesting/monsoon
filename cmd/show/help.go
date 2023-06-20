@@ -23,7 +23,9 @@ Construct a request from scratch with a custom header, using the string
       --value hunter2 \
       https://www.example.com
 
-Load a request from the file 'request.txt', replacing the 'Accept' header:
+Load a request from the file 'request.txt' (note that the HTTP version
+specified in the template file is currently ignored), replacing the
+'Accept' header:
 
     monsoon show --template-file 'request.txt' \
       --header 'Accept: */*' \

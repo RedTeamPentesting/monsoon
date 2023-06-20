@@ -89,8 +89,9 @@ Only show responses which contain the pattern "The secret is: " in the response:
       --show-pattern 'The secret is: ' \
       https://example.com/FUZZ
 
-Load a request from the file 'template.txt', setting the 'User-Agent' header
-and replacing the string FUZZ from the file:
+Load a request from the file 'template.txt' (note that the HTTP version
+specified in the template file is currently ignored), setting the 'User-Agent'
+header and replacing the string FUZZ from the file:
 
     monsoon fuzz --range 1-500 \
       --template-file template.txt \

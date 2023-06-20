@@ -24,7 +24,7 @@ func AddFlags(r *Request, fs *pflag.FlagSet) {
 	fs.StringVarP(&r.Body, "data", "d", "", "transmit `data` in the HTTP request body")
 	fs.StringVarP(&r.UserPass, "user", "u", "", "use `user:password` for HTTP basic auth")
 
-	fs.StringVar(&r.TemplateFile, "template-file", "", "read HTTP request from `file`")
+	fs.StringVar(&r.TemplateFile, "template-file", "", "read HTTP request from `file` (the HTTP version specified in the file is ignored)")
 
 	// configure request
 	fs.BoolVar(&r.ForceChunkedEncoding, "force-chunked-encoding", false, `do not set the Content-Length HTTP header and use chunked encoding`)
