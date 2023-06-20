@@ -174,7 +174,7 @@ func (r *Response) ExtractBodyCommand(cmds [][]string) (err error) {
 	}
 
 	for i, v := range r.Values {
-		env = append(env, fmt.Sprintf("MONSOON_VALUE%d=%s", i, v))
+		env = append(env, fmt.Sprintf("MONSOON_VALUE%d=%s", i+1, v))
 	}
 
 	data, err := extractCommand(env, r.Body, cmds)
