@@ -29,6 +29,7 @@ type Response struct {
 
 	Header, BodyStats TextStats
 	Extract           []string
+	ExtractError      error
 
 	HTTPResponse *http.Response
 	Body         []byte
@@ -181,8 +182,9 @@ func (r *Response) ExtractBodyCommand(ctx context.Context, cmds [][]string) (err
 	if err != nil {
 		return err
 	}
+
 	r.Extract = append(r.Extract, data...)
-	return err
+	return nil
 }
 
 // ExtractHeader extracts data from an HTTP header. This fills r.Header.

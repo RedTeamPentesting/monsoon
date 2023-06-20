@@ -100,6 +100,10 @@ func FormatResponse(r response.Response, longRequest time.Duration) string {
 		status += Dim(" response took ") + Bold(colored(yellow, fmt.Sprintf("%.2fs", r.Duration.Seconds())))
 	}
 
+	if r.ExtractError != nil {
+		status += Bold(colored(red, "extract error: ")) + colored(red, r.ExtractError.Error())
+	}
+
 	return status
 }
 

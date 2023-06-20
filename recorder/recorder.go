@@ -48,6 +48,7 @@ type Response struct {
 	Header        response.TextStats `json:"header"`
 	Body          response.TextStats `json:"body"`
 	ExtractedData []string           `json:"extracted_data,omitempty"`
+	ExtractError  string             `json:"extract_error,omitempty"`
 }
 
 // New creates a new  recorder.
@@ -178,6 +179,9 @@ func NewResponse(r response.Response) (res Response) {
 	res.Header = r.Header
 	res.Body = r.BodyStats
 	res.ExtractedData = r.Extract
+	if r.ExtractError != nil {
+		res.ExtractError = r.ExtractError.Error()
+	}
 
 	return res
 }
