@@ -46,10 +46,17 @@ func (e *Extracter) Run(ctx context.Context, numWorkers int, in <-chan Response)
 
 func (e Extracter) handleResponses(ctx context.Context, in <-chan Response, out chan<- Response) {
 	for {
-		var res Response
+		var (
+			res Response
+			ok  bool
+		)
 
 		select {
-		case res = <-in:
+		case res, ok = <-in:
+			if !ok {
+				// channel is closed, no valid response received
+				return
+			}
 		case <-ctx.Done():
 			return
 		}
