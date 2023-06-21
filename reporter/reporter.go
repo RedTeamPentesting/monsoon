@@ -158,7 +158,7 @@ next_response:
 			var reqErr response.InvalidRequest
 			if errors.As(resp.Error, &reqErr) {
 				errString := cleanedErrorString(reqErr.Err)
-				stats.InvalidInputData[errString] = append(stats.InvalidInputData[errString], fmt.Sprintf("%q", resp.Values))
+				stats.InvalidInputData[errString] = append(stats.InvalidInputData[errString], formatValues(resp.Values))
 
 				continue
 			}
@@ -188,6 +188,14 @@ next_response:
 	}
 
 	return nil
+}
+
+func formatValues(values []string) string {
+	if len(values) == 1 {
+		return fmt.Sprintf("%q", values[0])
+	}
+
+	return fmt.Sprintf("%q", values)
 }
 
 func sortedKeys(m map[string][]string) []string {
