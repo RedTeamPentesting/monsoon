@@ -28,6 +28,11 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+const (
+	defaultNumberOfThreads = 5
+	defaultBufferSize      = 100000
+)
+
 // Options collect options for a run.
 
 type Options struct {
@@ -168,7 +173,7 @@ func (opts *Options) valid() (err error) {
 	var ignoredOptions []string
 
 	if opts.IsTest {
-		if opts.Threads > 0 {
+		if opts.Threads != defaultNumberOfThreads {
 			ignoredOptions = append(ignoredOptions, "threads")
 		}
 
@@ -176,17 +181,11 @@ func (opts *Options) valid() (err error) {
 			ignoredOptions = append(ignoredOptions, "requests-per-second")
 		}
 
-		if opts.Skip > 0 {
-			ignoredOptions = append(ignoredOptions, "skip")
-		}
-
-		if opts.Limit > 0 {
+		if opts.Limit < 0 || opts.Limit > 1 {
 			ignoredOptions = append(ignoredOptions, "limit")
 		}
 
 		opts.Limit = 1
-		opts.Skip = 0
-
 		if len(opts.Values) > 0 {
 			opts.Limit = len(opts.Values)
 		}
@@ -246,8 +245,8 @@ func AddCommand(c *cobra.Command) {
 	fs.StringVar(&opts.Logfile, "logfile", "", "write copy of printed messages to `filename`.log")
 	fs.StringVar(&opts.Logdir, "logdir", os.Getenv("MONSOON_LOG_DIR"), "automatically log all output to files in `dir`")
 
-	fs.IntVarP(&opts.Threads, "threads", "t", 5, "make as many as `n` parallel requests")
-	fs.IntVar(&opts.BufferSize, "buffer-size", 100000, "set number of buffered items to `n`")
+	fs.IntVarP(&opts.Threads, "threads", "t", defaultNumberOfThreads, "make as many as `n` parallel requests")
+	fs.IntVar(&opts.BufferSize, "buffer-size", defaultBufferSize, "set number of buffered items to `n`")
 	fs.IntVar(&opts.Skip, "skip", 0, "skip the first `n` requests")
 	fs.IntVar(&opts.Limit, "limit", 0, "only run `n` requests, then exit")
 	fs.Float64Var(&opts.RequestsPerSecond, "requests-per-second", 0, "do at most `n` requests per second (e.g. 0.5)")
