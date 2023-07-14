@@ -102,7 +102,25 @@ Try different passwords for the user admin with HTTP Basic authentication:
 
     monsoon fuzz --file passwords.txt \
       --hide-status 403 \
-	  --user admin:FUZZ \
+      --user admin:FUZZ \
+      http://example.com
+
+Load usernames and passwords from several files:
+
+    monsoon fuzz \
+      --replace USER:file:usernames.txt \
+      --replace PASS:file:passwords.txt \
+      --hide-status 403 \
+      --user USER:PASS \
+      http://example.com
+
+Load usernames and generate passwords with a script:
+
+    monsoon fuzz \
+      --replace USER:file:usernames.txt \
+      --replace PASS:exec:./gen_password.py \
+      --hide-status 403 \
+      --user USER:PASS \
       http://example.com
 
 

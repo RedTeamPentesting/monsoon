@@ -241,7 +241,7 @@ func AddCommand(c *cobra.Command) {
 	fs.StringVar(&opts.RangeFormat, "range-format", "%d", "set `format` for range (when used with --range)")
 	fs.StringVarP(&opts.Filename, "file", "f", "", "read values from `filename`")
 	fs.StringArrayVar(&opts.Replace, "replace", []string{}, "add replace var `name:type:options` (valid types: 'file','range', "+
-		"and 'value', e.g. 'FUZZ:range:1-100'), mutually exclusive with --range and --file")
+		"'exec', and 'value', e.g. 'FUZZ:range:1-100'), mutually exclusive with --range and --file")
 
 	fs.StringVar(&opts.Logfile, "logfile", "", "write copy of printed messages to `filename`.log")
 	fs.StringVar(&opts.Logdir, "logdir", os.Getenv("MONSOON_LOG_DIR"), "automatically log all output to files in `dir`")
@@ -404,6 +404,13 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 			multiplexer.AddSource(r.Name, src)
 		case "value":
 			multiplexer.AddSource(r.Name, producer.NewValue(r.Options))
+		case "exec":
+			err := producer.CheckExec(r.Options)
+			if err != nil {
+				return nil, fmt.Errorf("check replace %v: %w", r.Name, err)
+			}
+
+			multiplexer.AddSource(r.Name, producer.NewExec(r.Options))
 		default:
 			return nil, fmt.Errorf("unknown replace type %q", r.Type)
 		}

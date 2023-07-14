@@ -7,7 +7,7 @@ import (
 )
 
 func TestParseReplace(t *testing.T) {
-	var tests = []struct {
+	tests := []struct {
 		input   string
 		replace Replace
 		err     bool
@@ -58,6 +58,22 @@ func TestParseReplace(t *testing.T) {
 				Name:    "ZZ",
 				Type:    "range",
 				Options: "1-100",
+			},
+		},
+		{
+			input: "ID:exec:./gen_id.sh",
+			replace: Replace{
+				Name:    "ID",
+				Type:    "exec",
+				Options: "./gen_id.sh",
+			},
+		},
+		{
+			input: `ID:exec:./gen_id.sh from-to`,
+			replace: Replace{
+				Name:    "ID",
+				Type:    "exec",
+				Options: "./gen_id.sh from-to",
 			},
 		},
 	}
