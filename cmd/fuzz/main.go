@@ -30,7 +30,7 @@ import (
 
 const (
 	defaultNumberOfThreads = 5
-	defaultBufferSize      = 100000
+	defaultBufferSize      = 200000
 )
 
 // Options collect options for a run.
