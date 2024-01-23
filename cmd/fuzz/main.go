@@ -338,14 +338,14 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 		}
 
 		src := producer.NewRanges(ranges, opts.RangeFormat)
-		multiplexer.AddSource("FUZZ", src)
+		multiplexer.AddSource("FUZZ", src, true)
 
 		return multiplexer, nil
 
 	// handle old user interface, read from stdin
 	case opts.Filename == "-":
 		src := producer.NewFile(os.Stdin, false)
-		multiplexer.AddSource("FUZZ", src)
+		multiplexer.AddSource("FUZZ", src, true)
 
 		return multiplexer, nil
 
@@ -357,7 +357,7 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 		}
 
 		src := producer.NewFile(file, true)
-		multiplexer.AddSource("FUZZ", src)
+		multiplexer.AddSource("FUZZ", src, true)
 
 		return multiplexer, nil
 	case len(opts.Values) > 0:
@@ -366,7 +366,7 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 			inValues = append(inValues, []byte(v)...)
 			inValues = append(inValues, []byte("\n")...)
 		}
-		multiplexer.AddSource("FUZZ", producer.NewFile(bytes.NewReader(inValues), true))
+		multiplexer.AddSource("FUZZ", producer.NewFile(bytes.NewReader(inValues), true), true)
 		return multiplexer, nil
 	}
 
@@ -384,14 +384,14 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 		switch r.Type {
 		case "file":
 			if r.Options == "-" {
-				multiplexer.AddSource(r.Name, producer.NewFile(os.Stdin, false))
+				multiplexer.AddSource(r.Name, producer.NewFile(os.Stdin, false), true)
 			} else {
 				f, err := os.Open(r.Options)
 				if err != nil {
 					return nil, fmt.Errorf("file source: %w", err)
 				}
 
-				multiplexer.AddSource(r.Name, producer.NewFile(f, true))
+				multiplexer.AddSource(r.Name, producer.NewFile(f, true), true)
 			}
 
 		case "range":
@@ -419,16 +419,16 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 			}
 
 			src := producer.NewRanges(ranges, rangeFormat)
-			multiplexer.AddSource(r.Name, src)
+			multiplexer.AddSource(r.Name, src, true)
 		case "value":
-			multiplexer.AddSource(r.Name, producer.NewValue(r.Options))
+			multiplexer.AddSource(r.Name, producer.NewValue(r.Options), false)
 		case "exec":
 			err := producer.CheckExec(r.Options)
 			if err != nil {
 				return nil, fmt.Errorf("check replace %v: %w", r.Name, err)
 			}
 
-			multiplexer.AddSource(r.Name, producer.NewExec(r.Options))
+			multiplexer.AddSource(r.Name, producer.NewExec(r.Options), true)
 		default:
 			return nil, fmt.Errorf("unknown replace type %q", r.Type)
 		}
@@ -686,7 +686,7 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	// run the reporter
 	term.Printf(reporter.Bold("Target URL:")+" %v\n\n", targetURL)
-	reporter := reporter.New(term, opts.LongRequest, opts.IsTest)
+	reporter := reporter.New(term, opts.LongRequest, opts.IsTest, multiplexer.ShowValues)
 	err = reporter.Display(responseCh, countCh)
 
 	return err

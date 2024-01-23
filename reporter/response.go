@@ -67,7 +67,7 @@ func FormatResponse(r response.Response, longRequest time.Duration) string {
 	var values string
 	if len(r.Values) == 1 {
 		values = fmt.Sprintf("%-8v", r.Values[0])
-	} else {
+	} else if len(r.Values) != 0 {
 		values = "[" + strings.Join(r.Values, ", ") + "]"
 	}
 

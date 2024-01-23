@@ -8,8 +8,9 @@ import (
 
 // Multiplexer takes several sources of values and returns the cross product.
 type Multiplexer struct {
-	Names   []string
-	Sources []Source
+	Names      []string
+	Sources    []Source
+	ShowValues []bool
 }
 
 type sourceCount struct {
@@ -18,9 +19,10 @@ type sourceCount struct {
 }
 
 // AddSource adds a source with the given name.
-func (m *Multiplexer) AddSource(name string, src Source) {
+func (m *Multiplexer) AddSource(name string, src Source, showValue bool) {
 	m.Names = append(m.Names, name)
 	m.Sources = append(m.Sources, src)
+	m.ShowValues = append(m.ShowValues, showValue)
 }
 
 // Run runs the multiplexer until ctx is cancelled. Both ch and count will be

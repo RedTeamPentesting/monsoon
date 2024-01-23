@@ -20,12 +20,13 @@ type Reporter struct {
 	term                    cli.Terminal
 	longRequest             time.Duration
 	printRequestAndResponse bool
+	showValues              []bool
 }
 
 // New returns a new reporter. For requests which took longer than longRequest
 // to process, the time is shown.
-func New(term cli.Terminal, longRequest time.Duration, printRequestAndResponse bool) *Reporter {
-	return &Reporter{term: term, longRequest: longRequest, printRequestAndResponse: printRequestAndResponse}
+func New(term cli.Terminal, longRequest time.Duration, printRequestAndResponse bool, showValues []bool) *Reporter {
+	return &Reporter{term: term, longRequest: longRequest, printRequestAndResponse: printRequestAndResponse, showValues: showValues}
 }
 
 // HTTPStats collects statistics about several HTTP responses.
@@ -113,6 +114,16 @@ func (h *HTTPStats) Report(last []string) (res []string) {
 	return res
 }
 
+func filterArray(toFilter []string, showValue []bool) []string {
+	var out []string
+	for i, v := range toFilter {
+		if showValue[i] {
+			out = append(out, v)
+		}
+	}
+	return out
+}
+
 // Display shows incoming Responses.
 func (r *Reporter) Display(ch <-chan response.Response, countChannel <-chan int) error {
 	r.term.Printf(Bold("%7s %8s %8s   %-8s %s\n"), "status", "header", "body", "value", "extract")
@@ -138,6 +149,7 @@ next_response:
 
 		select {
 		case resp, ok = <-ch:
+			resp.Values = filterArray(resp.Values, r.showValues)
 			if !ok {
 				break next_response
 			}
