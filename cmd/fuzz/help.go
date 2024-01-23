@@ -64,6 +64,20 @@ You can also request multiple ranges:
       --header 'Cookie: sessionid=FUZZ' \
       --hide-status 500 https://example.com/login/session
 
+You can also start ranges from the end:
+
+    monsoon fuzz --range 10000-1 \
+      --header 'Cookie: sessionid=FUZZ' \
+      --hide-status 500 https://example.com/login/session
+
+You can also specify the format of the range values using printf-style format
+strings (in the following the values are preceeded with zeroes):
+
+    monsoon fuzz --range 10000-1 \
+      --range-format '%010d' \
+      --header 'Cookie: sessionid=FUZZ' \
+      --hide-status 500 https://example.com/login/session
+
 Request 500 session IDs and extract the cookie values (matching case insensitive):
 
     monsoon fuzz --range 1-500 \
