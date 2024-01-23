@@ -28,6 +28,27 @@ var cmdVersion = &cobra.Command{
 	},
 }
 
+var completionCmd = &cobra.Command{
+    Use:   "completion [bash|zsh|fish|powershell]",
+    Short: "Generate completion script",
+    Long: "To load completions",
+    DisableFlagsInUseLine: true,
+    ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+    Args:                  cobra.ExactValidArgs(1),
+    Run: func(cmd *cobra.Command, args []string) {
+        switch args[0] {
+        case "bash":
+            cmdRoot.GenBashCompletionV2(os.Stdout, true)
+        case "zsh":
+            cmdRoot.GenZshCompletion(os.Stdout)
+        case "fish":
+            cmdRoot.GenFishCompletion(os.Stdout, true)
+        case "powershell":
+            cmdRoot.GenPowerShellCompletionWithDesc(os.Stdout)
+        }
+    },
+}
+
 func init() {
 	// configure cobra help texts
 	setupHelp(cmdRoot)
@@ -35,6 +56,7 @@ func init() {
 	show.AddCommand(cmdRoot)
 	list.AddCommand(cmdRoot)
 	cmdRoot.AddCommand(cmdVersion)
+	cmdRoot.AddCommand(completionCmd)
 }
 
 func injectDefaultCommand(args []string) []string {
