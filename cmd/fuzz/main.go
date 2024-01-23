@@ -1,6 +1,7 @@
 package fuzz
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -193,6 +194,23 @@ func (opts *Options) valid() (err error) {
 		if len(ignoredOptions) > 0 {
 			fmt.Fprintf(os.Stderr, reporter.Dim("Warning: The following options are ignored in test mode: %s\n"),
 				strings.Join(ignoredOptions, ", "))
+		}
+	}
+
+	if opts.DisableHTTP2 && opts.Request.TemplateFile != "" {
+		file, err := os.Open(opts.Request.TemplateFile)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+
+		scanner.Scan()
+		firstLine := scanner.Text()
+
+		if strings.Contains(string(firstLine), "HTTP/2") {
+			fmt.Fprint(os.Stderr, reporter.Dim("Warning: Template contains HTTP/2 request, but --disable-http2 is set. HTTP/1.1 will be used.\n"))
 		}
 	}
 
