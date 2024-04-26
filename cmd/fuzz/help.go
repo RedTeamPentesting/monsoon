@@ -71,7 +71,7 @@ You can also start ranges from the end:
       --hide-status 500 https://example.com/login/session
 
 You can also specify the format of the range values using printf-style format
-strings (in the following the values are preceeded with zeroes):
+strings (in the following the values are preceded with zeroes):
 
     monsoon fuzz --range 10000-1 \
       --range-format '%010d' \

@@ -29,24 +29,26 @@ var cmdVersion = &cobra.Command{
 }
 
 var completionCmd = &cobra.Command{
-    Use:   "completion [bash|zsh|fish|powershell]",
-    Short: "Generate completion script",
-    Long: "To load completions",
-    DisableFlagsInUseLine: true,
-    ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
-    Args:                  cobra.ExactValidArgs(1),
-    Run: func(cmd *cobra.Command, args []string) {
-        switch args[0] {
-        case "bash":
-            cmdRoot.GenBashCompletionV2(os.Stdout, true)
-        case "zsh":
-            cmdRoot.GenZshCompletion(os.Stdout)
-        case "fish":
-            cmdRoot.GenFishCompletion(os.Stdout, true)
-        case "powershell":
-            cmdRoot.GenPowerShellCompletionWithDesc(os.Stdout)
-        }
-    },
+	Use:                   "completion [bash|zsh|fish|powershell]",
+	Short:                 "Generate completion script",
+	Long:                  "To load completions",
+	DisableFlagsInUseLine: true,
+	ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+	Args:                  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		switch args[0] {
+		case "bash":
+			return cmdRoot.GenBashCompletionV2(os.Stdout, true)
+		case "zsh":
+			return cmdRoot.GenZshCompletion(os.Stdout)
+		case "fish":
+			return cmdRoot.GenFishCompletion(os.Stdout, true)
+		case "powershell":
+			return cmdRoot.GenPowerShellCompletionWithDesc(os.Stdout)
+		default:
+			return fmt.Errorf("unsupported argument: %q", args[0])
+		}
+	},
 }
 
 func init() {
