@@ -44,11 +44,7 @@ func (e *Exec) Yield(ctx context.Context, ch chan<- string, count chan<- int) (e
 		}
 		cmd = exec.CommandContext(ctx, args[0], args[1:]...)
 	} else {
-		args, err := shell.Split(e.shellBaseCommand)
-		if err != nil {
-			return fmt.Errorf("error splitting shell base command %q: %w", e.cmd, err)
-		}
-		cmd = exec.CommandContext(ctx, args[0], append(args[1:], e.cmd)...)
+		cmd = exec.CommandContext(ctx, e.shellBaseCommand, "-c", e.cmd)
 	}
 	cmd.Stdout = commandOutputWriter
 	cmd.Stderr = os.Stderr
