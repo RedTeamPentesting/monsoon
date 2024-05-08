@@ -14,7 +14,8 @@ import (
 
 // Exec runs a command and produces each line the command prints.
 type Exec struct {
-	cmd string
+	cmd              string
+	shellBaseCommand string
 }
 
 // statically ensure that *Exec implements Source
@@ -22,8 +23,8 @@ var _ Source = &Exec{}
 
 // NewFile creates a new producer from a reader. If seekable is set to false
 // (e.g. for stdin), Yield() returns an error for subsequent runs.
-func NewExec(cmd string) *Exec {
-	return &Exec{cmd: cmd}
+func NewExec(cmd string, shellBaseCommand string) *Exec {
+	return &Exec{cmd: cmd, shellBaseCommand: shellBaseCommand}
 }
 
 // Yield runs the command and sends all lines printed by it to ch and the number
@@ -33,14 +34,22 @@ func (e *Exec) Yield(ctx context.Context, ch chan<- string, count chan<- int) (e
 	defer close(ch)
 	defer close(count)
 
-	args, err := shell.Split(e.cmd)
-	if err != nil {
-		return fmt.Errorf("error splitting command %q: %w", e.cmd, err)
-	}
-
 	commandOutput, commandOutputWriter := io.Pipe()
 
-	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+	var cmd *exec.Cmd
+	if e.shellBaseCommand == "" {
+		args, err := shell.Split(e.cmd)
+		if err != nil {
+			return fmt.Errorf("error splitting command %q: %w", e.cmd, err)
+		}
+		cmd = exec.CommandContext(ctx, args[0], args[1:]...)
+	} else {
+		args, err := shell.Split(e.shellBaseCommand)
+		if err != nil {
+			return fmt.Errorf("error splitting shell base command %q: %w", e.cmd, err)
+		}
+		cmd = exec.CommandContext(ctx, args[0], append(args[1:], e.cmd)...)
+	}
 	cmd.Stdout = commandOutputWriter
 	cmd.Stderr = os.Stderr
 
