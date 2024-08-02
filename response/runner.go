@@ -155,6 +155,7 @@ func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transpor
 	if opts.EnableInsecureCiphersAndTLSVersions {
 		tr.TLSClientConfig.CipherSuites = getAllCipherSuiteIDs()
 		tr.TLSClientConfig.MinVersion = tls.VersionTLS10
+		tr.TLSClientConfig.Renegotiation = tls.RenegotiateOnceAsClient
 	}
 
 	if !opts.DisableHTTP2 {
