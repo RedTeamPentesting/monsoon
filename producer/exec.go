@@ -76,21 +76,15 @@ func (e *Exec) Yield(ctx context.Context, ch chan<- string, count chan<- int) (e
 			}
 		}
 
-		fmt.Printf("scanner: done, num %v\n", num)
-
 		select {
 		case <-localCtx.Done():
 		case count <- num:
 		}
 
-		fmt.Printf("scanner: done, err %v\n", sc.Err())
-
 		return sc.Err()
 	})
 
-	fmt.Printf("exec main, waiting\n")
 	err = eg.Wait()
-	fmt.Printf("exec main, done, err: %v\n", err)
 	return err
 }
 
