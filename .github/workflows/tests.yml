@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         go-version:
-          - 1.23.x
+          - 1.24.x
     runs-on: ubuntu-latest
 
     name: Go ${{ matrix.go-version }}
@@ -54,7 +54,7 @@ jobs:
         uses: golangci/golangci-lint-action@v3
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.61
+          version: v1.64
           args: --verbose --timeout 5m
 
       - name: Check go.mod/go.sum
