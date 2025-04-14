@@ -277,6 +277,9 @@ func requestFromBuffer(buf []byte, target *url.URL, replace func([]byte) []byte)
 
 	origBody = append(origBody, rest...)
 	req.Body = io.NopCloser(bytes.NewReader(origBody))
+	req.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(bytes.NewReader(origBody)), nil
+	}
 	req.ContentLength = int64(len(origBody))
 
 	// fill some details from the URL
@@ -375,6 +378,10 @@ func (r *Request) Apply(values []string) (*http.Request, error) {
 		if len(body) > 0 {
 			// use new body and set content length
 			req.Body = io.NopCloser(bytes.NewReader(body))
+			req.GetBody = func() (io.ReadCloser, error) {
+				return io.NopCloser(bytes.NewReader(body)), nil
+			}
+
 			req.ContentLength = int64(len(body))
 		}
 
