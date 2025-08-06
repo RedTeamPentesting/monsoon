@@ -188,7 +188,7 @@ next_response:
 		r.term.SetStatus(stats.Report(last))
 
 		if r.printRequestAndResponse {
-			defer r.dislayRequestAndResponse(resp)
+			defer r.displayRequestAndResponse(resp)
 		}
 	}
 
@@ -222,7 +222,7 @@ func sortedKeys(m map[string][]string) []string {
 	return keys
 }
 
-func (r *Reporter) dislayRequestAndResponse(res response.Response) {
+func (r *Reporter) displayRequestAndResponse(res response.Response) {
 	if res.HTTPResponse == nil {
 		return
 	}
