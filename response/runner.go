@@ -294,7 +294,7 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 
 	response.URL = req.URL.String()
 
-	if r.DecompressResponseBody {
+	if r.DecompressResponseBody && req.Header.Get("Accept-Encoding") == "" {
 		addHeader(req, "Accept-Encoding", "gzip")
 	}
 
