@@ -18,6 +18,8 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"github.com/andybalholm/brotli"
 )
 
 // Response is an HTTP response.
@@ -150,6 +152,10 @@ func (r *Response) ReadBody(res *http.Response, maxBodySize int, decompress bool
 					finalError = fmt.Errorf("close gzip reader: %w", err)
 				}
 			}()
+		case "br":
+			r.Decompressed = true
+
+			bodyReader = io.NopCloser(brotli.NewReader(bodyReader))
 		default:
 		}
 	}
