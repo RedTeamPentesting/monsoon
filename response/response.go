@@ -20,6 +20,7 @@ import (
 	"unicode"
 
 	"github.com/andybalholm/brotli"
+	"github.com/klauspost/compress/zstd"
 )
 
 // Response is an HTTP response.
@@ -145,6 +146,22 @@ func (r *Response) ReadBody(res *http.Response, maxBodySize int, decompress bool
 			if err != nil {
 				return fmt.Errorf("create gzip reader: %w", err)
 			}
+
+			defer func() {
+				err := bodyReader.Close()
+				if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && finalError == nil {
+					finalError = fmt.Errorf("close gzip reader: %w", err)
+				}
+			}()
+		case "zstd":
+			r.Decompressed = true
+
+			rd, err := zstd.NewReader(bodyReader)
+			if err != nil {
+				return fmt.Errorf("create gzip reader: %w", err)
+			}
+
+			bodyReader = rd.IOReadCloser()
 
 			defer func() {
 				err := bodyReader.Close()
