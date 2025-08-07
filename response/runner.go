@@ -59,6 +59,7 @@ type TransportOptions struct {
 	EnableInsecureCiphersAndTLSVersions bool
 	TLSClientCertKeyFilename            string
 	DisableHTTP2                        bool
+	DisableKeepAlives                   bool
 	Network                             string
 
 	ConnectTimeout        time.Duration
@@ -76,6 +77,7 @@ func AddTransportFlags(fs *pflag.FlagSet, opts *TransportOptions) {
 	fs.BoolVar(&opts.EnableInsecureCiphersAndTLSVersions, "insecure-ciphersuites", false, "enable insecure ciphersuites and TLS versions")
 	fs.StringVar(&opts.TLSClientCertKeyFilename, "client-cert", "", "read TLS client key and cert from `file`")
 	fs.BoolVar(&opts.DisableHTTP2, "disable-http2", false, "do not try to negotiate an HTTP2 connection")
+	fs.BoolVar(&opts.DisableKeepAlives, "disable-keep-alive", false, "do not re-use connections for multiple HTTP requests")
 
 	fs.DurationVar(&opts.ConnectTimeout, "connect-timeout", DefaultConnectTimeout, "limit TCP connection establishment")
 	fs.DurationVar(&opts.TLSHandshakeTimeout, "tls-handshake-timeout", DefaultTLSHandshakeTimeout, "limit TLS connection establishment")
@@ -122,6 +124,7 @@ func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transpor
 		MaxIdleConns:          concurrentRequests,
 		MaxIdleConnsPerHost:   concurrentRequests,
 		DisableCompression:    true, // we handle that ourselves
+		DisableKeepAlives:     opts.DisableKeepAlives,
 	}
 
 	dialer := &net.Dialer{
