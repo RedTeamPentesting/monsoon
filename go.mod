@@ -1,5 +1,9 @@
 module github.com/RedTeamPentesting/monsoon
 
+godebug (
+    x509negativeserial=1
+)
+
 require (
 	github.com/fd0/termstatus v1.1.0
 	github.com/google/go-cmp v0.6.0
