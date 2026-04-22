@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/RedTeamPentesting/monsoon/producer"
 	"github.com/RedTeamPentesting/monsoon/request"
 	"github.com/spf13/pflag"
 	"golang.org/x/net/http2"
@@ -35,6 +36,7 @@ type Runner struct {
 
 	PreserveRequestBody bool
 
+	static *producer.Static
 	input  <-chan []string
 	output chan<- Response
 }
@@ -179,6 +181,7 @@ func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transpor
 		if err != nil {
 			return nil, fmt.Errorf("parse TLS client cert or key: %v", err)
 		}
+
 		tr.TLSClientConfig.Certificates = []tls.Certificate{crt}
 	}
 
@@ -238,6 +241,7 @@ func readPEMCertKey(filename string) (certs []byte, key []byte, err error) {
 			if key != nil {
 				return nil, nil, fmt.Errorf("error loading TLS cert and key from %v: more than one private key found", filename)
 			}
+
 			key = pem.EncodeToMemory(block)
 		default:
 			return nil, nil, fmt.Errorf("error loading TLS cert and key from %v: unknown block type %v found", filename, block.Type)
@@ -248,7 +252,7 @@ func readPEMCertKey(filename string) (certs []byte, key []byte, err error) {
 }
 
 // NewRunner returns a new runner to execute HTTP requests.
-func NewRunner(tr *http.Transport, template *request.Request, input <-chan []string, output chan<- Response) *Runner {
+func NewRunner(tr *http.Transport, template *request.Request, staticValues *producer.Static, input <-chan []string, output chan<- Response) *Runner {
 	c := &http.Client{
 		Transport: tr,
 		CheckRedirect: func(*http.Request, []*http.Request) error {
@@ -260,6 +264,7 @@ func NewRunner(tr *http.Transport, template *request.Request, input <-chan []str
 		Template:    template,
 		Client:      c,
 		Transport:   tr,
+		static:      staticValues,
 		input:       input,
 		output:      output,
 		MaxBodySize: DefaultMaxBodySize,
@@ -341,6 +346,24 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 // Run processes items read from ch and executes HTTP requests.
 func (r *Runner) Run(ctx context.Context) {
 	for item := range r.input {
+		staticValues, err := r.static.Yield(ctx)
+		if err != nil {
+			res := Response{
+				Values: item,
+				Error:  err,
+			}
+
+			select {
+			case <-ctx.Done():
+				return
+			case r.output <- res:
+			}
+
+			continue
+		}
+
+		item = append(item, staticValues...)
+
 		res := r.request(ctx, item)
 
 		select {

@@ -39,6 +39,7 @@ func (m *Multiplexer) Run(ctx context.Context, ch chan<- []string, count chan<- 
 	// collect the counts for all sources separately, compute the global count
 	// and send it on
 	sourceCountChan := make(chan sourceCount, len(m.Sources))
+
 	eg.Go(func() error {
 		globalCount := 1
 		countCollected := 0

@@ -76,6 +76,14 @@ func TestParseReplace(t *testing.T) {
 				Options: "./gen_id.sh from-to",
 			},
 		},
+		{
+			input: "TOKEN:token:./get_token.sh",
+			replace: Replace{
+				Name:    "TOKEN",
+				Type:    "token",
+				Options: "./get_token.sh",
+			},
+		},
 	}
 
 	for _, test := range tests {

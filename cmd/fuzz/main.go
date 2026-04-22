@@ -259,7 +259,7 @@ func AddCommand(c *cobra.Command) {
 	fs.StringVar(&opts.RangeFormat, "range-format", "%d", "set `format` for range (when used with --range)")
 	fs.StringVarP(&opts.Filename, "file", "f", "", "read values from `filename`")
 	fs.StringArrayVar(&opts.Replace, "replace", []string{}, "add replace var `name:type:options` (valid types: 'file','range', "+
-		"'exec', 'shell', and 'value', e.g. 'FUZZ:range:1-100'), mutually exclusive with --range and --file")
+		"'exec', 'shell', 'token', and 'value', e.g. 'FUZZ:range:1-100'), mutually exclusive with --range and --file")
 
 	fs.StringVar(&opts.Logfile, "logfile", "", "write copy of printed messages to `filename`.log")
 	fs.StringVar(&opts.Logdir, "logdir", os.Getenv("MONSOON_LOG_DIR"), "automatically log all output to files in `dir`")
@@ -321,8 +321,9 @@ func logfilePath(opts *Options, inputURL string) (prefix string, err error) {
 	return opts.Logfile, nil
 }
 
-func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, error) {
+func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, *producer.Static, error) {
 	multiplexer := &producer.Multiplexer{}
+	static := &producer.Static{}
 
 	switch {
 	// handle old user interface, only range
@@ -331,7 +332,7 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 		for _, r := range opts.Range {
 			rng, err := producer.NewRange(r)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
 			ranges = append(ranges, rng)
@@ -340,26 +341,26 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 		src := producer.NewRanges(ranges, opts.RangeFormat)
 		multiplexer.AddSource("FUZZ", src, true)
 
-		return multiplexer, nil
+		return multiplexer, static, nil
 
 	// handle old user interface, read from stdin
 	case opts.Filename == "-":
 		src := producer.NewFile(os.Stdin, false)
 		multiplexer.AddSource("FUZZ", src, true)
 
-		return multiplexer, nil
+		return multiplexer, static, nil
 
 	// handle old user interface, only filename
 	case opts.Filename != "":
 		file, err := os.Open(opts.Filename)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		src := producer.NewFile(file, true)
 		multiplexer.AddSource("FUZZ", src, true)
 
-		return multiplexer, nil
+		return multiplexer, static, nil
 	case len(opts.Values) > 0:
 		inValues := make([]byte, 0)
 		for _, v := range opts.Values {
@@ -367,18 +368,18 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 			inValues = append(inValues, []byte("\n")...)
 		}
 		multiplexer.AddSource("FUZZ", producer.NewFile(bytes.NewReader(inValues), true), true)
-		return multiplexer, nil
+		return multiplexer, static, nil
 	}
 
 	if len(opts.Replace) == 0 {
-		return nil, errors.New("no source specified, nothing to do")
+		return nil, nil, errors.New("no source specified, nothing to do")
 	}
 
 	// handle new user interface with replace rules
 	for _, s := range opts.Replace {
 		r, err := ParseReplace(s)
 		if err != nil {
-			return nil, fmt.Errorf("invalid replace rule: %w", err)
+			return nil, nil, fmt.Errorf("invalid replace rule: %w", err)
 		}
 
 		switch r.Type {
@@ -388,7 +389,7 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 			} else {
 				f, err := os.Open(r.Options)
 				if err != nil {
-					return nil, fmt.Errorf("file source: %w", err)
+					return nil, nil, fmt.Errorf("file source: %w", err)
 				}
 
 				multiplexer.AddSource(r.Name, producer.NewFile(f, true), true)
@@ -401,7 +402,7 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 			if strings.Contains(r.Options, ":") {
 				data := strings.SplitN(r.Options, ":", 2)
 				if len(data) != 2 {
-					return nil, fmt.Errorf("wrong options format for range, want NAME:range:A-B[,C-D][:format]")
+					return nil, nil, fmt.Errorf("wrong options format for range, want NAME:range:A-B[,C-D][:format]")
 				}
 
 				r.Options = data[0]
@@ -412,7 +413,7 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 			for _, r := range strings.Split(r.Options, ",") {
 				rng, err := producer.NewRange(r)
 				if err != nil {
-					return nil, err
+					return nil, nil, err
 				}
 
 				ranges = append(ranges, rng)
@@ -425,23 +426,32 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, e
 		case "exec":
 			err := producer.CheckExec(r.Options)
 			if err != nil {
-				return nil, fmt.Errorf("check replace %v: %w", r.Name, err)
+				return nil, nil, fmt.Errorf("check replace %v: %w", r.Name, err)
 			}
 
 			multiplexer.AddSource(r.Name, producer.NewExec(r.Options, ""), true)
 		case "shell":
 			err := producer.CheckExec(r.Options)
 			if err != nil {
-				return nil, fmt.Errorf("check replace %v: %w", r.Name, err)
+				return nil, nil, fmt.Errorf("check replace %v: %w", r.Name, err)
 			}
 
 			multiplexer.AddSource(r.Name, producer.NewExec(r.Options, "/bin/sh"), true)
+		case "token":
+			err := producer.CheckToken(ctx, r.Options)
+			if err != nil {
+				return nil, nil, fmt.Errorf("check replace %v: %w", r.Name, err)
+			}
+
+			token := producer.NewToken(r.Options)
+
+			static.AddSource(r.Name, token.Yield)
 		default:
-			return nil, fmt.Errorf("unknown replace type %q", r.Type)
+			return nil, nil, fmt.Errorf("unknown replace type %q", r.Type)
 		}
 	}
 
-	return multiplexer, nil
+	return multiplexer, static, nil
 }
 
 func setupTerminal(ctx context.Context, g *errgroup.Group, maxFrameRate uint, logfilePrefix string) (term cli.Terminal, cleanup func(), err error) {
@@ -528,7 +538,7 @@ func setupValueFilters(ctx context.Context, opts *Options, cancelProducer func()
 	return valueCh, countCh
 }
 
-func startRunners(ctx context.Context, opts *Options, in <-chan []string) (<-chan response.Response, error) {
+func startRunners(ctx context.Context, opts *Options, staticValues *producer.Static, in <-chan []string) (<-chan response.Response, error) {
 	out := make(chan response.Response)
 
 	var wg sync.WaitGroup
@@ -538,8 +548,8 @@ func startRunners(ctx context.Context, opts *Options, in <-chan []string) (<-cha
 		return nil, err
 	}
 
-	for i := 0; i < opts.Threads; i++ {
-		runner := response.NewRunner(transport, opts.Request, in, out)
+	for range opts.Threads {
+		runner := response.NewRunner(transport, opts.Request, staticValues, in, out)
 		runner.MaxBodySize = opts.MaxBodySize * 1024 * 1024
 		runner.Extract = opts.extract
 		runner.DecompressResponseBody = !opts.DisableDecompression
@@ -551,7 +561,9 @@ func startRunners(ctx context.Context, opts *Options, in <-chan []string) (<-cha
 			}
 			return http.ErrUseLastResponse
 		}
+
 		wg.Add(1)
+
 		go func() {
 			runner.Run(ctx)
 			wg.Done()
@@ -622,12 +634,13 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	producerCtx, producerCancel := context.WithCancel(ctx)
 	defer producerCancel()
 
-	multiplexer, err := setupProducer(producerCtx, opts)
+	multiplexer, staticValues, err := setupProducer(producerCtx, opts)
 	if err != nil {
 		return err
 	}
 
 	opts.Request.Names = multiplexer.Names
+	opts.Request.Names = append(opts.Request.Names, staticValues.Names...)
 
 	// run Multiplexer
 	g.Go(func() error {
@@ -643,7 +656,7 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	}
 
 	// start the runners
-	responseCh, err := startRunners(ctx, opts, valueCh)
+	responseCh, err := startRunners(ctx, opts, staticValues, valueCh)
 	if err != nil {
 		return err
 	}
@@ -693,7 +706,15 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	// run the reporter
 	term.Printf(reporter.Bold("Target URL:")+" %v\n\n", targetURL)
-	reporter := reporter.New(term, opts.LongRequest, opts.IsTest, multiplexer.ShowValues)
+
+	showValues := multiplexer.ShowValues
+
+	// do not display any static values
+	for range staticValues.Names {
+		showValues = append(showValues, false)
+	}
+
+	reporter := reporter.New(term, opts.LongRequest, opts.IsTest, showValues)
 	err = reporter.Display(responseCh, countCh)
 
 	return err

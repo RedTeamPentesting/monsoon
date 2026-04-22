@@ -112,6 +112,16 @@ header and replacing the string FUZZ from the file:
       --header 'user-agent: foobar' \
       https://example.com
 
+Generate auth tokens from a script, which prints the TTL in seconds in the
+first line, and the replacement value in the second. Monsoon automatically
+caches the value until the TTL is reached and then re-runs the script:
+
+    monsoon fuzz \
+      --replace TOKEN:token:./get_token.sh \
+      --header 'Authorization: Bearer TOKEN' \
+      --hide-status 401 \
+      https://example.com/api
+
 Try different passwords for the user admin with HTTP Basic authentication:
 
     monsoon fuzz --file passwords.txt \
