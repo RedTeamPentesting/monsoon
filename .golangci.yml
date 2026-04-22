@@ -1,6 +1,129 @@
+version: "2"
 linters:
+  default: none
   enable:
-    - goimports
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - canonicalheader
+    - containedctx
+    - decorder
+    - dupl
+    - dupword
+    - durationcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - fatcontext
+    - forcetypeassert
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - gochecksumtype
+    - goconst
+    - gocritic
+    - gocyclo
+    - godot
+    - godox
+    - goheader
+    - gomodguard
+    - goprintffuncname
+    - gosmopolitan
     - govet
+    - grouper
+    - importas
+    - inamedparam
+    - ineffassign
+    - interfacebloat
+    - lll
+    - loggercheck
+    - maintidx
+    - makezero
+    - mirror
     - misspell
-    - stylecheck
+    - nakedret
+    - nestif
+    - nilerr
+    - nilnil
+    - nlreturn
+    - noctx
+    - nolintlint
+    - nosprintfhostport
+    - prealloc
+    - predeclared
+    - promlinter
+    - protogetter
+    - reassign
+    - sloglint
+    - spancheck
+    - sqlclosecheck
+    - staticcheck
+    - tagliatelle
+    - testableexamples
+    - testifylint
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - usetesting
+    - wastedassign
+    - whitespace
+    - wsl_v5
+    - zerologlint
+    - exptostd
+    - intrange
+    - musttag
+    - nilnesserr
+    - paralleltest
+    - recvcheck
+    - noinlineerr
+  settings:
+    lll:
+      line-length: 130
+      tab-width: 4
+    cyclop:
+      max-complexity: 20
+    exhaustive:
+      default-signifies-exhaustive: true
+    goconst:
+      min-occurrences: 5
+    godox:
+      keywords:
+        - FIXME
+    gosec:
+      excludes:
+        - G304
+        - G204
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+          yaml: snake
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+    rules:
+      - linters:
+          - noinlineerr
+        source: "errors.As"
+      - linters:
+          - bodyclose
+        path: '(.+)_test\.go'
+formatters:
+  enable:
+    - golines
+    - goimports
+  settings:
+    golines:
+      max-len: 130
+      tab-len: 4
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
