@@ -1,13 +1,13 @@
 module github.com/RedTeamPentesting/monsoon
 
-godebug (
-    x509negativeserial=1
-)
+godebug x509negativeserial=1
 
 require (
+	github.com/andybalholm/brotli v1.2.0
 	github.com/fd0/termstatus v1.1.0
 	github.com/google/go-cmp v0.6.0
 	github.com/juju/ratelimit v1.0.2
+	github.com/klauspost/compress v1.18.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/net v0.37.0
@@ -16,9 +16,7 @@ require (
 )
 
 require (
-	github.com/andybalholm/brotli v1.2.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/klauspost/compress v1.18.0 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/rogpeppe/go-internal v1.13.1 // indirect
