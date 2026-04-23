@@ -72,6 +72,29 @@ func (m *Multiplexer) Run(ctx context.Context, ch chan<- []string, count chan<- 
 }
 
 func run(ctx context.Context, resultChan chan<- []string, sourceCountChan chan<- sourceCount, sources []Source, partResult []string, countKnownSubtree bool) error {
+	// special case: the sources list is empty (because all values are static
+	// values), so we just send one empty string slice
+	if len(sources) == 0 {
+		sc := sourceCount{
+			sourceIndex: len(partResult),
+			count:       1,
+		}
+
+		select {
+		case sourceCountChan <- sc:
+		case <-ctx.Done():
+			return nil
+		}
+
+		select {
+		case resultChan <- []string{}:
+		case <-ctx.Done():
+			return nil
+		}
+
+		return nil
+	}
+
 	eg, ctx := errgroup.WithContext(ctx)
 
 	src := sources[0]

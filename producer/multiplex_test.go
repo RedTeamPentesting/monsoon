@@ -25,6 +25,8 @@ func mustParseRanges(rs string) *Ranges {
 }
 
 func TestMultiplex(t *testing.T) {
+	t.Parallel()
+
 	tests := []struct {
 		names   []string
 		sources []Source
@@ -127,10 +129,19 @@ func TestMultiplex(t *testing.T) {
 				{"3", "b", "11"},
 			},
 		},
+		{
+			names:   []string{},
+			sources: []Source{},
+			result: [][]string{
+				{}, // empty slice
+			},
+		},
 	}
 
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
+			t.Parallel()
+
 			m := Multiplexer{
 				Names:   test.names,
 				Sources: test.sources,
@@ -145,11 +156,13 @@ func TestMultiplex(t *testing.T) {
 				return m.Run(context.Background(), ch, count)
 			})
 
-			var values [][]string
+			values := [][]string{}
+
 			eg.Go(func() error {
 				for v := range ch {
 					values = append(values, v)
 				}
+
 				return nil
 			})
 
