@@ -64,6 +64,9 @@ type TransportOptions struct {
 	DisableKeepAlives                   bool
 	Network                             string
 
+	KeyLog string
+	keylog io.WriteCloser
+
 	ConnectTimeout        time.Duration
 	TLSHandshakeTimeout   time.Duration
 	ResponseHeaderTimeout time.Duration
@@ -80,6 +83,7 @@ func AddTransportFlags(fs *pflag.FlagSet, opts *TransportOptions) {
 	fs.StringVar(&opts.TLSClientCertKeyFilename, "client-cert", "", "read TLS client key and cert from `file`")
 	fs.BoolVar(&opts.DisableHTTP2, "disable-http2", false, "do not try to negotiate an HTTP2 connection")
 	fs.BoolVar(&opts.DisableKeepAlives, "disable-keep-alive", false, "do not re-use connections for multiple HTTP requests")
+	fs.StringVar(&opts.KeyLog, "key-log", "", "write TLS connection keys to `filename` (for use with Wireshark)")
 
 	fs.DurationVar(&opts.ConnectTimeout, "connect-timeout", DefaultConnectTimeout, "limit TCP connection establishment")
 	fs.DurationVar(&opts.TLSHandshakeTimeout, "tls-handshake-timeout", DefaultTLSHandshakeTimeout, "limit TLS connection establishment")
@@ -112,6 +116,15 @@ func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transpor
 		opts.ResponseHeaderTimeout = DefaultResponseHeaderTimeout
 	}
 
+	if opts.KeyLog != "" {
+		f, err := os.OpenFile(opts.KeyLog, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o600)
+		if err != nil {
+			return nil, fmt.Errorf("open key log file: %w", err)
+		}
+
+		opts.keylog = f
+	}
+
 	if opts.Network == "" {
 		opts.Network = "tcp"
 	}
@@ -127,6 +140,10 @@ func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transpor
 		MaxIdleConnsPerHost:   concurrentRequests,
 		DisableCompression:    true, // we handle that ourselves
 		DisableKeepAlives:     opts.DisableKeepAlives,
+	}
+
+	if opts.keylog != nil {
+		tr.TLSClientConfig.KeyLogWriter = opts.keylog
 	}
 
 	dialer := &net.Dialer{
