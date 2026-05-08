@@ -158,7 +158,7 @@ func (r *Response) ReadBody(res *http.Response, maxBodySize int, decompress bool
 
 			rd, err := zstd.NewReader(bodyReader)
 			if err != nil {
-				return fmt.Errorf("create gzip reader: %w", err)
+				return fmt.Errorf("create zstd reader: %w", err)
 			}
 
 			bodyReader = rd.IOReadCloser()
@@ -166,7 +166,7 @@ func (r *Response) ReadBody(res *http.Response, maxBodySize int, decompress bool
 			defer func() {
 				err := bodyReader.Close()
 				if err != nil && !errors.Is(err, io.ErrUnexpectedEOF) && finalError == nil {
-					finalError = fmt.Errorf("close gzip reader: %w", err)
+					finalError = fmt.Errorf("close zstd reader: %w", err)
 				}
 			}()
 		case "br":
