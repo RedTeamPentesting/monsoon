@@ -115,21 +115,21 @@ func TestHeaderSet(t *testing.T) {
 type CheckFunc func(testing.TB, *http.Request)
 
 func checkURL(url string) CheckFunc {
-	return func(t testing.TB, req *http.Request) {
-		t.Helper()
+	return func(tb testing.TB, req *http.Request) {
+		tb.Helper()
 
 		if req.URL.String() != url {
-			t.Errorf("wrong URL, want %q, got %q", url, req.URL.String())
+			tb.Errorf("wrong URL, want %q, got %q", url, req.URL.String())
 		}
 	}
 }
 
 func checkMethod(method string) CheckFunc {
-	return func(t testing.TB, req *http.Request) {
-		t.Helper()
+	return func(tb testing.TB, req *http.Request) {
+		tb.Helper()
 
 		if req.Method != method {
-			t.Errorf("wrong method, want %q, got %q", method, req.Method)
+			tb.Errorf("wrong method, want %q, got %q", method, req.Method)
 		}
 	}
 }
@@ -137,21 +137,21 @@ func checkMethod(method string) CheckFunc {
 func checkHeader(name, value string) CheckFunc {
 	name = textproto.CanonicalMIMEHeaderKey(name)
 
-	return func(t testing.TB, req *http.Request) {
-		t.Helper()
+	return func(tb testing.TB, req *http.Request) {
+		tb.Helper()
 
 		v, ok := req.Header[name]
 		if !ok {
-			t.Errorf("required header %q not found", name)
+			tb.Errorf("required header %q not found", name)
 			return
 		}
 
 		if len(v) != 1 {
-			t.Errorf("more than one value found for header %v: %q", name, v)
+			tb.Errorf("more than one value found for header %v: %q", name, v)
 		}
 
 		if v[0] != value {
-			t.Errorf("wrong value for header %v, want %q, got %q", name, value, v[0])
+			tb.Errorf("wrong value for header %v, want %q, got %q", name, value, v[0])
 		}
 	}
 }
