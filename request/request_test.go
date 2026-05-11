@@ -164,6 +164,7 @@ func checkHost(value string) CheckFunc {
 	}
 }
 
+// nolint:unparam
 func checkHeaderMulti(name string, values []string) CheckFunc {
 	name = textproto.CanonicalMIMEHeaderKey(name)
 
