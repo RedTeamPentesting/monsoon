@@ -111,13 +111,13 @@ func TestHeaderSet(t *testing.T) {
 	}
 }
 
-// CheckFunc is one test for an http request generated
+// CheckFunc is one test for an http request generated.
 type CheckFunc func(testing.TB, *http.Request)
 
 func checkURL(url string) CheckFunc {
 	return func(t testing.TB, req *http.Request) {
 		t.Helper()
-		
+
 		if req.URL.String() != url {
 			t.Errorf("wrong URL, want %q, got %q", url, req.URL.String())
 		}

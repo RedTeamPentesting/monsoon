@@ -18,7 +18,7 @@ type Exec struct {
 	shellBaseCommand string
 }
 
-// statically ensure that *Exec implements Source
+// statically ensure that *Exec implements Source.
 var _ Source = &Exec{}
 
 // NewFile creates a new producer from a reader. If seekable is set to false

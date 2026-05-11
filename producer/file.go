@@ -15,7 +15,7 @@ type File struct {
 	yields   int
 }
 
-// statically ensure that *File implements Source
+// statically ensure that *File implements Source.
 var _ Source = &File{}
 
 // NewFile creates a new producer from a reader. If seekable is set to false

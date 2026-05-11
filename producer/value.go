@@ -7,7 +7,7 @@ type Value struct {
 	value string
 }
 
-// statically ensure that *File implements Source
+// statically ensure that *File implements Source.
 var _ Source = &Value{}
 
 // NewFile creates a new producer from a reader.

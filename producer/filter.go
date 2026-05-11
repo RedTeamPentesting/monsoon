@@ -16,7 +16,7 @@ type FilterSkip struct {
 	Skip int
 }
 
-// ensure Filter Skip implements Filter
+// ensure Filter Skip implements Filter.
 var _ Filter = &FilterSkip{}
 
 // Count filters the number of values.
