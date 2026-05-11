@@ -116,6 +116,8 @@ type CheckFunc func(testing.TB, *http.Request)
 
 func checkURL(url string) CheckFunc {
 	return func(t testing.TB, req *http.Request) {
+		t.Helper()
+		
 		if req.URL.String() != url {
 			t.Errorf("wrong URL, want %q, got %q", url, req.URL.String())
 		}
@@ -124,6 +126,8 @@ func checkURL(url string) CheckFunc {
 
 func checkMethod(method string) CheckFunc {
 	return func(t testing.TB, req *http.Request) {
+		t.Helper()
+
 		if req.Method != method {
 			t.Errorf("wrong method, want %q, got %q", method, req.Method)
 		}
@@ -134,6 +138,8 @@ func checkHeader(name, value string) CheckFunc {
 	name = textproto.CanonicalMIMEHeaderKey(name)
 
 	return func(t testing.TB, req *http.Request) {
+		t.Helper()
+
 		v, ok := req.Header[name]
 		if !ok {
 			t.Errorf("required header %q not found", name)
