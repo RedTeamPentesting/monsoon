@@ -288,11 +288,11 @@ func NewRunner(tr *http.Transport, template *request.Request, staticValues *prod
 	}
 }
 
-type InvalidRequest struct {
+type InvalidRequestError struct {
 	Err error
 }
 
-func (ir InvalidRequest) Error() string {
+func (ir InvalidRequestError) Error() string {
 	return "invalid request: " + ir.Err.Error()
 }
 
@@ -301,7 +301,7 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 
 	req, err := r.Template.Apply(values)
 	if err != nil {
-		response.Error = InvalidRequest{err}
+		response.Error = InvalidRequestError{err}
 		return
 	}
 
@@ -310,7 +310,7 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 	if r.PreserveRequestBody {
 		preservedBody, err = io.ReadAll(req.Body)
 		if err != nil {
-			response.Error = InvalidRequest{err}
+			response.Error = InvalidRequestError{err}
 			return
 		}
 

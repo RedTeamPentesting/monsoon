@@ -167,7 +167,7 @@ next_response:
 		if resp.Error != nil {
 			stats.Errors++
 
-			var reqErr response.InvalidRequest
+			var reqErr response.InvalidRequestError
 			if errors.As(resp.Error, &reqErr) {
 				errString := cleanedErrorString(reqErr.Err)
 				stats.InvalidInputData[errString] = append(stats.InvalidInputData[errString], formatValues(resp.Values))
