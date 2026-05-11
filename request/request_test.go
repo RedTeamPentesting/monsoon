@@ -157,9 +157,11 @@ func checkHeader(name, value string) CheckFunc {
 }
 
 func checkHost(value string) CheckFunc {
-	return func(t testing.TB, req *http.Request) {
+	return func(tb testing.TB, req *http.Request) {
+		tb.Helper()
+
 		if req.Host != value {
-			t.Errorf("invalid value for host: want %q, got %q", value, req.Host)
+			tb.Errorf("invalid value for host: want %q, got %q", value, req.Host)
 		}
 	}
 }
@@ -168,22 +170,24 @@ func checkHost(value string) CheckFunc {
 func checkHeaderMulti(name string, values []string) CheckFunc {
 	name = textproto.CanonicalMIMEHeaderKey(name)
 
-	return func(t testing.TB, req *http.Request) {
+	return func(tb testing.TB, req *http.Request) {
+		tb.Helper()
+
 		v, ok := req.Header[name]
 		if !ok {
-			t.Errorf("required header %q not found", name)
+			tb.Errorf("required header %q not found", name)
 			return
 		}
 
 		if len(v) != len(values) {
-			t.Errorf("wrong number of headers found, want %v, got %v", len(values), len(v))
+			tb.Errorf("wrong number of headers found, want %v, got %v", len(values), len(v))
 		}
 
 		sort.Strings(v)
 		sort.Strings(values)
 
 		if !cmp.Equal(values, v) {
-			t.Error(cmp.Diff(values, v))
+			tb.Error(cmp.Diff(values, v))
 		}
 	}
 }
@@ -191,42 +195,48 @@ func checkHeaderMulti(name string, values []string) CheckFunc {
 func checkHeaderAbsent(name string) CheckFunc {
 	name = textproto.CanonicalMIMEHeaderKey(name)
 
-	return func(t testing.TB, req *http.Request) {
+	return func(tb testing.TB, req *http.Request) {
+		tb.Helper()
+
 		v, ok := req.Header[name]
 		if ok {
-			t.Errorf("header %q (%q) is present (but should not be)", name, v)
+			tb.Errorf("header %q (%q) is present (but should not be)", name, v)
 			return
 		}
 	}
 }
 
 func checkBasicAuth(user, password string) CheckFunc {
-	return func(t testing.TB, req *http.Request) {
+	return func(tb testing.TB, req *http.Request) {
+		tb.Helper()
+
 		u, p, ok := req.BasicAuth()
 		if !ok {
-			t.Error("basic auth requested but not present")
+			tb.Error("basic auth requested but not present")
 			return
 		}
 
 		if u != user {
-			t.Errorf("wrong username for basic auth: want %q, got %q", user, u)
+			tb.Errorf("wrong username for basic auth: want %q, got %q", user, u)
 		}
 
 		if p != password {
-			t.Errorf("wrong password for basic auth: want %q, got %q", password, p)
+			tb.Errorf("wrong password for basic auth: want %q, got %q", password, p)
 		}
 	}
 }
 
 func checkBody(body string) CheckFunc {
-	return func(t testing.TB, req *http.Request) {
+	return func(tb testing.TB, req *http.Request) {
+		tb.Helper()
+
 		buf, err := io.ReadAll(req.Body)
 		if err != nil {
-			t.Fatal(err)
+			tb.Fatal(err)
 		}
 
 		if string(buf) != body {
-			t.Errorf("wrong body returned, want:\n  %q\ngot:\n  %q", body, string(buf))
+			tb.Errorf("wrong body returned, want:\n  %q\ngot:\n  %q", body, string(buf))
 		}
 	}
 }
