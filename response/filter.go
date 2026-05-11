@@ -62,7 +62,6 @@ func (f FilterStatusCode) Reject(r Response) bool {
 		}
 	}
 
-	// nolint:gosimple
 	if len(f.accepts) > 0 {
 		// if the list of status codes to show is not empty, implicitly reject
 		// everything else
