@@ -240,7 +240,7 @@ func replaceTemplate(s, template, value string) string {
 		return s
 	}
 
-	return strings.Replace(s, template, value, -1)
+	return strings.ReplaceAll(s, template, value)
 }
 
 func requestFromBuffer(buf []byte, target *url.URL, replace func([]byte) []byte) (*http.Request, error) {
@@ -349,7 +349,7 @@ func (r *Request) Apply(values []string) (*http.Request, error) {
 
 	insertValueBytes := func(buf []byte) []byte {
 		for i := range r.Names {
-			buf = bytes.Replace(buf, []byte(r.Names[i]), []byte(values[i]), -1)
+			buf = bytes.ReplaceAll(buf, []byte(r.Names[i]), []byte(values[i]))
 		}
 
 		return buf

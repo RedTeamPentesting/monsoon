@@ -90,7 +90,6 @@ func injectDefaultCommand(args []string) []string {
 
 func main() {
 	resetTerminal := prepareTerminal()
-	defer resetTerminal()
 
 	os.Args = append(os.Args[:1], injectDefaultCommand(os.Args[1:])...)
 	cmdRoot.SetArgs(os.Args[1:])
@@ -102,6 +101,8 @@ func main() {
 		resetTerminal()
 		os.Exit(1)
 	}
+
+	resetTerminal()
 }
 
 func buildVersionString(compileTimeVersion string) string {

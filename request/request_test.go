@@ -838,7 +838,7 @@ Host: server:1234
 		t.Run("", func(t *testing.T) {
 			var filename string
 			if test.File != "" {
-				filename = filepath.Join(tempdir, "test-"+strings.Replace(t.Name(), "/", "_", -1))
+				filename = filepath.Join(tempdir, "test-"+strings.ReplaceAll(t.Name(), "/", "_"))
 
 				err := os.WriteFile(filename, []byte(test.File), 0o644)
 				if err != nil {

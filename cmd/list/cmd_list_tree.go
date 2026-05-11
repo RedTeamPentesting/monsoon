@@ -62,7 +62,7 @@ func printTree(target string, runs []recorder.Run) error {
 			// rebuild the request URL
 			reqURL := run.URL.String()
 			for i := range run.Data.Names {
-				reqURL = strings.Replace(reqURL, run.Names[i], resp.Values[i], -1)
+				reqURL = strings.ReplaceAll(reqURL, run.Names[i], resp.Values[i])
 			}
 
 			responseURL, err := url.Parse(reqURL)

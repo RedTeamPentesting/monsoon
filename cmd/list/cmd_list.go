@@ -86,12 +86,12 @@ var FuncMap = map[string]any{
 		sec := uint64(t2.Sub(t1).Seconds())
 		if sec > 3600 {
 			s += fmt.Sprintf("%dh", sec/3600)
-			sec = sec % 3600
+			sec %= 3600
 		}
 
 		if sec > 60 {
 			s += fmt.Sprintf("%dm", sec/60)
-			sec = sec % 60
+			sec %= 60
 		}
 
 		s += fmt.Sprintf("%ds", sec)
