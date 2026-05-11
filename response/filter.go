@@ -8,7 +8,7 @@ import (
 
 // Filter decides whether to reject a Response.
 type Filter interface {
-	Reject(Response) bool
+	Reject(res Response) bool
 }
 
 // FilterStatusCode hides responses based on the HTTP status code.

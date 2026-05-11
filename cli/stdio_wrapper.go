@@ -10,8 +10,8 @@ import (
 type Terminal interface {
 	Printf(msg string, data ...any)
 	Print(msg string)
-	SetStatus([]string)
-	Run(context.Context)
+	SetStatus(lines []string)
+	Run(ctx context.Context)
 }
 
 // StdioWrapper provides stdout and stderr integration with termstatus.
