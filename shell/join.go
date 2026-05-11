@@ -20,8 +20,10 @@ func Join(args []string) (s string) {
 		if !first {
 			s += " "
 		}
+
 		s += escapeParam(arg)
 		first = false
 	}
+
 	return s
 }

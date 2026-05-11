@@ -14,6 +14,7 @@ func init() {
 
 func extractHosts(list []recorder.Run) []string {
 	known := make(map[string]struct{})
+
 	var hosts []string
 
 	for _, run := range list {

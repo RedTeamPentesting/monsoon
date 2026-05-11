@@ -63,6 +63,7 @@ func (w *lineWriter) Write(data []byte) (n int, err error) {
 	// look for line breaks
 	buf := w.buf.Bytes()
 	skip := 0
+
 	for i := 0; i < len(buf); {
 		if buf[i] == '\n' {
 			// found line
@@ -70,6 +71,7 @@ func (w *lineWriter) Write(data []byte) (n int, err error) {
 			buf = buf[i+1:]
 			skip += i + 1
 			i = 0
+
 			continue
 		}
 
@@ -85,6 +87,7 @@ func (w *lineWriter) Flush() error {
 	if w.buf.Len() > 0 {
 		w.print(string(append(w.buf.Bytes(), '\n')))
 	}
+
 	return nil
 }
 

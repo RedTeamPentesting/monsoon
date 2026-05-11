@@ -116,6 +116,7 @@ func TestExtractBody(t *testing.T) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
 			var r Response
+
 			err := r.ReadBody(&http.Response{Body: io.NopCloser(strings.NewReader(test.body))}, 1024*1024, false)
 			if err != nil {
 				t.Fatal(err)
@@ -178,7 +179,6 @@ func TestDecompressBody(t *testing.T) {
 	}
 
 	for i, test := range tests {
-
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			r := Response{
 				HTTPResponse: &http.Response{

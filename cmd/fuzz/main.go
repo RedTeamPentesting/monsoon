@@ -101,16 +101,20 @@ func compileRegexps(pattern []string) (res []*regexp.Regexp, err error) {
 
 func splitShell(cmds []string) ([][]string, error) {
 	var data [][]string
+
 	for _, cmd := range cmds {
 		args, err := shell.Split(cmd)
 		if err != nil {
 			return nil, err
 		}
+
 		if len(args) < 1 {
 			return nil, fmt.Errorf("invalid command: %q", cmd)
 		}
+
 		data = append(data, args)
 	}
+
 	return data, nil
 }
 
@@ -315,6 +319,7 @@ func logfilePath(opts *Options, inputURL string) (prefix string, err error) {
 		ts := time.Now().Format("20060102_150405")
 		fn := fmt.Sprintf("monsoon_%s_%s", url.Host, ts)
 		p := filepath.Join(opts.Logdir, fn)
+
 		return p, nil
 	}
 
@@ -329,6 +334,7 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, *
 	// handle old user interface, only range
 	case len(opts.Range) > 0:
 		var ranges []producer.Range
+
 		for _, r := range opts.Range {
 			rng, err := producer.NewRange(r)
 			if err != nil {
@@ -367,7 +373,9 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, *
 			inValues = append(inValues, []byte(v)...)
 			inValues = append(inValues, []byte("\n")...)
 		}
+
 		multiplexer.AddSource("FUZZ", producer.NewFile(bytes.NewReader(inValues), true), true)
+
 		return multiplexer, static, nil
 	}
 
@@ -410,6 +418,7 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, *
 			}
 
 			var ranges []producer.Range
+
 			for r := range strings.SplitSeq(r.Options, ",") {
 				rng, err := producer.NewRange(r)
 				if err != nil {
@@ -508,6 +517,7 @@ func setupResponseFilters(opts *Options) ([]response.Filter, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		filters = append(filters, f)
 	}
 
@@ -559,6 +569,7 @@ func startRunners(ctx context.Context, opts *Options, staticValues *producer.Sta
 			if len(via) <= opts.FollowRedirect {
 				return nil
 			}
+
 			return http.ErrUseLastResponse
 		}
 
@@ -601,16 +612,19 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 	}
 
 	var maxFrameRate uint
+
 	if s, ok := os.LookupEnv("MONSOON_PROGRESS_FPS"); ok {
 		rate, err := strconv.ParseUint(s, 10, 32)
 		if err != nil {
 			return fmt.Errorf("parse $MONSOON_PROGRESS_FPS: %w", err)
 		}
+
 		maxFrameRate = uint(rate)
 	}
 
 	term, cleanup, err := setupTerminal(ctx, g, maxFrameRate, logfilePrefix)
 	defer cleanup()
+
 	if err != nil {
 		return err
 	}
@@ -623,8 +637,11 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 
 	// setup the pipeline for the values
 	vch := make(chan []string, opts.BufferSize)
+
 	var valueCh <-chan []string = vch
+
 	cch := make(chan int, 1)
+
 	var countCh <-chan int = cch
 
 	// start produces and initialize multiplexer

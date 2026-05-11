@@ -15,7 +15,6 @@ type shellSplitter struct {
 func (s *shellSplitter) isSplitChar(c rune) bool {
 	// only test for quotes if the last char was not a backslash
 	if s.lastChar != '\\' {
-
 		// quote ended
 		if s.quote != 0 && c == s.quote {
 			s.quote = 0
@@ -56,6 +55,7 @@ func Split(data string) (strs []string, err error) {
 			fieldStart = i
 		}
 	}
+
 	if fieldStart >= 0 { // Last field might end at EOF.
 		strs = append(strs, data[fieldStart:])
 	}

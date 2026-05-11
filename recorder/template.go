@@ -30,6 +30,7 @@ func NewTemplate(request *request.Request) (t Template, err error) {
 	if err != nil {
 		return Template{}, err
 	}
+
 	t.Body = string(buf)
 
 	return t, nil

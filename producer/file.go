@@ -46,6 +46,7 @@ func (f *File) Yield(ctx context.Context, ch chan<- string, count chan<- int) (e
 
 	sc := bufio.NewScanner(f.rd)
 	num := 0
+
 	for sc.Scan() {
 		if sc.Err() != nil {
 			return sc.Err()

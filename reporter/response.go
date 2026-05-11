@@ -84,6 +84,7 @@ func FormatResponse(r response.Response, longRequest time.Duration) string {
 	}
 
 	res := r.HTTPResponse
+
 	status := fmt.Sprintf("%s %8d %8d   %s", colorStatusCode(res.StatusCode, "%7d"),
 		r.Header.Bytes, r.BodyStats.Bytes, Bold(values))
 	if res.StatusCode >= 300 && res.StatusCode < 400 {
@@ -92,6 +93,7 @@ func FormatResponse(r response.Response, longRequest time.Duration) string {
 			status += ", " + Dim("Location: ") + loc[0]
 		}
 	}
+
 	if len(r.Extract) > 0 {
 		status += Dim(" data: ") + Bold(strings.Join(quote(r.Extract), ", "))
 	}
@@ -114,6 +116,7 @@ func quote(strs []string) []string {
 		r = r[1 : len(r)-1]
 		res = append(res, r)
 	}
+
 	return res
 }
 

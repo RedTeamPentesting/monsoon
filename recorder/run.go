@@ -66,6 +66,7 @@ func LoadRuns(dir string) (runs []Run, err error) {
 			JSONFile: file,
 			Logfile:  strings.TrimSuffix(file, filepath.Ext(file)) + ".log",
 		}
+
 		err = json.Unmarshal(buf, &run.Data)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "unable to read JSON data from file %v, skipping: %v\n", file, err)
@@ -91,6 +92,7 @@ func LoadRuns(dir string) (runs []Run, err error) {
 		run.Host = run.URL.Hostname()
 		run.Port = port
 		run.Hostport = run.URL.Hostname() + ":" + port
+
 		run.PathQuery = run.URL.Path
 		if run.URL.RawQuery != "" {
 			run.PathQuery += "?" + run.URL.RawQuery
@@ -120,12 +122,15 @@ func SortRuns(list []Run) {
 // HostPorts returns a list of host:port combinations, and the list of runs sorted by the hostport combination.
 func HostPorts(list []Run) (hostports []string, runs map[string][]Run) {
 	runs = make(map[string][]Run)
+
 	for _, run := range list {
 		hostport := run.Hostport
 		if _, ok := runs[hostport]; !ok {
 			hostports = append(hostports, hostport)
 		}
+
 		runs[hostport] = append(runs[hostport], run)
 	}
+
 	return hostports, runs
 }

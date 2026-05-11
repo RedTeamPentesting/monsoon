@@ -132,6 +132,7 @@ func checkMethod(method string) CheckFunc {
 
 func checkHeader(name, value string) CheckFunc {
 	name = textproto.CanonicalMIMEHeaderKey(name)
+
 	return func(t testing.TB, req *http.Request) {
 		v, ok := req.Header[name]
 		if !ok {
@@ -159,6 +160,7 @@ func checkHost(value string) CheckFunc {
 
 func checkHeaderMulti(name string, values []string) CheckFunc {
 	name = textproto.CanonicalMIMEHeaderKey(name)
+
 	return func(t testing.TB, req *http.Request) {
 		v, ok := req.Header[name]
 		if !ok {
@@ -181,6 +183,7 @@ func checkHeaderMulti(name string, values []string) CheckFunc {
 
 func checkHeaderAbsent(name string) CheckFunc {
 	name = textproto.CanonicalMIMEHeaderKey(name)
+
 	return func(t testing.TB, req *http.Request) {
 		v, ok := req.Header[name]
 		if ok {
@@ -820,6 +823,7 @@ Host: server:1234
 		if err != nil {
 			t.Fatal(err)
 		}
+
 		defer func() {
 			err := os.RemoveAll(tempdir)
 			if err != nil {
@@ -831,6 +835,7 @@ Host: server:1234
 			var filename string
 			if test.File != "" {
 				filename = filepath.Join(tempdir, "test-"+strings.Replace(t.Name(), "/", "_", -1))
+
 				err := os.WriteFile(filename, []byte(test.File), 0o644)
 				if err != nil {
 					t.Fatal(err)
@@ -845,12 +850,15 @@ Host: server:1234
 			}
 
 			req := New(test.Names)
+
 			req.URL = test.URL
 			if test.File != "" {
 				req.TemplateFile = filename
 			}
+
 			req.Method = test.Method
 			req.Body = test.Body
+
 			req.ForceChunkedEncoding = test.ForceChunkedEncoding
 			for _, hdr := range test.Header {
 				err := req.Header.Set(hdr)
@@ -895,7 +903,9 @@ Host: server:1234
 							panic("unknown scheme " + srvURL.Scheme)
 						}
 					}
+
 					testServerAddr := fmt.Sprintf("%v:%v", srvURL.Hostname(), port)
+
 					return net.Dial("tcp", testServerAddr)
 				},
 			}

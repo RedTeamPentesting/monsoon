@@ -21,6 +21,7 @@ func setupHelp(cmd *cobra.Command) {
 			if cmd == nil || e != nil {
 				c.Printf("Unknown help topic %q\n", args)
 				_ = c.Root().Usage()
+
 				return
 			}
 

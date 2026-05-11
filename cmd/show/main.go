@@ -79,7 +79,9 @@ var cmd = &cobra.Command{
 		if !bytes.HasSuffix(buf, []byte("\n")) {
 			buf = append(buf, '\n')
 		}
+
 		_, err = os.Stdout.Write(buf)
+
 		return err
 	},
 }

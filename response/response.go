@@ -48,6 +48,7 @@ func quote(strs []string) []string {
 		r = r[1 : len(r)-1]
 		res = append(res, r)
 	}
+
 	return res
 }
 
@@ -74,6 +75,7 @@ func (r Response) String() string {
 	if len(r.Extract) > 0 {
 		status += " data: " + strings.Join(quote(r.Extract), ", ")
 	}
+
 	return status
 }
 
@@ -118,8 +120,10 @@ func extractCommand(ctx context.Context, extraEnv []string, buf []byte, cmds [][
 		if err != nil {
 			return nil, fmt.Errorf("command %s failed: %v", command, err)
 		}
+
 		data = append(data, string(buf))
 	}
+
 	return data, nil
 }
 
@@ -221,6 +225,7 @@ func (r *Response) ExtractBodyCommand(ctx context.Context, cmds [][]string) (err
 	}
 
 	r.Extract = append(r.Extract, data...)
+
 	return nil
 }
 
@@ -250,6 +255,7 @@ func Count(rd io.Reader) (TextStats, error) {
 	var stats TextStats
 
 	bufReader := bufio.NewReader(rd)
+
 	var previous, current byte
 	for {
 		current, err := bufReader.ReadByte()

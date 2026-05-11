@@ -38,6 +38,7 @@ func filterRuns(list []recorder.Run, opts ListOptions) (res []recorder.Run) {
 		if !strings.Contains(run.Host, opts.Host) {
 			continue
 		}
+
 		if opts.Port != "" && opts.Port != run.Port {
 			continue
 		}
@@ -92,7 +93,9 @@ var FuncMap = map[string]any{
 			s += fmt.Sprintf("%dm", sec/60)
 			sec = sec % 60
 		}
+
 		s += fmt.Sprintf("%ds", sec)
+
 		return s
 	},
 	"join": strings.Join,

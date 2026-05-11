@@ -136,6 +136,7 @@ func parseInt(s string) (int, error) {
 	magnitude := int64(math.Pow10(exp))
 
 	negative := false
+
 	if value < 0 {
 		value = -value
 		negative = true

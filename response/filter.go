@@ -20,6 +20,7 @@ type FilterStatusCode struct {
 // NewFilterStatusCode returns a filter based on HTTP status code.
 func NewFilterStatusCode(rejects, accepts []string) (FilterStatusCode, error) {
 	filter := FilterStatusCode{}
+
 	for _, s := range rejects {
 		f, err := parseRangeFilterSpec(s)
 		if err != nil {
@@ -87,6 +88,7 @@ func parseRangeFilterSpec(spec string) (func(int) bool, error) {
 		f := func(size int) bool {
 			return size <= v
 		}
+
 		return f, nil
 	}
 
@@ -99,6 +101,7 @@ func parseRangeFilterSpec(spec string) (func(int) bool, error) {
 		f := func(size int) bool {
 			return size >= v
 		}
+
 		return f, nil
 	}
 
@@ -119,6 +122,7 @@ func parseRangeFilterSpec(spec string) (func(int) bool, error) {
 		f := func(size int) bool {
 			return size >= v1 && size <= v2
 		}
+
 		return f, nil
 	}
 
@@ -130,6 +134,7 @@ func parseRangeFilterSpec(spec string) (func(int) bool, error) {
 	f := func(size int) bool {
 		return size == v
 	}
+
 	return f, nil
 }
 

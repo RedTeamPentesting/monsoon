@@ -250,6 +250,7 @@ func requestFromBuffer(buf []byte, target *url.URL, replace func([]byte) []byte)
 	}
 
 	rd := bufio.NewReader(bytes.NewReader(buf))
+
 	req, err := http.ReadRequest(rd)
 	if err != nil {
 		return nil, fmt.Errorf("parse HTTP request: %w", err)
@@ -261,6 +262,7 @@ func requestFromBuffer(buf []byte, target *url.URL, replace func([]byte) []byte)
 		// if nothing further can be read, that's fine with us
 		err = nil
 	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -270,6 +272,7 @@ func requestFromBuffer(buf []byte, target *url.URL, replace func([]byte) []byte)
 	if err == io.ErrUnexpectedEOF {
 		err = nil
 	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -387,7 +390,6 @@ func (r *Request) Apply(values []string) (*http.Request, error) {
 		if r.Method != "" {
 			req.Method = insertValues(r.Method)
 		}
-
 	} else {
 		var err error
 
@@ -413,6 +415,7 @@ func (r *Request) Apply(values []string) (*http.Request, error) {
 	if r.UserPass != "" {
 		data := strings.SplitN(insertValues(r.UserPass), ":", 2)
 		u := data[0]
+
 		p := ""
 		if len(data) > 1 {
 			p = data[1]

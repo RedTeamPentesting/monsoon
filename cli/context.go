@@ -20,6 +20,7 @@ func WithContext(f func(context.Context, *errgroup.Group) error) error {
 	// cancel the context on SIGINT
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT)
+
 	go func() {
 		// track the number of events we receive
 		received := 0
@@ -33,6 +34,7 @@ func WithContext(f func(context.Context, *errgroup.Group) error) error {
 				fmt.Printf("received signal %v again, exiting\n", sig)
 				os.Exit(1)
 			}
+
 			received++
 		}
 	}()
@@ -41,5 +43,6 @@ func WithContext(f func(context.Context, *errgroup.Group) error) error {
 	g.Go(func() error {
 		return f(ctx, g)
 	})
+
 	return g.Wait()
 }

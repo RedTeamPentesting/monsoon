@@ -116,11 +116,13 @@ func (h *HTTPStats) Report(last []string) (res []string) {
 
 func filterArray(toFilter []string, showValue []bool) []string {
 	var out []string
+
 	for i, v := range toFilter {
 		if showValue[i] {
 			out = append(out, v)
 		}
 	}
+
 	return out
 }
 
@@ -150,12 +152,14 @@ next_response:
 		select {
 		case resp, ok = <-ch:
 			resp.Values = filterArray(resp.Values, r.showValues)
+
 			if !ok {
 				break next_response
 			}
 		case c := <-countChannel:
 			stats.Count = c
 			countChannel = nil
+
 			continue next_response
 		case <-ticker.C:
 			r.term.SetStatus(stats.Report(last))
@@ -180,6 +184,7 @@ next_response:
 
 		if !resp.Hide || resp.Error != nil {
 			r.term.Printf("%v\n", FormatResponse(resp, r.longRequest))
+
 			stats.ShownResponses++
 		}
 
@@ -228,6 +233,7 @@ func (r *Reporter) displayRequestAndResponse(res response.Response) {
 	}
 
 	r.term.Print(delimiter("Request"))
+
 	requestHeaderBytes, err := httputil.DumpRequestOut(res.HTTPResponse.Request, false)
 	if err != nil {
 		r.term.Print("Error: cannot dump request header: " + err.Error())

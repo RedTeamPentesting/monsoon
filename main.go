@@ -82,7 +82,9 @@ func injectDefaultCommand(args []string) []string {
 
 	// inject default command as first argument
 	fmt.Fprintf(os.Stderr, "no command found, assuming 'monsoon fuzz'\n\n")
+
 	args = append([]string{"fuzz"}, args...)
+
 	return args
 }
 
@@ -129,6 +131,7 @@ func buildVersionString(compileTimeVersion string) string {
 	}
 
 	commit, _ := buildSetting("vcs.revision")
+
 	if !ok {
 		return version
 	}

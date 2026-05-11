@@ -66,6 +66,7 @@ func New(filename string, request *request.Request) (*Recorder, error) {
 			Template: t,
 		},
 	}
+
 	return rec, nil
 }
 
@@ -93,8 +94,10 @@ func (r *Recorder) Run(ctx context.Context, in <-chan response.Response, out cha
 
 loop:
 	for {
-		var res response.Response
-		var ok bool
+		var (
+			res response.Response
+			ok  bool
+		)
 
 		select {
 		case <-ctx.Done():
@@ -113,6 +116,7 @@ loop:
 			inCount = nil
 			// enable sending by setting countCh to outCount (which is not nil)
 			countCh = outCount
+
 			continue loop
 
 		case countCh <- data.TotalRequests:
@@ -128,6 +132,7 @@ loop:
 		} else {
 			data.HiddenResponses++
 		}
+
 		data.End = time.Now()
 
 		if time.Since(lastStatus) > statusInterval {
@@ -148,6 +153,7 @@ loop:
 	}
 
 	data.End = time.Now()
+
 	return r.dump(data)
 }
 
@@ -157,6 +163,7 @@ func (r *Recorder) dump(data Data) error {
 	if err != nil {
 		return err
 	}
+
 	buf = append(buf, '\n')
 
 	return os.WriteFile(r.filename, buf, 0o644)
@@ -168,6 +175,7 @@ func NewResponse(r response.Response) (res Response) {
 	if r.Duration != 0 {
 		res.Duration = float64(r.Duration) / float64(time.Second)
 	}
+
 	if r.Error != nil {
 		res.Error = r.Error.Error()
 	}
@@ -176,8 +184,10 @@ func NewResponse(r response.Response) (res Response) {
 		res.StatusCode = r.HTTPResponse.StatusCode
 		res.StatusText = r.HTTPResponse.Status
 	}
+
 	res.Header = r.Header
 	res.Body = r.BodyStats
+
 	res.ExtractedData = r.Extract
 	if r.ExtractError != nil {
 		res.ExtractError = r.ExtractError.Error()

@@ -14,6 +14,7 @@ func init() {
 
 func extractTargets(list []recorder.Run) []string {
 	known := make(map[string]struct{})
+
 	var targets []string
 
 	for _, run := range list {

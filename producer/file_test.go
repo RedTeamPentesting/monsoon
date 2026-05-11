@@ -48,6 +48,7 @@ func TestFile(t *testing.T) {
 				})
 
 				var values []string
+
 				eg.Go(func() error {
 					for v := range ch {
 						values = append(values, v)

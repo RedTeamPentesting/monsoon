@@ -8,15 +8,18 @@ func Mark(in <-chan Response, filters []Filter) <-chan Response {
 
 	go func() {
 		defer close(ch)
+
 		for res := range in {
 			// run filters
 			hide := false
+
 			for _, f := range filters {
 				if f.Reject(res) {
 					hide = true
 					break
 				}
 			}
+
 			res.Hide = hide
 
 			// forward response to next in chain

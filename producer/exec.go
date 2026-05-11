@@ -42,10 +42,12 @@ func (e *Exec) Yield(ctx context.Context, ch chan<- string, count chan<- int) (e
 		if err != nil {
 			return fmt.Errorf("error splitting command %q: %w", e.cmd, err)
 		}
+
 		cmd = exec.CommandContext(ctx, args[0], args[1:]...)
 	} else {
 		cmd = exec.CommandContext(ctx, e.shellBaseCommand, "-c", e.cmd)
 	}
+
 	cmd.Stdout = commandOutputWriter
 	cmd.Stderr = os.Stderr
 
@@ -62,7 +64,6 @@ func (e *Exec) Yield(ctx context.Context, ch chan<- string, count chan<- int) (e
 
 	eg.Go(func() error {
 		// io.Copy(os.Stdout, commandOutput)
-
 		num := 0
 		sc := bufio.NewScanner(commandOutput)
 
@@ -85,6 +86,7 @@ func (e *Exec) Yield(ctx context.Context, ch chan<- string, count chan<- int) (e
 	})
 
 	err = eg.Wait()
+
 	return err
 }
 

@@ -20,9 +20,11 @@ func printTree(target string, runs []recorder.Run) error {
 	if err != nil {
 		return err
 	}
+
 	fmt.Printf("\n%v\n====================================\n", url)
 
 	structure := make(map[string]string)
+
 	for _, run := range runs {
 		// we're only interested in the runs exactly matching the host and port
 		if run.Host != url.Hostname() {
@@ -39,6 +41,7 @@ func printTree(target string, runs []recorder.Run) error {
 
 		// only consider the runs for which the path was tested
 		foundTemplate := false
+
 		for _, name := range run.Names {
 			if strings.Contains(run.URL.Path, name) {
 				foundTemplate = true
@@ -87,6 +90,7 @@ func printTree(target string, runs []recorder.Run) error {
 	for path := range structure {
 		names = append(names, path)
 	}
+
 	sort.Strings(names)
 
 	var current string
@@ -95,6 +99,7 @@ func printTree(target string, runs []recorder.Run) error {
 			current = path.Dir(name)
 			fmt.Printf("%v\n", current)
 		}
+
 		state := structure[name]
 		fmt.Printf("     %v %v\n", path.Base(name), state)
 	}

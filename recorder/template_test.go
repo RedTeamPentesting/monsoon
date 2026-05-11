@@ -32,6 +32,7 @@ func TestTemplate(t *testing.T) {
 				req := request.New([]string{"FUZZ"})
 				req.URL = "https://localhost:8443/"
 				req.Method = "foo"
+
 				return req
 			},
 			want: Template{
@@ -49,6 +50,7 @@ func TestTemplate(t *testing.T) {
 				_ = req.Header.Set("x-foo: bar")
 				_ = req.Header.Set("accept: application/json")
 				_ = req.Header.Set("accept: image/jpeg")
+
 				return req
 			},
 			want: Template{
@@ -72,6 +74,7 @@ Accept: image/jpeg
 X-foo: bar
 
 foobar`)
+
 				err := os.WriteFile(fn, data, 0o644)
 				if err != nil {
 					t.Fatal(err)

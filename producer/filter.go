@@ -25,6 +25,7 @@ func (f *FilterSkip) Count(ctx context.Context, in <-chan int) <-chan int {
 
 	go func() {
 		defer close(out)
+
 		var total int
 		select {
 		case total = <-in:
@@ -53,10 +54,15 @@ func (f *FilterSkip) Select(ctx context.Context, in <-chan []string) <-chan []st
 
 	go func() {
 		defer close(out)
+
 		var cur int
+
 		for {
-			var v []string
-			var ok bool
+			var (
+				v  []string
+				ok bool
+			)
+
 			select {
 			case <-ctx.Done():
 				return
@@ -99,6 +105,7 @@ func (f *FilterLimit) Count(ctx context.Context, in <-chan int) <-chan int {
 
 	go func() {
 		defer close(out)
+
 		var total int
 		select {
 		case total = <-in:
@@ -128,9 +135,13 @@ func (f *FilterLimit) Select(ctx context.Context, in <-chan []string) <-chan []s
 		defer f.CancelProducer()
 
 		var cur int
+
 		for {
-			var v []string
-			var ok bool
+			var (
+				v  []string
+				ok bool
+			)
+
 			select {
 			case <-ctx.Done():
 				return
@@ -146,6 +157,7 @@ func (f *FilterLimit) Select(ctx context.Context, in <-chan []string) <-chan []s
 				f.CancelProducer()
 				continue
 			}
+
 			cur++
 
 			select {

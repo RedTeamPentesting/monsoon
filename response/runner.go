@@ -211,6 +211,7 @@ func getAllCipherSuiteIDs() []uint16 {
 	for _, v := range append(tls.CipherSuites(), tls.InsecureCipherSuites()...) {
 		allCiphers = append(allCiphers, v.ID)
 	}
+
 	return allCiphers
 }
 
@@ -242,10 +243,12 @@ func readPEMCertKey(filename string) (certs []byte, key []byte, err error) {
 	}
 
 	var block *pem.Block
+
 	for {
 		if len(data) == 0 {
 			break
 		}
+
 		block, data = pem.Decode(data)
 		if block == nil {
 			break
@@ -325,6 +328,7 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 
 	start := time.Now()
 	res, err := r.Client.Do(req.WithContext(ctx))
+
 	response.Duration = time.Since(start)
 	if err != nil {
 		response.Error = fmt.Errorf("execute request: %w", err)

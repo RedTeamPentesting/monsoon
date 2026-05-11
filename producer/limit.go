@@ -18,6 +18,7 @@ func Limit(ctx context.Context, perSecond float64, in <-chan []string) <-chan []
 
 	go func() {
 		defer close(out)
+
 		for s := range in {
 			timeout := bucket.Take(1)
 			select {
