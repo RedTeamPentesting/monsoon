@@ -76,7 +76,13 @@ const statusInterval = time.Second
 // recording statistics on the way. When ch is closed or the context is
 // cancelled, the output file is closed, processing stops, and the output
 // channel is closed.
-func (r *Recorder) Run(ctx context.Context, in <-chan response.Response, out chan<- response.Response, inCount <-chan int, outCount chan<- int) error {
+func (r *Recorder) Run(
+	ctx context.Context,
+	in <-chan response.Response,
+	out chan<- response.Response,
+	inCount <-chan int,
+	outCount chan<- int,
+) error {
 	defer close(out)
 
 	data := r.Data

@@ -87,7 +87,8 @@ func AddTransportFlags(fs *pflag.FlagSet, opts *TransportOptions) {
 
 	fs.DurationVar(&opts.ConnectTimeout, "connect-timeout", DefaultConnectTimeout, "limit TCP connection establishment")
 	fs.DurationVar(&opts.TLSHandshakeTimeout, "tls-handshake-timeout", DefaultTLSHandshakeTimeout, "limit TLS connection establishment")
-	fs.DurationVar(&opts.ResponseHeaderTimeout, "response-header-timeout", DefaultResponseHeaderTimeout, "limit time until the first response header line must have been received")
+	fs.DurationVar(&opts.ResponseHeaderTimeout, "response-header-timeout", DefaultResponseHeaderTimeout,
+		"limit time until the first response header line must have been received")
 }
 
 // NewTransport creates a new shared transport for clients to use.

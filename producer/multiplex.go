@@ -71,7 +71,14 @@ func (m *Multiplexer) Run(ctx context.Context, ch chan<- []string, count chan<- 
 	return eg.Wait()
 }
 
-func run(ctx context.Context, resultChan chan<- []string, sourceCountChan chan<- sourceCount, sources []Source, partResult []string, countKnownSubtree bool) error {
+func run(
+	ctx context.Context,
+	resultChan chan<- []string,
+	sourceCountChan chan<- sourceCount,
+	sources []Source,
+	partResult []string,
+	countKnownSubtree bool,
+) error {
 	// special case: the sources list is empty (because all values are static
 	// values), so we just send one empty string slice
 	if len(sources) == 0 {

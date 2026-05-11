@@ -284,8 +284,10 @@ func AddCommand(c *cobra.Command) {
 	fs.StringSliceVar(&opts.ShowStatusCodes, "show-status", nil, "show only responses with this status `code,[code-code],[code-],[...]`")
 	fs.StringSliceVar(&opts.HideHeaderSize, "hide-header-size", nil, "hide responses with this header size (`size,from-to,from-,-to`)")
 	fs.StringSliceVar(&opts.HideBodySize, "hide-body-size", nil, "hide responses with this body size (`size,from-to,from-,-to`)")
-	fs.StringArrayVar(&opts.HidePattern, "hide-pattern", nil, "hide responses containing `regex` in response header or body (can be specified multiple times)")
-	fs.StringArrayVar(&opts.ShowPattern, "show-pattern", nil, "show only responses containing `regex` in response header or body (can be specified multiple times)")
+	fs.StringArrayVar(&opts.HidePattern, "hide-pattern", nil,
+		"hide responses containing `regex` in response header or body (can be specified multiple times)")
+	fs.StringArrayVar(&opts.ShowPattern, "show-pattern", nil,
+		"show only responses containing `regex` in response header or body (can be specified multiple times)")
 
 	fs.StringArrayVar(&opts.Extract, "extract", nil, "extract `regex` from response header or body (can be specified multiple times)")
 	fs.StringArrayVar(&opts.ExtractPipe, "extract-pipe", nil, "pipe response body to `cmd` to extract data (can be specified multiple times, "+
@@ -532,7 +534,13 @@ func setupResponseFilters(opts *Options) ([]response.Filter, error) {
 	return filters, nil
 }
 
-func setupValueFilters(ctx context.Context, opts *Options, cancelProducer func(), valueCh <-chan []string, countCh <-chan int) (<-chan []string, <-chan int) {
+func setupValueFilters(
+	ctx context.Context,
+	opts *Options,
+	cancelProducer func(),
+	valueCh <-chan []string,
+	countCh <-chan int,
+) (<-chan []string, <-chan int) {
 	if opts.Skip > 0 {
 		f := &producer.FilterSkip{Skip: opts.Skip}
 		countCh = f.Count(ctx, countCh)

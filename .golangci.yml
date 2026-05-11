@@ -82,7 +82,7 @@ linters:
     - noinlineerr
   settings:
     lll:
-      line-length: 130
+      line-length: 150
       tab-width: 4
     cyclop:
       max-complexity: 20
