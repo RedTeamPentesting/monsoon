@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
-	"net/url"
 	"os"
 	"os/exec"
 	"regexp"
@@ -55,10 +54,7 @@ func quote(strs []string) []string {
 func (r Response) String() string {
 	if r.Error != nil {
 		// don't print anything if the request has been cancelled
-		if r.Error == context.Canceled {
-			return ""
-		}
-		if e, ok := r.Error.(*url.Error); ok && e.Err == context.Canceled {
+		if errors.Is(r.Error, context.Canceled) {
 			return ""
 		}
 
@@ -66,6 +62,7 @@ func (r Response) String() string {
 	}
 
 	res := r.HTTPResponse
+
 	status := fmt.Sprintf("%7d %8d %8d   %-8v", res.StatusCode, r.Header.Bytes, r.BodyStats.Bytes, r.Values)
 	if res.StatusCode >= 300 && res.StatusCode < 400 {
 		loc, ok := res.Header["Location"]
@@ -73,6 +70,7 @@ func (r Response) String() string {
 			status += ", Location: " + loc[0]
 		}
 	}
+
 	if len(r.Extract) > 0 {
 		status += " data: " + strings.Join(quote(r.Extract), ", ")
 	}
