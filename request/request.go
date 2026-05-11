@@ -258,7 +258,7 @@ func requestFromBuffer(buf []byte, target *url.URL, replace func([]byte) []byte)
 
 	// append the rest of the file to the body
 	rest, err := io.ReadAll(rd)
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		// if nothing further can be read, that's fine with us
 		err = nil
 	}
@@ -269,7 +269,7 @@ func requestFromBuffer(buf []byte, target *url.URL, replace func([]byte) []byte)
 
 	// rebuild body
 	origBody, err := io.ReadAll(req.Body)
-	if err == io.ErrUnexpectedEOF {
+	if errors.Is(err, io.ErrUnexpectedEOF) {
 		err = nil
 	}
 

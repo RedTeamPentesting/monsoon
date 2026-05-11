@@ -90,7 +90,7 @@ func compileRegexps(pattern []string) (res []*regexp.Regexp, err error) {
 	for _, pat := range pattern {
 		r, err := regexp.Compile(pat)
 		if err != nil {
-			return nil, fmt.Errorf("regexp %q failed to compile: %v", pat, err)
+			return nil, fmt.Errorf("regexp %q failed to compile: %w", pat, err)
 		}
 
 		res = append(res, r)

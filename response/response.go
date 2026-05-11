@@ -118,7 +118,7 @@ func extractCommand(ctx context.Context, extraEnv []string, buf []byte, cmds [][
 
 		buf, err := cmd.Output()
 		if err != nil {
-			return nil, fmt.Errorf("command %s failed: %v", command, err)
+			return nil, fmt.Errorf("command %s failed: %w", command, err)
 		}
 
 		data = append(data, string(buf))

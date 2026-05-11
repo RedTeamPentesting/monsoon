@@ -161,7 +161,7 @@ func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transpor
 		// to loopback devices through the proxy connection
 		socks5Dialer, err := socks5ContextDialer(dialer, socks5ProxyConfig)
 		if err != nil {
-			return nil, fmt.Errorf("configure socks5 proxy: %v", err)
+			return nil, fmt.Errorf("configure socks5 proxy: %w", err)
 		}
 
 		tr.DialContext = socks5Dialer.DialContext
@@ -196,7 +196,7 @@ func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transpor
 
 		crt, err := tls.X509KeyPair(certs, key)
 		if err != nil {
-			return nil, fmt.Errorf("parse TLS client cert or key: %v", err)
+			return nil, fmt.Errorf("parse TLS client cert or key: %w", err)
 		}
 
 		tr.TLSClientConfig.Certificates = []tls.Certificate{crt}
@@ -218,7 +218,7 @@ func getAllCipherSuiteIDs() []uint16 {
 func socks5ContextDialer(dialer proxy.Dialer, socks5Conf string) (proxy.ContextDialer, error) {
 	socks5URL, err := url.Parse("socks5://" + socks5Conf)
 	if err != nil {
-		return nil, fmt.Errorf("parse socks5 configuration: %v", err)
+		return nil, fmt.Errorf("parse socks5 configuration: %w", err)
 	}
 
 	socks5Dialer, err := proxy.FromURL(socks5URL, dialer)
@@ -239,7 +239,7 @@ func socks5ContextDialer(dialer proxy.Dialer, socks5Conf string) (proxy.ContextD
 func readPEMCertKey(filename string) (certs []byte, key []byte, err error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, nil, fmt.Errorf("ReadFile: %v", err)
+		return nil, nil, fmt.Errorf("ReadFile: %w", err)
 	}
 
 	var block *pem.Block
