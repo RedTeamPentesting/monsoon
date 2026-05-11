@@ -306,7 +306,8 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 	req, err := r.Template.Apply(values)
 	if err != nil {
 		response.Error = InvalidRequestError{err}
-		return
+
+		return response
 	}
 
 	var preservedBody []byte
@@ -315,7 +316,8 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 		preservedBody, err = io.ReadAll(req.Body)
 		if err != nil {
 			response.Error = InvalidRequestError{err}
-			return
+
+			return response
 		}
 
 		req.Body = io.NopCloser(bytes.NewReader(preservedBody))
@@ -333,7 +335,8 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 	response.Duration = time.Since(start)
 	if err != nil {
 		response.Error = fmt.Errorf("execute request: %w", err)
-		return
+
+		return response
 	}
 
 	response.HTTPResponse = res
@@ -347,22 +350,25 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 	err = response.ExtractHeader(res, r.Extract)
 	if err != nil {
 		response.Error = fmt.Errorf("extract header: %w", err)
-		return
+
+		return response
 	}
 
 	err = response.ReadBody(res, r.MaxBodySize, r.DecompressResponseBody)
 	if err != nil {
 		response.Error = fmt.Errorf("read body: %w", err)
-		return
+
+		return response
 	}
 
 	err = res.Body.Close()
 	if err != nil {
 		response.Error = fmt.Errorf("close body: %w", err)
-		return
+
+		return response
 	}
 
-	return
+	return response
 }
 
 // Run processes items read from ch and executes HTTP requests.
