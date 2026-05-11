@@ -11,10 +11,7 @@ import (
 )
 
 func TestTemplate(t *testing.T) {
-	tempdir, err := os.MkdirTemp("", "monsoon-recorder-test-")
-	if err != nil {
-		t.Fatal(err)
-	}
+	tempdir := t.TempDir()
 
 	defer func() {
 		err := os.RemoveAll(tempdir)

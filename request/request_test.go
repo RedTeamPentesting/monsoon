@@ -825,10 +825,7 @@ Host: server:1234
 	}
 
 	for _, test := range tests {
-		tempdir, err := os.MkdirTemp("", "monsoon-test-request-")
-		if err != nil {
-			t.Fatal(err)
-		}
+		tempdir := t.TempDir()
 
 		defer func() {
 			err := os.RemoveAll(tempdir)
