@@ -138,12 +138,21 @@ func (r *Response) ReadBody(res *http.Response, maxBodySize int, decompress bool
 	if decompress {
 		switch strings.ToLower(res.Header.Get("Content-Encoding")) {
 		case "gzip":
-			r.Decompressed = true
-
 			bodyReader, err = gzip.NewReader(bodyReader)
-			if err != nil {
-				return fmt.Errorf("create gzip reader: %w", err)
+			// the gzip reader tries to read the header first. if the server
+			// just closes the connection and sends an empty body, an error is
+			// returned here. We treat this as an empty body.
+			if errors.Is(err, io.EOF) {
+				bodyReader = io.NopCloser(bytes.NewReader([]byte{}))
+
+				break
 			}
+
+			if err != nil {
+				return fmt.Errorf("decompress gzip response: %w", err)
+			}
+
+			r.Decompressed = true
 
 			defer func() {
 				err := bodyReader.Close()
@@ -156,7 +165,7 @@ func (r *Response) ReadBody(res *http.Response, maxBodySize int, decompress bool
 
 			rd, err := zstd.NewReader(bodyReader)
 			if err != nil {
-				return fmt.Errorf("create zstd reader: %w", err)
+				return fmt.Errorf("decompress zstd response: %w", err)
 			}
 
 			bodyReader = rd.IOReadCloser()
@@ -177,10 +186,13 @@ func (r *Response) ReadBody(res *http.Response, maxBodySize int, decompress bool
 
 	r.Body, err = io.ReadAll(bodyReader)
 	if err != nil && !(errors.Is(err, io.ErrUnexpectedEOF) && r.Decompressed) {
-		return err
+		return fmt.Errorf("read body: %w", err)
 	}
 
 	r.BodyStats, err = Count(bytes.NewReader(r.Body))
+	if err != nil {
+		return fmt.Errorf("count body bytes: %w", err)
+	}
 
 	return err
 }

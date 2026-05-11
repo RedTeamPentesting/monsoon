@@ -208,6 +208,68 @@ func TestDecompressBody(t *testing.T) {
 	}
 }
 
+func TestDecompressBodyErrors(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		Algorithm            string
+		Body                 []byte
+		ExpectedResult       []byte
+		DecompressionEnabled bool
+		MaxBodySize          int
+		Error                string
+	}{
+		{
+			Algorithm:            "gzip",
+			Body:                 []byte{},
+			ExpectedResult:       []byte{},
+			DecompressionEnabled: true,
+		},
+		{
+			Algorithm:            "zstd",
+			Body:                 []byte{},
+			ExpectedResult:       []byte{},
+			DecompressionEnabled: true,
+		},
+		{
+			Algorithm:            "br",
+			Body:                 []byte{},
+			ExpectedResult:       []byte{},
+			DecompressionEnabled: true,
+		},
+	}
+
+	for i, test := range tests {
+		t.Run(strconv.Itoa(i), func(t *testing.T) {
+			t.Parallel()
+
+			r := Response{
+				HTTPResponse: &http.Response{
+					Body:   io.NopCloser(bytes.NewReader(test.Body)),
+					Header: make(http.Header),
+				},
+			}
+
+			if test.Algorithm != "" {
+				r.HTTPResponse.Header.Add("Content-Encoding", test.Algorithm)
+			}
+
+			if test.MaxBodySize == 0 {
+				test.MaxBodySize = math.MaxInt
+			}
+
+			err := r.ReadBody(r.HTTPResponse, test.MaxBodySize, test.DecompressionEnabled)
+			if err != nil {
+				t.Fatalf("read body: %v", err)
+			}
+
+			if !bytes.Equal(r.Body, test.ExpectedResult) {
+				t.Fatalf("read body %q instead of %q", string(r.Body), string(test.ExpectedResult))
+			}
+		})
+	}
+}
+
 func compress(tb testing.TB, data []byte) []byte {
 	tb.Helper()
 

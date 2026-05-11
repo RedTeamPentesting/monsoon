@@ -327,7 +327,7 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 	res, err := r.Client.Do(req.WithContext(ctx))
 	response.Duration = time.Since(start)
 	if err != nil {
-		response.Error = err
+		response.Error = fmt.Errorf("execute request: %w", err)
 		return
 	}
 
@@ -341,19 +341,19 @@ func (r *Runner) request(ctx context.Context, values []string) (response Respons
 	// for that, so we can easily run data extraction in the same step.
 	err = response.ExtractHeader(res, r.Extract)
 	if err != nil {
-		response.Error = err
+		response.Error = fmt.Errorf("extract header: %w", err)
 		return
 	}
 
 	err = response.ReadBody(res, r.MaxBodySize, r.DecompressResponseBody)
 	if err != nil {
-		response.Error = err
+		response.Error = fmt.Errorf("read body: %w", err)
 		return
 	}
 
 	err = res.Body.Close()
 	if err != nil {
-		response.Error = err
+		response.Error = fmt.Errorf("close body: %w", err)
 		return
 	}
 
