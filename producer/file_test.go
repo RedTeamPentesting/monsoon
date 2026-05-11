@@ -38,7 +38,7 @@ func TestFile(t *testing.T) {
 
 			// test the source twice, so we check if it really yields the same
 			// values
-			for i := 0; i < 2; i++ {
+			for i := range 2 {
 				ch := make(chan string)
 				count := make(chan int, 1)
 

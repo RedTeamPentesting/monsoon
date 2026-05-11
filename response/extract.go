@@ -28,7 +28,7 @@ func (e *Extracter) Run(ctx context.Context, numWorkers int, in <-chan Response)
 
 		eg, ctx := errgroup.WithContext(ctx)
 
-		for i := 0; i < numWorkers; i++ {
+		for range numWorkers {
 			eg.Go(func() error {
 				e.handleResponses(ctx, in, ch)
 

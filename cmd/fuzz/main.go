@@ -410,7 +410,7 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, *
 			}
 
 			var ranges []producer.Range
-			for _, r := range strings.Split(r.Options, ",") {
+			for r := range strings.SplitSeq(r.Options, ",") {
 				rng, err := producer.NewRange(r)
 				if err != nil {
 					return nil, nil, err
@@ -562,12 +562,9 @@ func startRunners(ctx context.Context, opts *Options, staticValues *producer.Sta
 			return http.ErrUseLastResponse
 		}
 
-		wg.Add(1)
-
-		go func() {
+		wg.Go(func() {
 			runner.Run(ctx)
-			wg.Done()
-		}()
+		})
 	}
 
 	go func() {

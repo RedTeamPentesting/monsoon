@@ -12,7 +12,7 @@ import (
 func mustParseRanges(rs string) *Ranges {
 	var ranges []Range
 
-	for _, s := range strings.Split(rs, ",") {
+	for s := range strings.SplitSeq(rs, ",") {
 		r, err := NewRange(s)
 		if err != nil {
 			panic(err)

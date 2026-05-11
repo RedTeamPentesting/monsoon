@@ -102,9 +102,9 @@ func parseRangeFilterSpec(spec string) (func(int) bool, error) {
 		return f, nil
 	}
 
-	pos := strings.IndexByte(spec, '-')
-	if pos >= 0 {
-		s1, s2 := spec[:pos], spec[pos+1:]
+	before, after, ok := strings.Cut(spec, "-")
+	if ok {
+		s1, s2 := before, after
 
 		v1, err := strconv.Atoi(s1)
 		if err != nil {

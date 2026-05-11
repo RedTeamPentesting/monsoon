@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/textproto"
 	"net/url"
@@ -74,9 +75,7 @@ func (h Header) Type() string {
 // NewHeader initializes a Header.
 func NewHeader(defaults http.Header) *Header {
 	hdr := make(http.Header)
-	for k, vs := range defaults {
-		hdr[k] = vs
-	}
+	maps.Copy(hdr, defaults)
 
 	return &Header{
 		Header: hdr,

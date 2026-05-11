@@ -79,7 +79,7 @@ const HostTemplate = `{{ .Hostport }}
 {{ end }}
 `
 
-var FuncMap = map[string]interface{}{
+var FuncMap = map[string]any{
 	"contains": strings.Contains,
 	"duration": func(t1, t2 time.Time) (s string) {
 		sec := uint64(t2.Sub(t1).Seconds())

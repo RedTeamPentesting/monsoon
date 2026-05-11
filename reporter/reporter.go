@@ -319,10 +319,7 @@ func styleHeaderLine(line string) string {
 }
 
 func delimiter(name string) string {
-	repeats := 50 - len(name)
-	if repeats < 1 {
-		repeats = 1
-	}
+	repeats := max(50-len(name), 1)
 
 	return colored(blue, Bold("\n―― "+name+": "+strings.Repeat("―", repeats)))
 }

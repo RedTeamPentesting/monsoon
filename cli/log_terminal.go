@@ -22,7 +22,7 @@ type LogTerminal struct {
 }
 
 // Printf prints a message with formatting.
-func (lt *LogTerminal) Printf(msg string, data ...interface{}) {
+func (lt *LogTerminal) Printf(msg string, data ...any) {
 	lt.Print(fmt.Sprintf(msg, data...))
 }
 

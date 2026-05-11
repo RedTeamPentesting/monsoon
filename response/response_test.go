@@ -178,7 +178,6 @@ func TestDecompressBody(t *testing.T) {
 	}
 
 	for i, test := range tests {
-		test := test // capture variable
 
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			r := Response{
