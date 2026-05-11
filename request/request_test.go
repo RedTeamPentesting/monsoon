@@ -166,7 +166,7 @@ func checkHost(value string) CheckFunc {
 	}
 }
 
-// nolint:unparam
+//nolint:unparam
 func checkHeaderMulti(name string, values []string) CheckFunc {
 	name = textproto.CanonicalMIMEHeaderKey(name)
 
@@ -241,6 +241,7 @@ func checkBody(body string) CheckFunc {
 	}
 }
 
+//nolint:maintidx
 func TestRequestApply(t *testing.T) {
 	tests := []struct {
 		URL  string
