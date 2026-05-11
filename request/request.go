@@ -316,7 +316,7 @@ func (r *Request) TargetURL() (string, error) {
 
 	target, err := url.Parse(r.URL)
 	if err != nil {
-		return r.URL, nil
+		return "", fmt.Errorf("parse URL: %w", err)
 	}
 
 	tmpl, err := r.template()
