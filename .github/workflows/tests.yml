@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         go-version:
-          - 1.24.x
+          - 1.26.x
     runs-on: ubuntu-latest
 
     name: Go ${{ matrix.go-version }}
@@ -24,13 +24,13 @@ jobs:
     steps:
 
       - name: Set up Go ${{ matrix.go-version }}
-        uses: actions/setup-go@v3
+        uses: actions/setup-go@v7
         with:
           go-version: ${{ matrix.go-version }}
         id: go
 
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: Build
         run: |
@@ -48,13 +48,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v3
+        uses: golangci/golangci-lint-action@v9
         with:
           # Required: the version of golangci-lint is required and must be specified without patch version: we always use the latest patch version.
-          version: v1.64
+          version: v2.9
           args: --verbose --timeout 5m
 
       - name: Check go.mod/go.sum
