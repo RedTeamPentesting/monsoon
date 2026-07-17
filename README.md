@@ -5,7 +5,6 @@
     <a href="https://github.com/RedTeamPentesting/monsoon/releases/latest"><img alt="Release" src="https://img.shields.io/github/release/RedTeamPentesting/monsoon.svg?style=for-the-badge"></a>
     <a href="https://github.com/RedTeamPentesting/monsoon/actions?workflow=Build+and+tests"><img alt="GitHub Action: Check" src="https://img.shields.io/github/actions/workflow/status/RedTeamPentesting/monsoon/tests.yml?branch=main&style=for-the-badge"></a>
     <a href="/LICENSE"><img alt="Software License" src="https://img.shields.io/badge/license-MIT-brightgreen.svg?style=for-the-badge"></a>
-    <a href="https://goreportcard.com/report/github.com/RedTeamPentesting/monsoon"><img alt="Go Report Card" src="https://goreportcard.com/badge/github.com/RedTeamPentesting/monsoon?style=for-the-badge"></a>
   </p>
 </p>
 
