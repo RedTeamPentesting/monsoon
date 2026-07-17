@@ -187,7 +187,7 @@ func TestCheckToken(t *testing.T) {
 	t.Parallel()
 
 	// Test with valid command
-	err := CheckToken(context.Background(), "echo -e '123\nhello'")
+	err := CheckToken(context.Background(), "printf '123\nhello\n'")
 	if err != nil {
 		t.Errorf("expected no error for valid command, got %v", err)
 	}
