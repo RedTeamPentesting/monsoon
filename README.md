@@ -48,18 +48,6 @@ for other operating systems such as Windows as follows:
 $ GOOS=windows GOARCH=amd64 go build -o monsoon.exe
 ```
 
-### Unofficial Packages
-
-**Please note that unofficial packages are not maintained by RedTeam Pentesting**
-
-For Arch Linux based distributions `monsoon` is available as an unofficial
-package on the [AUR](https://aur.archlinux.org/packages/monsoon). Using your
-AUR helper of choice such as [yay](https://github.com/Jguer/yay):
-
-```bash
-yay -S monsoon
-```
-
 ## Documentation
 
 The program has several subcommands, the most important one is `fuzz` which
