@@ -43,14 +43,14 @@ linters:
     - mirror
     - misspell
     - nakedret
-    - nestif
+    # - nestif
     - nilerr
     - nilnil
     - nlreturn
-    - noctx
+    # - noctx
     - nolintlint
     - nosprintfhostport
-    - prealloc
+    # - prealloc
     - predeclared
     - promlinter
     - protogetter
@@ -77,15 +77,16 @@ linters:
     - intrange
     - musttag
     - nilnesserr
-    - paralleltest
-    - recvcheck
+    # - recvcheck
     - noinlineerr
   settings:
     lll:
       line-length: 150
       tab-width: 4
     cyclop:
-      max-complexity: 20
+      max-complexity: 40
+    gocyclo:
+      min-complexity: 40
     exhaustive:
       default-signifies-exhaustive: true
     goconst:

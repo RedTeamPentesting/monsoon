@@ -108,6 +108,7 @@ loop:
 		select {
 		case <-ctx.Done():
 			data.Cancelled = true
+
 			break loop
 
 		case res, ok = <-in:
@@ -128,6 +129,7 @@ loop:
 		case countCh <- data.TotalRequests:
 			// disable sending again by setting countCh to nil
 			countCh = nil
+
 			continue loop
 		}
 
@@ -153,6 +155,7 @@ loop:
 		select {
 		case <-ctx.Done():
 			data.Cancelled = true
+
 			break loop
 		case out <- res:
 		}

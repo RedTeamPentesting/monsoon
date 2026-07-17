@@ -155,6 +155,7 @@ func (f *FilterLimit) Select(ctx context.Context, in <-chan []string) <-chan []s
 			if cur >= f.Max {
 				// cancel producer, drop value, receive next
 				f.CancelProducer()
+
 				continue
 			}
 

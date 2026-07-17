@@ -65,11 +65,11 @@ func TestStdioWrapper(t *testing.T) {
 		t.Run("", func(t *testing.T) {
 			var lines []string
 
-			print := func(s string) {
+			printFunc := func(s string) {
 				lines = append(lines, s)
 			}
 
-			w := newLineWriter(print)
+			w := newLineWriter(printFunc)
 
 			for _, data := range test.inputs {
 				n, err := w.Write(data)

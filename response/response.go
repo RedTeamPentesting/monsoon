@@ -189,7 +189,7 @@ func (r *Response) ReadBody(res *http.Response, maxBodySize int, decompress bool
 	}
 
 	r.Body, err = io.ReadAll(bodyReader)
-	if err != nil && !(errors.Is(err, io.ErrUnexpectedEOF) && r.Decompressed) {
+	if err != nil && (!errors.Is(err, io.ErrUnexpectedEOF) || !r.Decompressed) {
 		return fmt.Errorf("read body: %w", err)
 	}
 

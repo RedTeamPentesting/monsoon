@@ -15,6 +15,7 @@ func findJSONFiles(dir string) (files []string, err error) {
 		if err != nil {
 			// try to continue despite error
 			fmt.Fprintf(os.Stderr, "%v\n", err)
+
 			return nil
 		}
 
@@ -59,6 +60,7 @@ func LoadRuns(dir string) (runs []Run, err error) {
 		buf, err := os.ReadFile(file)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "unable to read file, skipping: %v\n", file)
+
 			continue
 		}
 
@@ -70,12 +72,14 @@ func LoadRuns(dir string) (runs []Run, err error) {
 		err = json.Unmarshal(buf, &run.Data)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "unable to read JSON data from file %v, skipping: %v\n", file, err)
+
 			continue
 		}
 
-		run.URL, err = url.Parse(run.Data.Template.URL)
+		run.URL, err = url.Parse(run.Template.URL)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "unable to parse template URL %v, skipping: %v\n", run.Data.Template.URL, err)
+			fmt.Fprintf(os.Stderr, "unable to parse template URL %v, skipping: %v\n", run.Template.URL, err)
+
 			continue
 		}
 

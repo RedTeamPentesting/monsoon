@@ -64,6 +64,7 @@ func (e Extracter) handleResponses(ctx context.Context, in <-chan Response, out 
 		if res.Hide || res.Error != nil {
 			// forward response to next in chain
 			out <- res
+
 			continue
 		}
 

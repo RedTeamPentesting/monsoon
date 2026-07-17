@@ -35,6 +35,7 @@ func setupHelp(cmd *cobra.Command) {
 // wrapFlags returns a help text for all flags wrapped at the terminal size.
 func wrapFlags(f *pflag.FlagSet) string {
 	width := getTermWidth(int(os.Stdin.Fd()))
+
 	return f.FlagUsagesWrapped(width)
 }
 

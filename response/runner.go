@@ -79,14 +79,24 @@ func (t TransportOptions) Valid() error {
 func AddTransportFlags(fs *pflag.FlagSet, opts *TransportOptions) {
 	// Transport
 	fs.BoolVarP(&opts.SkipCertificateVerification, "insecure", "k", false, "disable TLS certificate verification")
-	fs.BoolVar(&opts.EnableInsecureCiphersAndTLSVersions, "insecure-ciphersuites", false, "enable insecure ciphersuites and TLS versions")
+	fs.BoolVar(
+		&opts.EnableInsecureCiphersAndTLSVersions,
+		"insecure-ciphersuites",
+		false,
+		"enable insecure ciphersuites and TLS versions",
+	)
 	fs.StringVar(&opts.TLSClientCertKeyFilename, "client-cert", "", "read TLS client key and cert from `file`")
 	fs.BoolVar(&opts.DisableHTTP2, "disable-http2", false, "do not try to negotiate an HTTP2 connection")
 	fs.BoolVar(&opts.DisableKeepAlives, "disable-keep-alive", false, "do not re-use connections for multiple HTTP requests")
 	fs.StringVar(&opts.KeyLog, "key-log", "", "write TLS connection keys to `filename` (for use with Wireshark)")
 
 	fs.DurationVar(&opts.ConnectTimeout, "connect-timeout", DefaultConnectTimeout, "limit TCP connection establishment")
-	fs.DurationVar(&opts.TLSHandshakeTimeout, "tls-handshake-timeout", DefaultTLSHandshakeTimeout, "limit TLS connection establishment")
+	fs.DurationVar(
+		&opts.TLSHandshakeTimeout,
+		"tls-handshake-timeout",
+		DefaultTLSHandshakeTimeout,
+		"limit TLS connection establishment",
+	)
 	fs.DurationVar(&opts.ResponseHeaderTimeout, "response-header-timeout", DefaultResponseHeaderTimeout,
 		"limit time until the first response header line must have been received")
 }
@@ -245,11 +255,7 @@ func readPEMCertKey(filename string) (certs []byte, key []byte, err error) {
 
 	var block *pem.Block
 
-	for {
-		if len(data) == 0 {
-			break
-		}
-
+	for len(data) != 0 {
 		block, data = pem.Decode(data)
 		if block == nil {
 			break
@@ -265,7 +271,11 @@ func readPEMCertKey(filename string) (certs []byte, key []byte, err error) {
 
 			key = pem.EncodeToMemory(block)
 		default:
-			return nil, nil, fmt.Errorf("error loading TLS cert and key from %v: unknown block type %v found", filename, block.Type)
+			return nil, nil, fmt.Errorf(
+				"error loading TLS cert and key from %v: unknown block type %v found",
+				filename,
+				block.Type,
+			)
 		}
 	}
 
@@ -273,7 +283,13 @@ func readPEMCertKey(filename string) (certs []byte, key []byte, err error) {
 }
 
 // NewRunner returns a new runner to execute HTTP requests.
-func NewRunner(tr *http.Transport, template *request.Request, staticValues *producer.Static, input <-chan []string, output chan<- Response) *Runner {
+func NewRunner(
+	tr *http.Transport,
+	template *request.Request,
+	staticValues *producer.Static,
+	input <-chan []string,
+	output chan<- Response,
+) *Runner {
 	c := &http.Client{
 		Transport: tr,
 		CheckRedirect: func(*http.Request, []*http.Request) error {

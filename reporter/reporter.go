@@ -26,7 +26,12 @@ type Reporter struct {
 // New returns a new reporter. For requests which took longer than longRequest
 // to process, the time is shown.
 func New(term cli.Terminal, longRequest time.Duration, printRequestAndResponse bool, showValues []bool) *Reporter {
-	return &Reporter{term: term, longRequest: longRequest, printRequestAndResponse: printRequestAndResponse, showValues: showValues}
+	return &Reporter{
+		term:                    term,
+		longRequest:             longRequest,
+		printRequestAndResponse: printRequestAndResponse,
+		showValues:              showValues,
+	}
 }
 
 // HTTPStats collects statistics about several HTTP responses.
@@ -47,14 +52,14 @@ func formatSeconds(secs float64) string {
 	sec := int(secs)
 	hours := sec / 3600
 	sec -= hours * 3600
-	min := sec / 60
-	sec -= min * 60
+	minutes := sec / 60
+	sec -= minutes * 60
 
 	if hours > 0 {
-		return fmt.Sprintf("%dh%02dm%02ds", hours, min, sec)
+		return fmt.Sprintf("%dh%02dm%02ds", hours, minutes, sec)
 	}
 
-	return fmt.Sprintf("%dm%02ds", min, sec)
+	return fmt.Sprintf("%dm%02ds", minutes, sec)
 }
 
 // Report returns a report about the received HTTP status codes.
@@ -163,6 +168,7 @@ next_response:
 			continue next_response
 		case <-ticker.C:
 			r.term.SetStatus(stats.Report(last))
+
 			continue next_response
 		}
 
@@ -237,6 +243,7 @@ func (r *Reporter) displayRequestAndResponse(res response.Response) {
 	requestHeaderBytes, err := httputil.DumpRequestOut(res.HTTPResponse.Request, false)
 	if err != nil {
 		r.term.Print("Error: cannot dump request header: " + err.Error())
+
 		return
 	}
 
@@ -249,6 +256,7 @@ func (r *Reporter) displayRequestAndResponse(res response.Response) {
 	requestBodyBytes, err := io.ReadAll(res.HTTPResponse.Request.Body)
 	if err != nil {
 		r.term.Print("Error: cannot dump request body: " + err.Error())
+
 		return
 	}
 

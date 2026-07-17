@@ -143,6 +143,7 @@ func checkHeader(name, value string) CheckFunc {
 		v, ok := req.Header[name]
 		if !ok {
 			tb.Errorf("required header %q not found", name)
+
 			return
 		}
 
@@ -176,6 +177,7 @@ func checkHeaderMulti(name string, values []string) CheckFunc {
 		v, ok := req.Header[name]
 		if !ok {
 			tb.Errorf("required header %q not found", name)
+
 			return
 		}
 
@@ -201,6 +203,7 @@ func checkHeaderAbsent(name string) CheckFunc {
 		v, ok := req.Header[name]
 		if ok {
 			tb.Errorf("header %q (%q) is present (but should not be)", name, v)
+
 			return
 		}
 	}
@@ -213,6 +216,7 @@ func checkBasicAuth(user, password string) CheckFunc {
 		u, p, ok := req.BasicAuth()
 		if !ok {
 			tb.Error("basic auth requested but not present")
+
 			return
 		}
 

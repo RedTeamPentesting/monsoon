@@ -2,6 +2,7 @@ package list
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"path"
 	"sort"
@@ -45,6 +46,7 @@ func printTree(target string, runs []recorder.Run) error {
 		for _, name := range run.Names {
 			if strings.Contains(run.URL.Path, name) {
 				foundTemplate = true
+
 				break
 			}
 		}
@@ -61,7 +63,7 @@ func printTree(target string, runs []recorder.Run) error {
 
 			// rebuild the request URL
 			reqURL := run.URL.String()
-			for i := range run.Data.Names {
+			for i := range run.Names {
 				reqURL = strings.ReplaceAll(reqURL, run.Names[i], resp.Values[i])
 			}
 
@@ -72,13 +74,13 @@ func printTree(target string, runs []recorder.Run) error {
 			}
 
 			switch resp.StatusCode {
-			case 200:
+			case http.StatusOK:
 				structure[responseURL.Path] = "file"
-			case 301:
+			case http.StatusMovedPermanently:
 				structure[responseURL.Path] = "dir"
-			case 401, 403:
+			case http.StatusUnauthorized, http.StatusForbidden:
 				structure[responseURL.Path] = "forbidden"
-			case 400, 404:
+			case http.StatusBadRequest, http.StatusNotFound:
 				// ignore
 			default:
 				structure[responseURL.Path] = fmt.Sprintf("unknown (%v)", resp.StatusCode)

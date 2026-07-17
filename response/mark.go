@@ -16,6 +16,7 @@ func Mark(in <-chan Response, filters []Filter) <-chan Response {
 			for _, f := range filters {
 				if f.Reject(res) {
 					hide = true
+
 					break
 				}
 			}

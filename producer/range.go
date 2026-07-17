@@ -42,7 +42,6 @@ func NewRange(s string) (r Range, err error) {
 		return Range{First: first, Last: last}, nil
 	default:
 		return Range{}, fmt.Errorf("invalid range expression: %s", s)
-
 	}
 }
 

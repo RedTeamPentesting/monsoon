@@ -18,12 +18,14 @@ func (s *shellSplitter) isSplitChar(c rune) bool {
 		// quote ended
 		if s.quote != 0 && c == s.quote {
 			s.quote = 0
+
 			return true
 		}
 
 		// quote starts
 		if s.quote == 0 && (c == '"' || c == '\'') {
 			s.quote = c
+
 			return true
 		}
 	}

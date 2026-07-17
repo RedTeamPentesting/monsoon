@@ -142,7 +142,7 @@ func (opts *Options) valid() (err error) {
 		}
 	}
 
-	if len(opts.Range) == 0 && opts.Filename == "" && len(opts.Replace) == 0 && !(opts.IsTest && len(opts.Values) > 0) {
+	if len(opts.Range) == 0 && opts.Filename == "" && len(opts.Replace) == 0 && (!opts.IsTest || len(opts.Values) == 0) {
 		return errors.New("no replace specified, nothing to do")
 	}
 
@@ -170,9 +170,9 @@ func (opts *Options) valid() (err error) {
 	case opts.IPv4Only && opts.IPv6Only:
 		return fmt.Errorf("--ipv4-only and --ipv6-only cannot be used together")
 	case opts.IPv4Only:
-		opts.TransportOptions.Network = "tcp4"
+		opts.Network = "tcp4"
 	case opts.IPv6Only:
-		opts.TransportOptions.Network = "tcp6"
+		opts.Network = "tcp6"
 	}
 
 	var ignoredOptions []string
@@ -213,8 +213,11 @@ func (opts *Options) valid() (err error) {
 		scanner.Scan()
 		firstLine := scanner.Text()
 
-		if strings.Contains(string(firstLine), "HTTP/2") {
-			fmt.Fprint(os.Stderr, reporter.Dim("Warning: Template contains HTTP/2 request, but --disable-http2 is set. HTTP/1.1 will be used.\n"))
+		if strings.Contains(firstLine, "HTTP/2") {
+			fmt.Fprint(
+				os.Stderr,
+				reporter.Dim("Warning: Template contains HTTP/2 request, but --disable-http2 is set. HTTP/1.1 will be used.\n"),
+			)
 		}
 	}
 
@@ -247,6 +250,7 @@ var cmdTest = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return cli.WithContext(func(ctx context.Context, g *errgroup.Group) error {
 			opts.IsTest = true
+
 			return run(ctx, g, &opts, args)
 		})
 	},
@@ -280,19 +284,49 @@ func AddCommand(c *cobra.Command) {
 
 	fs.IntVar(&opts.FollowRedirect, "follow-redirect", 0, "follow `n` redirects")
 
-	fs.StringSliceVar(&opts.HideStatusCodes, "hide-status", nil, "hide responses with this status `code,[code-code],[-code],[...]`")
-	fs.StringSliceVar(&opts.ShowStatusCodes, "show-status", nil, "show only responses with this status `code,[code-code],[code-],[...]`")
-	fs.StringSliceVar(&opts.HideHeaderSize, "hide-header-size", nil, "hide responses with this header size (`size,from-to,from-,-to`)")
+	fs.StringSliceVar(
+		&opts.HideStatusCodes,
+		"hide-status",
+		nil,
+		"hide responses with this status `code,[code-code],[-code],[...]`",
+	)
+	fs.StringSliceVar(
+		&opts.ShowStatusCodes,
+		"show-status",
+		nil,
+		"show only responses with this status `code,[code-code],[code-],[...]`",
+	)
+	fs.StringSliceVar(
+		&opts.HideHeaderSize,
+		"hide-header-size",
+		nil,
+		"hide responses with this header size (`size,from-to,from-,-to`)",
+	)
 	fs.StringSliceVar(&opts.HideBodySize, "hide-body-size", nil, "hide responses with this body size (`size,from-to,from-,-to`)")
 	fs.StringArrayVar(&opts.HidePattern, "hide-pattern", nil,
 		"hide responses containing `regex` in response header or body (can be specified multiple times)")
 	fs.StringArrayVar(&opts.ShowPattern, "show-pattern", nil,
 		"show only responses containing `regex` in response header or body (can be specified multiple times)")
 
-	fs.StringArrayVar(&opts.Extract, "extract", nil, "extract `regex` from response header or body (can be specified multiple times)")
-	fs.StringArrayVar(&opts.ExtractPipe, "extract-pipe", nil, "pipe response body to `cmd` to extract data (can be specified multiple times, "+
-		"the current fuzz values are passed as environment variables $MONSOON_VALUE or $MONSOON_VALUE1-$MONSOON_VALUEN)")
-	fs.IntVar(&opts.MaxBodySize, "max-body-size", 5, "read at most `n` MiB from a returned response body (used for extracting data from the body)")
+	fs.StringArrayVar(
+		&opts.Extract,
+		"extract",
+		nil,
+		"extract `regex` from response header or body (can be specified multiple times)",
+	)
+	fs.StringArrayVar(
+		&opts.ExtractPipe,
+		"extract-pipe",
+		nil,
+		"pipe response body to `cmd` to extract data (can be specified multiple times, "+
+			"the current fuzz values are passed as environment variables $MONSOON_VALUE or $MONSOON_VALUE1-$MONSOON_VALUEN)",
+	)
+	fs.IntVar(
+		&opts.MaxBodySize,
+		"max-body-size",
+		5,
+		"read at most `n` MiB from a returned response body (used for extracting data from the body)",
+	)
 	fs.BoolVar(&opts.DisableDecompression, "disable-decompression", false, "disable automatic decompression of the response body")
 
 	// add transport options
@@ -306,7 +340,13 @@ func AddCommand(c *cobra.Command) {
 	c.AddCommand(cmdTest)
 	testFlags := cmdTest.Flags()
 	testFlags.AddFlagSet(fs)
-	testFlags.StringSliceVarP(&opts.Values, "value", "v", []string{}, "use `string` as the value (can be specified multiple times)")
+	testFlags.StringSliceVarP(
+		&opts.Values,
+		"value",
+		"v",
+		[]string{},
+		"use `string` as the value (can be specified multiple times)",
+	)
 	testFlags.BoolVar(&opts.ShowRequest, "show-request", false, "also print HTTP request")
 }
 
@@ -465,7 +505,12 @@ func setupProducer(ctx context.Context, opts *Options) (*producer.Multiplexer, *
 	return multiplexer, static, nil
 }
 
-func setupTerminal(ctx context.Context, g *errgroup.Group, maxFrameRate uint, logfilePrefix string) (term cli.Terminal, cleanup func(), err error) {
+func setupTerminal(
+	ctx context.Context,
+	g *errgroup.Group,
+	maxFrameRate uint,
+	logfilePrefix string,
+) (term cli.Terminal, cleanup func(), err error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	statusTerm := termstatus.New(os.Stdout, os.Stderr, false)
@@ -498,6 +543,7 @@ func setupTerminal(ctx context.Context, g *errgroup.Group, maxFrameRate uint, lo
 
 	g.Go(func() error {
 		term.Run(ctx)
+
 		return nil
 	})
 
@@ -556,7 +602,12 @@ func setupValueFilters(
 	return valueCh, countCh
 }
 
-func startRunners(ctx context.Context, opts *Options, staticValues *producer.Static, in <-chan []string) (<-chan response.Response, error) {
+func startRunners(
+	ctx context.Context,
+	opts *Options,
+	staticValues *producer.Static,
+	in <-chan []string,
+) (<-chan response.Response, error) {
 	out := make(chan response.Response)
 
 	var wg sync.WaitGroup
@@ -702,11 +753,11 @@ func run(ctx context.Context, g *errgroup.Group, opts *Options, args []string) e
 		}
 
 		// fill in information for generating the request
-		rec.Data.InputFile = opts.Filename
-		rec.Data.Ranges = opts.Range
-		rec.Data.RangeFormat = opts.RangeFormat
-		rec.Data.Extract = opts.Extract
-		rec.Data.ExtractPipe = opts.ExtractPipe
+		rec.InputFile = opts.Filename
+		rec.Ranges = opts.Range
+		rec.RangeFormat = opts.RangeFormat
+		rec.Extract = opts.Extract
+		rec.ExtractPipe = opts.ExtractPipe
 
 		out := make(chan response.Response)
 		in := responseCh

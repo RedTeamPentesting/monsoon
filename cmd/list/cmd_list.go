@@ -31,7 +31,7 @@ host, port, or path.
 
 func filterRuns(list []recorder.Run, opts ListOptions) (res []recorder.Run) {
 	for _, run := range list {
-		if run.Data.Cancelled && !opts.ShowIncomplete {
+		if run.Cancelled && !opts.ShowIncomplete {
 			continue
 		}
 

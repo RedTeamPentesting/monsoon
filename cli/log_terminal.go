@@ -35,5 +35,5 @@ func (lt *LogTerminal) Print(msg string) {
 	lt.Terminal.Print(msg)
 
 	strippedMsg := ansiEscapeSequenceRegEx.ReplaceAllString(msg, "")
-	_, _ = lt.Writer.Write([]byte(strippedMsg))
+	_, _ = lt.Write([]byte(strippedMsg))
 }

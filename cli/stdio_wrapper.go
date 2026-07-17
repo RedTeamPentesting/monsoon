@@ -50,8 +50,8 @@ type lineWriter struct {
 
 var _ io.WriteCloser = &lineWriter{}
 
-func newLineWriter(print func(string)) *lineWriter {
-	return &lineWriter{buf: bytes.NewBuffer(nil), print: print}
+func newLineWriter(printFunc func(string)) *lineWriter {
+	return &lineWriter{buf: bytes.NewBuffer(nil), print: printFunc}
 }
 
 func (w *lineWriter) Write(data []byte) (n int, err error) {

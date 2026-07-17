@@ -45,6 +45,7 @@ func (h Header) Set(s string) error {
 	if len(data) == 1 {
 		// no value specified, this means the header is to be removed
 		h.Remove[name] = struct{}{}
+
 		return nil
 	}
 
@@ -213,7 +214,7 @@ func (r *Request) template() ([]byte, error) {
 		}
 
 		if bytes.HasSuffix(firstLine, suffix) {
-			firstLine = bytes.TrimSuffix(firstLine, []byte(suffix))
+			firstLine = bytes.TrimSuffix(firstLine, suffix)
 
 			// build new buffer so we can squezee the longer text in
 			newbuf := make([]byte, 0, len(buf)+2)
@@ -336,7 +337,12 @@ func (r *Request) TargetURL() (string, error) {
 // returns a new http.Request.
 func (r *Request) Apply(values []string) (*http.Request, error) {
 	if len(r.Names) != len(values) {
-		return nil, fmt.Errorf("got %v values for %v replacement strings (%v)", len(values), len(r.Names), strings.Join(r.Names, ", "))
+		return nil, fmt.Errorf(
+			"got %v values for %v replacement strings (%v)",
+			len(values),
+			len(r.Names),
+			strings.Join(r.Names, ", "),
+		)
 	}
 
 	insertValues := func(s string) string {
