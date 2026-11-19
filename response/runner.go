@@ -193,7 +193,7 @@ func NewTransport(opts TransportOptions, concurrentRequests int) (*http.Transpor
 
 	if !opts.DisableHTTP2 {
 		// enable http2
-		err := http2.ConfigureTransport(tr)
+		err := http2.ConfigureTransport(tr) //nolint:staticcheck
 		if err != nil {
 			return nil, err
 		}

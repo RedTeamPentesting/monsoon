@@ -114,6 +114,8 @@ linters:
         source: "errors.As"
       - linters:
           - bodyclose
+          - goconst
+          - staticcheck
         path: '(.+)_test\.go'
 formatters:
   enable:
